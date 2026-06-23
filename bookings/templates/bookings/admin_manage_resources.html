@@ -68,13 +68,13 @@
                         <!-- Status -->
                         <td style="padding: 10px 12px;">
                             {% if resource.status == 'APPROVED' %}
-                                <span style="background: #28a745; color: white; padding: 2px 10px; font-size: 0.65rem; font-weight: 600;">✅ Approved</span>
+                                <span style="background: #28a745; color: white; padding: 2px 10px; font-size: 0.65rem; font-weight: 600;">Approved</span>
                             {% elif resource.status == 'PENDING' %}
-                                <span style="background: #ffc107; color: #856404; padding: 2px 10px; font-size: 0.65rem; font-weight: 600;">⏳ Pending</span>
+                                <span style="background: #ffc107; color: #856404; padding: 2px 10px; font-size: 0.65rem; font-weight: 600;">Pending</span>
                             {% elif resource.status == 'REJECTED' %}
-                                <span style="background: #dc3545; color: white; padding: 2px 10px; font-size: 0.65rem; font-weight: 600;">❌ Rejected</span>
+                                <span style="background: #dc3545; color: white; padding: 2px 10px; font-size: 0.65rem; font-weight: 600;">Rejected</span>
                             {% else %}
-                                <span style="background: #6c757d; color: white; padding: 2px 10px; font-size: 0.65rem; font-weight: 600;">⛔ Inactive</span>
+                                <span style="background: #6c757d; color: white; padding: 2px 10px; font-size: 0.65rem; font-weight: 600;">Inactive</span>
                             {% endif %}
                         </td>
                         
@@ -88,10 +88,10 @@
                             <form method="post" action="{% url 'admin_update_resource_status' resource.id %}" style="display: flex; gap: 4px; flex-wrap: wrap; justify-content: center;">
                                 {% csrf_token %}
                                 <select name="status" style="padding: 4px 6px; border: 1px solid #ddd; font-size: 0.7rem;">
-                                    <option value="APPROVED" {% if resource.status == 'APPROVED' %}selected{% endif %}>✅ Approve</option>
-                                    <option value="PENDING" {% if resource.status == 'PENDING' %}selected{% endif %}>⏳ Pending</option>
-                                    <option value="REJECTED" {% if resource.status == 'REJECTED' %}selected{% endif %}>❌ Reject</option>
-                                    <option value="INACTIVE" {% if resource.status == 'INACTIVE' %}selected{% endif %}>⛔ Inactive</option>
+                                    <option value="APPROVED" {% if resource.status == 'APPROVED' %}selected{% endif %}>Approve</option>
+                                    <option value="PENDING" {% if resource.status == 'PENDING' %}selected{% endif %}>Pending</option>
+                                    <option value="REJECTED" {% if resource.status == 'REJECTED' %}selected{% endif %}>Reject</option>
+                                    <option value="INACTIVE" {% if resource.status == 'INACTIVE' %}selected{% endif %}>Inactive</option>
                                 </select>
                                 <button type="submit" style="padding: 4px 10px; background: #007bff; color: white; border: none; font-size: 0.65rem; cursor: pointer; transition: all 0.2s ease;"
                                         onmouseover="this.style.background='#0056b3'"

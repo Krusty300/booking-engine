@@ -11,6 +11,12 @@ urlpatterns = [
     path('resource/create/', views.create_resource, name='create_resource'),
     path('resource/<int:resource_id>/edit/', views.edit_resource, name='edit_resource'),
     path('resource/<int:resource_id>/delete/', views.delete_resource, name='delete_resource'),
+
+    # User profile
+    path('profile/', views.profile, name='profile'),
+    path('profile/edit/', views.edit_profile, name='edit_profile'),
+    path('profile/change-password/', views.change_password, name='change_password'),
+    path('booking-history/', views.booking_history, name='booking_history'),
     
     # Admin resource management
     path('manage-resources/', views.admin_manage_resources, name='admin_manage_resources'),
@@ -26,4 +32,11 @@ urlpatterns = [
     # API endpoints
     path('api/available-times/', views.get_available_times, name='get_available_times'),
     path('api/book/', views.book_slot, name='book_slot'),
+    
+    # Category management (admin only)
+    path('categories/', views.manage_categories, name='manage_categories'),
+    path('category/create/', views.create_category, name='create_category'),
+    path('category/<int:category_id>/edit/', views.edit_category, name='edit_category'),
+    path('category/<int:category_id>/delete/', views.delete_category, name='delete_category'),
+
 ]

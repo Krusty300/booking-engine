@@ -1,0 +1,49 @@
+{% extends 'bookings/base.html' %}
+
+{% block content %}
+<div style="max-width: 500px; margin: 40px auto; text-align: center;">
+
+    <div style="font-size: 64px; margin-bottom: 20px;">🗑️</div>
+    <h1 style="font-size: 1.6rem; font-weight: 800; margin-bottom: 10px;">Delete Category</h1>
+    <p style="font-size: 0.95rem; color: #6c757d; margin-bottom: 20px;">
+        Are you sure you want to delete the category <strong>"{{ category.name }}"</strong>?
+    </p>
+    
+    <div style="background: #f8f9fa; padding: 15px; margin-bottom: 25px; text-align: left;">
+        <p style="font-size: 0.85rem; margin: 5px 0;"><strong>Description:</strong> {{ category.description|default:"No description" }}</p>
+        <p style="font-size: 0.85rem; margin: 5px 0;"><strong>Resources:</strong> {{ category.resources.count }} resources</p>
+        <p style="font-size: 0.85rem; margin: 5px 0;"><strong>Created:</strong> {{ category.created_at|date:"M d, Y" }}</p>
+    </div>
+    
+    {% if category.resources.exists %}
+        <div style="background: #f8d7da; padding: 12px; margin-bottom: 20px; border-left: 4px solid #dc3545; color: #721c24; font-size: 0.85rem;">
+            ⚠️ This category has resources assigned to it. You cannot delete it until you remove or reassign them.
+        </div>
+        <a href="{% url 'manage_categories' %}" 
+           style="padding: 10px 30px; background: #6c757d; color: white; text-decoration: none; font-size: 0.9rem; font-weight: 600; display: inline-block;"
+           onmouseover="this.style.background='#5a6268'"
+           onmouseout="this.style.background='#6c757d'">
+            Go Back
+        </a>
+    {% else %}
+        <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+            <form method="post">
+                {% csrf_token %}
+                <button type="submit" 
+                        style="padding: 10px 30px; background: #dc3545; color: white; border: none; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease;"
+                        onmouseover="this.style.background='#c82333'"
+                        onmouseout="this.style.background='#dc3545'">
+                    Yes, Delete
+                </button>
+            </form>
+            <a href="{% url 'manage_categories' %}" 
+               style="padding: 10px 30px; background: #6c757d; color: white; text-decoration: none; font-size: 0.9rem; font-weight: 600; transition: all 0.2s ease;"
+               onmouseover="this.style.background='#5a6268'"
+               onmouseout="this.style.background='#6c757d'">
+                Cancel
+            </a>
+        </div>
+    {% endif %}
+</div>
+
+{% endblock %}

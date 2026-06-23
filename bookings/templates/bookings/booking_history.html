@@ -1,0 +1,136 @@
+{% extends 'bookings/base.html' %}
+
+{% block content %}
+<h1 style="font-size: 1.6rem; font-weight: 800; margin-bottom: 20px;">Booking History</h1>
+
+<!-- Filters -->
+<div style="margin: 15px 0 20px 0; padding: 15px; background: #f8f9fa;">
+    <form method="get" style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+        <select name="status" style="padding: 8px 12px; border: 2px solid #e9ecef; font-size: 0.85rem;">
+            <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All Statuses</option>
+            {% for value, label in status_choices %}
+                <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        
+        <select name="date" style="padding: 8px 12px; border: 2px solid #e9ecef; font-size: 0.85rem;">
+            <option value="all" {% if date_filter == 'all' %}selected{% endif %}>All Dates</option>
+            <option value="upcoming" {% if date_filter == 'upcoming' %}selected{% endif %}>Upcoming</option>
+            <option value="past" {% if date_filter == 'past' %}selected{% endif %}>Past</option>
+            <option value="this_month" {% if date_filter == 'this_month' %}selected{% endif %}>This Month</option>
+        </select>
+        
+        <input type="text" name="search" placeholder="Search by resource..." value="{{ search_query }}"
+               style="flex: 1; min-width: 150px; padding: 8px 12px; border: 2px solid #e9ecef; font-size: 0.85rem;">
+        
+        <button type="submit" style="padding: 8px 18px; background: #007bff; color: white; border: none; font-size: 0.85rem; font-weight: 600; cursor: pointer;">
+            Filter
+        </button>
+        
+        <a href="?" style="padding: 8px 18px; background: #6c757d; color: white; text-decoration: none; font-size: 0.85rem; font-weight: 600;">
+            ✕ Clear
+        </a>
+    </form>
+    
+    <div style="margin-top: 10px; font-size: 0.8rem; color: #6c757d;">
+        Found <strong>{{ total }}</strong> booking{% if total != 1 %}s{% endif %}
+    </div>
+</div>
+
+<!-- Bookings Table -->
+{% if bookings %}
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+            <thead>
+                <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">
+                    <th style="padding: 10px 12px; text-align: left;">Resource</th>
+                    <th style="padding: 10px 12px; text-align: left;">Date & Time</th>
+                    <th style="padding: 10px 12px; text-align: left;">Status</th>
+                    <th style="padding: 10px 12px; text-align: center;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for booking in bookings %}
+                    <tr style="border-bottom: 1px solid #dee2e6;">
+                        <td style="padding: 10px 12px;">
+                            <strong>{{ booking.resource.name }}</strong>
+                            <div style="font-size: 0.75rem; color: #6c757d;">
+                                📍 {{ booking.resource.location|default:"No location" }}
+                            </div>
+                        </td>
+                        <td style="padding: 10px 12px;">
+                            <div><strong>{{ booking.start_time|date:"M d, Y" }}</strong></div>
+                            <div style="font-size: 0.8rem; color: #6c757d;">
+                                {{ booking.start_time|date:"g:i A" }} - {{ booking.end_time|date:"g:i A" }}
+                            </div>
+                            {% if booking.start_time > now %}
+                                <span style="font-size: 0.7rem; color: #28a745;">({{ booking.start_time|timeuntil }} from now)</span>
+                            {% elif booking.start_time <= now and booking.status != 'CANCELLED' %}
+                                <span style="font-size: 0.7rem; color: #6c757d;">(Completed)</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 10px 12px;">
+                            <span style="padding: 3px 10px; font-size: 0.75rem; font-weight: 600; 
+                                {% if booking.status == 'CONFIRMED' %}background: #d4edda; color: #155724;
+                                {% elif booking.status == 'CANCELLED' %}background: #f8d7da; color: #721c24;
+                                {% elif booking.status == 'COMPLETED' %}background: #d1ecf1; color: #0c5460;
+                                {% else %}background: #fff3cd; color: #856404;{% endif %}">
+                                {{ booking.get_status_display }}
+                            </span>
+                        </td>
+                        <td style="padding: 10px 12px; text-align: center;">
+                            {% if booking.status != 'CANCELLED' and booking.status != 'COMPLETED' and booking.start_time > now %}
+                                <a href="{% url 'cancel_booking' booking.id %}" 
+                                   onclick="return confirm('Are you sure you want to cancel this booking?')"
+                                   style="background: #dc3545; color: white; padding: 5px 12px; text-decoration: none; font-size: 0.75rem; font-weight: 600; display: inline-block;"
+                                   onmouseover="this.style.background='#c82333'"
+                                   onmouseout="this.style.background='#dc3545'">
+                                    Cancel
+                                </a>
+                            {% else %}
+                                <span style="color: #999; font-size: 0.75rem;">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Pagination -->
+    {% if total_pages > 1 %}
+        <div style="display: flex; justify-content: center; gap: 5px; margin-top: 20px; flex-wrap: wrap;">
+            {% for i in total_pages|rjust:total_pages %}
+                <a href="?page={{ forloop.counter }}{% if status_filter != 'all' %}&status={{ status_filter }}{% endif %}{% if date_filter != 'all' %}&date={{ date_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
+                   style="padding: 6px 14px; background: {% if page == forloop.counter %}#007bff; color: white;{% else %}#e9ecef; color: #333;{% endif %} text-decoration: none; font-size: 0.8rem; font-weight: 600; transition: all 0.2s ease;"
+                   onmouseover="this.style.opacity='0.8'"
+                   onmouseout="this.style.opacity='1'">
+                    {{ forloop.counter }}
+                </a>
+            {% endfor %}
+        </div>
+    {% endif %}
+    
+{% else %}
+    <div style="text-align: center; padding: 60px 20px; background: #f8f9fa; margin-top: 20px;">
+        <div style="font-size: 48px; margin-bottom: 15px;">📭</div>
+        <h3 style="font-size: 1.2rem; color: #333; margin-bottom: 10px;">No bookings found</h3>
+        <p style="font-size: 0.85rem; color: #6c757d;">Start by booking a resource!</p>
+        <a href="{% url 'resource_list' %}" style="background: #007bff; color: white; padding: 10px 25px; text-decoration: none; font-size: 0.85rem; font-weight: 600; display: inline-block; margin-top: 10px;">
+            Browse Resources
+        </a>
+    </div>
+{% endif %}
+
+<style>
+    @media (max-width: 768px) {
+        form {
+            flex-direction: column;
+        }
+        form select, form input, form button, form a {
+            width: 100% !important;
+        }
+    }
+</style>
+
+{% endblock %}

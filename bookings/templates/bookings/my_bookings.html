@@ -39,7 +39,7 @@
     <a href="?status=past" class="filter-btn {% if current_filter == 'past' %}active{% endif %}"
        style="padding: 6px 14px; border-radius: 0; text-decoration: none; font-size: 0.8rem; font-weight: 600;
               {% if current_filter == 'past' %}background: #6c757d; color: white;{% else %}background: #e9ecef; color: #333;{% endif %}">
-        📜 Past ({{ past }})
+        Past ({{ past }})
     </a>
     <a href="?status=cancelled" class="filter-btn {% if current_filter == 'cancelled' %}active{% endif %}"
        style="padding: 6px 14px; border-radius: 0; text-decoration: none; font-size: 0.8rem; font-weight: 600;
@@ -95,23 +95,23 @@
                         <td style="padding: 10px 12px;">
                             {% if booking.status == 'CONFIRMED' and booking.start_time > now %}
                                 <span class="status-badge status-confirmed" style="display: inline-block; padding: 3px 10px; border-radius: 0; font-size: 0.7rem; font-weight: 600; background: #d4edda; color: #155724;">
-                                    ✅ Confirmed
+                                    Confirmed
                                 </span>
                             {% elif booking.status == 'CONFIRMED' and booking.start_time <= now %}
                                 <span class="status-badge status-completed" style="display: inline-block; padding: 3px 10px; border-radius: 0; font-size: 0.7rem; font-weight: 600; background: #d1ecf1; color: #0c5460;">
-                                    📌 Completed
+                                    Completed
                                 </span>
                             {% elif booking.status == 'PENDING' %}
                                 <span class="status-badge status-pending" style="display: inline-block; padding: 3px 10px; border-radius: 0; font-size: 0.7rem; font-weight: 600; background: #fff3cd; color: #856404;">
-                                    ⏳ Pending
+                                    Pending
                                 </span>
                             {% elif booking.status == 'CANCELLED' %}
                                 <span class="status-badge status-cancelled" style="display: inline-block; padding: 3px 10px; border-radius: 0; font-size: 0.7rem; font-weight: 600; background: #f8d7da; color: #721c24;">
-                                    ❌ Cancelled
+                                    Cancelled
                                 </span>
                             {% elif booking.status == 'COMPLETED' %}
                                 <span class="status-badge status-completed" style="display: inline-block; padding: 3px 10px; border-radius: 0; font-size: 0.7rem; font-weight: 600; background: #d1ecf1; color: #0c5460;">
-                                    ✅ Completed
+                                    Completed
                                 </span>
                             {% endif %}
                         </td>
@@ -211,7 +211,7 @@ function showDetails(bookingId) {
                 <p style="font-size: 0.85rem; margin: 6px 0;"><strong>Booking ID:</strong> #${id}</p>
                 <hr style="margin: 12px 0; border: none; border-top: 1px solid #dee2e6;">
                 <div style="background: #fff; padding: 10px 12px; border-radius: 0; border-left: 3px solid #007bff;">
-                    <strong style="font-size: 0.8rem;">📝 Notes:</strong>
+                    <strong style="font-size: 0.8rem;">Notes:</strong>
                     <p style="margin: 4px 0 0 0; font-size: 0.8rem; white-space: pre-wrap; word-wrap: break-word; color: #333;">${notes}</p>
                 </div>
             </div>

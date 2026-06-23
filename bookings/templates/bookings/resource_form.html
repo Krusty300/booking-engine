@@ -1,15 +1,21 @@
 {% extends 'bookings/base.html' %}
 
 {% block content %}
-<div style="max-width: 600px; margin: 0 auto;">
+<div style="max-width: 700px; margin: 0 auto;">
 
-    <h1 style="font-size: 1.6rem; font-weight: 800; margin-bottom: 20px;">{{ title }}</h1>
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 20px;">
+        <h1 style="font-size: 1.6rem; font-weight: 800; margin: 0;">{{ title }}</h1>
+        <div style="font-size: 0.8rem; color: #6c757d;">
+            <span style="color: #dc3545;">*</span> Required fields
+        </div>
+    </div>
     
-    <form method="post" enctype="multipart/form-data" style="background: white; padding: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.08);">
+    <form method="post" enctype="multipart/form-data" id="resource-form" style="background: white; padding: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.08);">
         {% csrf_token %}
         
+        <!-- Form Errors -->
         {% if form.errors %}
-            <div style="padding: 12px 16px; margin-bottom: 20px; background: #f8d7da; border-left: 4px solid #dc3545; color: #721c24;">
+            <div style="padding: 15px 18px; margin-bottom: 20px; background: #f8d7da; border-left: 4px solid #dc3545; color: #721c24;">
                 <strong style="font-size: 0.85rem;">Please correct the following errors:</strong>
                 <ul style="margin: 5px 0 0 20px; font-size: 0.8rem;">
                     {% for field in form %}
@@ -17,105 +23,191 @@
                             <li>{{ field.label }}: {{ error }}</li>
                         {% endfor %}
                     {% endfor %}
+                    {% for error in form.non_field_errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
                 </ul>
             </div>
         {% endif %}
         
         <!-- Name -->
-        <div style="margin-bottom: 16px;">
-            <label for="id_name" style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.8rem; color: #1a1a2e;">
+        <div style="margin-bottom: 18px;">
+            <label for="id_name" style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.85rem; color: #1a1a2e;">
                 Resource Name <span style="color: #dc3545;">*</span>
             </label>
             {{ form.name }}
+            <small style="color: #6c757d; font-size: 0.7rem;">{{ form.name.help_text }}</small>
+            <div style="text-align: right; font-size: 0.7rem; color: #6c757d; margin-top: 3px;">
+                <span id="name-count">0</span> characters
+            </div>
         </div>
         
         <!-- Description -->
-        <div style="margin-bottom: 16px;">
-            <label for="id_description" style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.8rem; color: #1a1a2e;">
+        <div style="margin-bottom: 18px;">
+            <label for="id_description" style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.85rem; color: #1a1a2e;">
                 Description <span style="color: #dc3545;">*</span>
             </label>
             {{ form.description }}
+            <small style="color: #6c757d; font-size: 0.7rem;">{{ form.description.help_text }}</small>
+            <div style="text-align: right; font-size: 0.7rem; color: #6c757d; margin-top: 3px;">
+                <span id="description-count">0</span> / 1000 characters
+            </div>
+        </div>
+        
+        <!-- Category -->
+        <div style="margin-bottom: 18px;">
+            <label for="id_category" style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.85rem; color: #1a1a2e;">
+                Category
+            </label>
+            {{ form.category }}
+            <small style="color: #6c757d; font-size: 0.7rem;">Select a category for your resource</small>
+            {% if not form.category.choices %}
+                <div style="color: #856404; font-size: 0.75rem; margin-top: 3px;">
+                    No categories available. Contact an admin to create categories.
+                </div>
+            {% endif %}
         </div>
         
         <!-- Location -->
-        <div style="margin-bottom: 16px;">
-            <label for="id_location" style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.8rem; color: #1a1a2e;">
+        <div style="margin-bottom: 18px;">
+            <label for="id_location" style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.85rem; color: #1a1a2e;">
                 Location
             </label>
             {{ form.location }}
+            <small style="color: #6c757d; font-size: 0.7rem;">Where is this resource located?</small>
         </div>
         
-        <!-- Max Capacity -->
-        <div style="margin-bottom: 16px;">
-            <label for="id_max_capacity" style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.8rem; color: #1a1a2e;">
-                Max Capacity
-            </label>
-            {{ form.max_capacity }}
-            <small style="color: #6c757d; font-size: 0.7rem;">Maximum number of people that can book this resource</small>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <!-- Max Capacity -->
+            <div style="margin-bottom: 18px;">
+                <label for="id_max_capacity" style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.85rem; color: #1a1a2e;">
+                    Max Capacity
+                </label>
+                {{ form.max_capacity }}
+                <small style="color: #6c757d; font-size: 0.7rem;">{{ form.max_capacity.help_text }}</small>
+            </div>
+            
+            <!-- Price per Hour -->
+            <div style="margin-bottom: 18px;">
+                <label for="id_price_per_hour" style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.85rem; color: #1a1a2e;">
+                    Price per Hour ($)
+                </label>
+                {{ form.price_per_hour }}
+                <small style="color: #6c757d; font-size: 0.7rem;">{{ form.price_per_hour.help_text }}</small>
+            </div>
         </div>
         
-        <!-- Price per Hour -->
-        <div style="margin-bottom: 16px;">
-            <label for="id_price_per_hour" style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.8rem; color: #1a1a2e;">
-                Price per Hour ($)
+        <!-- Contact Information (Optional) -->
+        <div style="background: #f8f9fa; padding: 15px; margin-bottom: 18px; border-left: 3px solid #007bff;">
+            <h4 style="font-size: 0.95rem; font-weight: 600; margin: 0 0 10px 0; color: #1a1a2e;">
+                📞 Contact Information <span style="font-weight: 400; font-size: 0.75rem; color: #6c757d;">(Optional)</span>
+            </h4>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div>
+                    <label for="id_contact_email" style="display: block; margin-bottom: 5px; font-weight: 500; font-size: 0.8rem; color: #1a1a2e;">
+                        Contact Email
+                    </label>
+                    {{ form.contact_email }}
+                </div>
+                <div>
+                    <label for="id_contact_phone" style="display: block; margin-bottom: 5px; font-weight: 500; font-size: 0.8rem; color: #1a1a2e;">
+                        Contact Phone
+                    </label>
+                    {{ form.contact_phone }}
+                </div>
+                <div style="grid-column: 1 / -1;">
+                    <label for="id_website" style="display: block; margin-bottom: 5px; font-weight: 500; font-size: 0.8rem; color: #1a1a2e;">
+                        Website / Social Media
+                    </label>
+                    {{ form.website }}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Tags -->
+        <div style="margin-bottom: 18px;">
+            <label for="id_tags" style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.85rem; color: #1a1a2e;">
+                Tags <span style="font-weight: 400; font-size: 0.75rem; color: #6c757d;">(Optional)</span>
             </label>
-            {{ form.price_per_hour }}
-            <small style="color: #6c757d; font-size: 0.7rem;">Set to 0.00 for free</small>
+            {{ form.tags }}
+            <small style="color: #6c757d; font-size: 0.7rem;">{{ form.tags.help_text }}</small>
+            <div id="tag-preview" style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 5px;"></div>
         </div>
         
         <!-- Image Upload -->
-<div style="margin-bottom: 16px;">
-    <label for="id_image" style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.8rem; color: #1a1a2e;">
-        Resource Image
-    </label>
-    
-    <!-- Current Image Preview (for edit mode) -->
-    {% if resource and resource.image %}
-        <div style="margin-bottom: 10px;">
-            <img src="{{ resource.image.url }}" alt="{{ resource.name }}" style="max-width: 200px; max-height: 150px; border: 1px solid #e9ecef; object-fit: cover;">
-            <p style="font-size: 0.7rem; color: #6c757d; margin-top: 3px;">Current image</p>
+        <div style="margin-bottom: 18px;">
+            <label for="id_image" style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.85rem; color: #1a1a2e;">
+                Resource Image
+            </label>
+            
+            <!-- Current Image Preview -->
+            {% if resource and resource.image %}
+                <div style="margin-bottom: 10px; position: relative; display: inline-block;">
+                    <img src="{{ resource.image.url }}" alt="{{ resource.name }}" 
+                         style="max-width: 200px; max-height: 150px; object-fit: cover; border: 2px solid #e9ecef;">
+                    <div style="position: absolute; top: -5px; right: -5px; background: #28a745; color: white; 
+                                padding: 2px 8px; font-size: 0.6rem; border-radius: 0;">Current</div>
+                </div>
+            {% elif resource and resource.image_url %}
+                <div style="margin-bottom: 10px; position: relative; display: inline-block;">
+                    <img src="{{ resource.image_url }}" alt="{{ resource.name }}" 
+                         style="max-width: 200px; max-height: 150px; object-fit: cover; border: 2px solid #e9ecef;">
+                    <div style="position: absolute; top: -5px; right: -5px; background: #28a745; color: white; 
+                                padding: 2px 8px; font-size: 0.6rem; border-radius: 0;">Current</div>
+                </div>
+            {% endif %}
+            
+            <div style="margin-bottom: 8px;">
+                {{ form.image }}
+            </div>
+            <small style="color: #6c757d; font-size: 0.7rem; display: block;">
+                {{ form.image.help_text|default:"Upload an image (JPG, PNG, GIF, WebP). Max 5MB." }}
+            </small>
+            
+            <!-- Live Preview -->
+            <div id="image-preview-container" style="margin-top: 10px; display: none;">
+                <img id="image-preview" src="#" alt="Preview" 
+                     style="max-width: 200px; max-height: 150px; object-fit: cover; border: 2px solid #007bff;">
+                <p style="font-size: 0.7rem; color: #007bff; margin-top: 3px;">Preview</p>
+            </div>
+            
+            <!-- OR Image URL -->
+            <div style="margin-top: 10px;">
+                <label for="id_image_url" style="display: block; margin-bottom: 5px; font-weight: 500; font-size: 0.8rem; color: #1a1a2e;">
+                    Or Image URL
+                </label>
+                {{ form.image_url }}
+                <small style="color: #6c757d; font-size: 0.7rem;">Link to an image URL (if you don't want to upload)</small>
+            </div>
         </div>
-    {% elif resource and resource.image_url %}
-        <div style="margin-bottom: 10px;">
-            <img src="{{ resource.image_url }}" alt="{{ resource.name }}" style="max-width: 200px; max-height: 150px; border: 1px solid #e9ecef; object-fit: cover;">
-            <p style="font-size: 0.7rem; color: #6c757d; margin-top: 3px;">Current image (URL)</p>
+        
+        <!-- Terms -->
+        <div style="margin-bottom: 20px; padding: 15px; background: #fff8e1; border-left: 3px solid #ffc107;">
+            <div style="display: flex; align-items: flex-start; gap: 10px;">
+                <input type="checkbox" name="terms_accepted" id="id_terms_accepted" required
+                       style="width: 18px; height: 18px; margin-top: 2px;">
+                <label for="id_terms_accepted" style="font-size: 0.85rem; color: #1a1a2e; cursor: pointer;">
+                    I agree to the terms and conditions, and confirm that the information provided is accurate and complete.
+                </label>
+            </div>
+            {% if form.terms_accepted.errors %}
+                <div style="color: #dc3545; font-size: 0.75rem; margin-top: 5px;">
+                    {{ form.terms_accepted.errors.0 }}
+                </div>
+            {% endif %}
         </div>
-    {% endif %}
-    
-    <!-- File Input -->
-    <div style="margin-bottom: 8px;">
-        {{ form.image }}
-    </div>
-    <small style="color: #6c757d; font-size: 0.7rem; display: block; margin-top: 3px;">
-        Upload an image (JPG, PNG, GIF, WebP). Max 5MB.
-    </small>
-    
-    <!-- Live Preview (shows when a file is selected) -->
-    <div id="image-preview-container" style="margin-top: 10px; display: none;">
-        <img id="image-preview" src="#" alt="Preview" style="max-width: 200px; max-height: 150px; border: 1px solid #e9ecef; object-fit: cover;">
-        <p style="font-size: 0.7rem; color: #6c757d; margin-top: 3px;">Preview</p>
-    </div>
-    
-    <!-- OR Image URL -->
-    <div style="margin-top: 10px;">
-        <label for="id_image_url" style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.8rem; color: #1a1a2e;">
-            Or Image URL
-        </label>
-        {{ form.image_url }}
-        <small style="color: #6c757d; font-size: 0.7rem;">Optional: Link to an image URL (if you don't want to upload)</small>
-    </div>
-</div>
         
         <!-- Submit Buttons -->
-        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
             <button type="submit" 
-                    style="padding: 10px 25px; background: #28a745; color: white; border: none; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease;"
+                    id="submit-btn"
+                    style="padding: 12px 30px; background: #28a745; color: white; border: none; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease;"
                     onmouseover="this.style.background='#218838'"
                     onmouseout="this.style.background='#28a745'">
                 {% if resource %}Update Resource{% else %}Create Resource{% endif %}
             </button>
             <a href="{% url 'my_resources' %}" 
-               style="padding: 10px 25px; background: #6c757d; color: white; text-decoration: none; font-size: 0.9rem; font-weight: 600; transition: all 0.2s ease;"
+               style="padding: 12px 30px; background: #6c757d; color: white; text-decoration: none; font-size: 0.95rem; font-weight: 600; transition: all 0.2s ease;"
                onmouseover="this.style.background='#5a6268'"
                onmouseout="this.style.background='#6c757d'">
                 Cancel
@@ -125,7 +217,37 @@
 </div>
 
 <script>
-    // Image preview on file selection
+    // Character Counter
+    document.addEventListener('DOMContentLoaded', function() {
+        const nameInput = document.getElementById('id_name');
+        const descInput = document.getElementById('id_description');
+        const nameCount = document.getElementById('name-count');
+        const descCount = document.getElementById('description-count');
+        
+        if (nameInput && nameCount) {
+            nameInput.addEventListener('input', function() {
+                nameCount.textContent = this.value.length;
+            });
+            nameCount.textContent = nameInput.value.length;
+        }
+        
+        if (descInput && descCount) {
+            descInput.addEventListener('input', function() {
+                const count = this.value.length;
+                descCount.textContent = count;
+                if (count > 900) {
+                    descCount.style.color = '#dc3545';
+                } else if (count > 700) {
+                    descCount.style.color = '#ffc107';
+                } else {
+                    descCount.style.color = '#6c757d';
+                }
+            });
+            descCount.textContent = descInput.value.length;
+        }
+    });
+
+    // Image preview
     document.addEventListener('DOMContentLoaded', function() {
         const imageInput = document.getElementById('id_image');
         const previewContainer = document.getElementById('image-preview-container');
@@ -148,23 +270,62 @@
         }
     });
 
+    // Tag preview
+    document.addEventListener('DOMContentLoaded', function() {
+        const tagsInput = document.getElementById('id_tags');
+        const tagPreview = document.getElementById('tag-preview');
+        
+        if (tagsInput && tagPreview) {
+            tagsInput.addEventListener('input', function() {
+                const tags = this.value.split(',').map(t => t.trim()).filter(t => t);
+                tagPreview.innerHTML = tags.map(tag => 
+                    `<span style="background: #e9ecef; padding: 2px 10px; font-size: 0.7rem; color: #333;">${tag}</span>`
+                ).join('');
+            });
+            // Trigger on load
+            tagsInput.dispatchEvent(new Event('input'));
+        }
+    });
+
     // Style form fields
     document.querySelectorAll('input, textarea, select').forEach(el => {
-        el.style.width = '100%';
-        el.style.padding = '8px 12px';
-        el.style.border = '2px solid #e9ecef';
-        el.style.fontSize = '0.85rem';
-        el.style.fontFamily = 'Mona Sans, sans-serif';
-        el.style.boxSizing = 'border-box';
-        el.onfocus = function() { 
-            this.style.borderColor = '#007bff'; 
-            this.style.boxShadow = '0 0 0 3px rgba(0,123,255,0.1)'; 
-        };
-        el.onblur = function() { 
-            this.style.borderColor = '#e9ecef'; 
-            this.style.boxShadow = 'none'; 
-        };
+        if (el.type !== 'checkbox' && el.type !== 'color' && el.id !== 'id_terms_accepted') {
+            el.style.width = '100%';
+            el.style.padding = '10px 14px';
+            el.style.border = '2px solid #e9ecef';
+            el.style.fontSize = '0.9rem';
+            el.style.fontFamily = 'Mona Sans, sans-serif';
+            el.style.boxSizing = 'border-box';
+            el.style.transition = 'all 0.2s ease';
+            el.onfocus = function() { 
+                this.style.borderColor = '#007bff'; 
+                this.style.boxShadow = '0 0 0 3px rgba(0,123,255,0.1)'; 
+            };
+            el.onblur = function() { 
+                this.style.borderColor = '#e9ecef'; 
+                this.style.boxShadow = 'none'; 
+            };
+        }
+    });
+
+    // Form validation before submit
+    document.getElementById('resource-form').addEventListener('submit', function(e) {
+        const termsCheckbox = document.getElementById('id_terms_accepted');
+        if (termsCheckbox && !termsCheckbox.checked) {
+            e.preventDefault();
+            alert('Please accept the terms and conditions to continue.');
+            termsCheckbox.focus();
+            return false;
+        }
     });
 </script>
+
+<style>
+    @media (max-width: 600px) {
+        div[style*="grid-template-columns: 1fr 1fr"] {
+            grid-template-columns: 1fr !important;
+        }
+    }
+</style>
 
 {% endblock %}

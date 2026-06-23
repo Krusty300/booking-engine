@@ -1,0 +1,146 @@
+{% extends 'bookings/base.html' %}
+
+{% block content %}
+<div style="max-width: 600px; margin: 0 auto;">
+
+    <h1 style="font-size: 1.6rem; font-weight: 800; margin-bottom: 20px;">{{ title }}</h1>
+    
+    <form method="post" style="background: white; padding: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.08);">
+        {% csrf_token %}
+        
+        {% if form.errors %}
+            <div style="padding: 12px 16px; margin-bottom: 20px; background: #f8d7da; border-left: 4px solid #dc3545; color: #721c24;">
+                <strong style="font-size: 0.85rem;">Please correct the following errors:</strong>
+                <ul style="margin: 5px 0 0 20px; font-size: 0.8rem;">
+                    {% for field in form %}
+                        {% for error in field.errors %}
+                            <li>{{ field.label }}: {{ error }}</li>
+                        {% endfor %}
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+        
+        <!-- Name -->
+        <div style="margin-bottom: 16px;">
+            <label for="id_name" style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.8rem; color: #1a1a2e;">
+                Category Name <span style="color: #dc3545;">*</span>
+            </label>
+            {{ form.name }}
+        </div>
+        
+        <!-- Description -->
+        <div style="margin-bottom: 16px;">
+            <label for="id_description" style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.8rem; color: #1a1a2e;">
+                Description
+            </label>
+            {{ form.description }}
+        </div>
+        
+        <!-- Icon -->
+        <div style="margin-bottom: 16px;">
+            <label for="id_icon" style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.8rem; color: #1a1a2e;">
+                Icon Class
+            </label>
+            {{ form.icon }}
+            <small style="color: #6c757d; font-size: 0.7rem;">Font Awesome icon class (e.g., fa-building, fa-laptop, fa-users)</small>
+        </div>
+        
+        <!-- Color -->
+        <div style="margin-bottom: 16px;">
+            <label for="id_color" style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.8rem; color: #1a1a2e;">
+                Color
+            </label>
+            {{ form.color }}
+        </div>
+        
+        <hr style="margin: 20px 0; border: none; border-top: 1px solid #e9ecef;">
+        
+        <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 15px;">Booking Rules</h3>
+        
+        <!-- Min Booking Duration -->
+        <div style="margin-bottom: 16px;">
+            <label for="id_min_booking_duration" style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.8rem; color: #1a1a2e;">
+                Minimum Booking Duration (hours)
+            </label>
+            {{ form.min_booking_duration }}
+            <small style="color: #6c757d; font-size: 0.7rem;">Leave blank for no minimum</small>
+        </div>
+        
+        <!-- Max Booking Duration -->
+        <div style="margin-bottom: 16px;">
+            <label for="id_max_booking_duration" style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.8rem; color: #1a1a2e;">
+                Maximum Booking Duration (hours)
+            </label>
+            {{ form.max_booking_duration }}
+            <small style="color: #6c757d; font-size: 0.7rem;">Leave blank for no maximum</small>
+        </div>
+        
+        <!-- Requires Approval -->
+        <div style="margin-bottom: 16px;">
+            <label for="id_requires_approval" style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.8rem; color: #1a1a2e;">
+                <input type="checkbox" name="requires_approval" id="id_requires_approval" {% if form.requires_approval.value %}checked{% endif %}>
+                Requires Admin Approval
+            </label>
+            <small style="color: #6c757d; font-size: 0.7rem;">Bookings in this category need admin approval</small>
+        </div>
+        
+        <!-- Booking Fee -->
+        <div style="margin-bottom: 16px;">
+            <label for="id_booking_fee" style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.8rem; color: #1a1a2e;">
+                Booking Fee ($)
+            </label>
+            {{ form.booking_fee }}
+            <small style="color: #6c757d; font-size: 0.7rem;">Additional fee per booking in this category</small>
+        </div>
+        
+        <!-- Submit Buttons -->
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px;">
+            <button type="submit" 
+                    style="padding: 10px 25px; background: #28a745; color: white; border: none; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease;"
+                    onmouseover="this.style.background='#218838'"
+                    onmouseout="this.style.background='#28a745'">
+                {% if category %}Update Category{% else %}Create Category{% endif %}
+            </button>
+            <a href="{% url 'manage_categories' %}" 
+               style="padding: 10px 25px; background: #6c757d; color: white; text-decoration: none; font-size: 0.9rem; font-weight: 600; transition: all 0.2s ease;"
+               onmouseover="this.style.background='#5a6268'"
+               onmouseout="this.style.background='#6c757d'">
+                Cancel
+            </a>
+        </div>
+    </form>
+</div>
+
+<script>
+    // Style form fields
+    document.querySelectorAll('input, textarea, select').forEach(el => {
+        if (el.type !== 'checkbox') {
+            el.style.width = '100%';
+            el.style.padding = '8px 12px';
+            el.style.border = '2px solid #e9ecef';
+            el.style.fontSize = '0.85rem';
+            el.style.fontFamily = 'Mona Sans, sans-serif';
+            el.style.boxSizing = 'border-box';
+            el.onfocus = function() { 
+                this.style.borderColor = '#007bff'; 
+                this.style.boxShadow = '0 0 0 3px rgba(0,123,255,0.1)'; 
+            };
+            el.onblur = function() { 
+                this.style.borderColor = '#e9ecef'; 
+                this.style.boxShadow = 'none'; 
+            };
+        }
+    });
+    
+    // Color picker styling
+    const colorInput = document.getElementById('id_color');
+    if (colorInput) {
+        colorInput.style.width = '60px';
+        colorInput.style.height = '45px';
+        colorInput.style.padding = '4px';
+        colorInput.style.cursor = 'pointer';
+    }
+</script>
+
+{% endblock %}

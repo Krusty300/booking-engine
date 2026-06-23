@@ -55,13 +55,13 @@
                     <!-- Status Badge on Image -->
                     <div style="position: absolute; top: 10px; right: 10px;">
                         {% if resource.status == 'APPROVED' %}
-                            <span style="background: rgba(40, 167, 69, 0.9); color: white; padding: 2px 10px; font-size: 0.65rem; font-weight: 600;">✅ Approved</span>
+                            <span style="background: rgba(40, 167, 69, 0.9); color: white; padding: 2px 10px; font-size: 0.65rem; font-weight: 600;">Approved</span>
                         {% elif resource.status == 'PENDING' %}
-                            <span style="background: rgba(255, 193, 7, 0.9); color: #856404; padding: 2px 10px; font-size: 0.65rem; font-weight: 600;">⏳ Pending</span>
+                            <span style="background: rgba(255, 193, 7, 0.9); color: #856404; padding: 2px 10px; font-size: 0.65rem; font-weight: 600;">Pending</span>
                         {% elif resource.status == 'REJECTED' %}
-                            <span style="background: rgba(220, 53, 69, 0.9); color: white; padding: 2px 10px; font-size: 0.65rem; font-weight: 600;">❌ Rejected</span>
+                            <span style="background: rgba(220, 53, 69, 0.9); color: white; padding: 2px 10px; font-size: 0.65rem; font-weight: 600;">Rejected</span>
                         {% else %}
-                            <span style="background: rgba(108, 117, 125, 0.9); color: white; padding: 2px 10px; font-size: 0.65rem; font-weight: 600;">⛔ Inactive</span>
+                            <span style="background: rgba(108, 117, 125, 0.9); color: white; padding: 2px 10px; font-size: 0.65rem; font-weight: 600;">Inactive</span>
                         {% endif %}
                     </div>
                 </div>
@@ -80,13 +80,13 @@
                         {% elif resource.status == 'REJECTED' %}#dc3545
                         {% else %}#6c757d{% endif %};">
                         {% if resource.status == 'APPROVED' %}
-                            <span style="color: #28a745;">✅ This resource is live and available for booking</span>
+                            <span style="color: #28a745;">This resource is live and available for booking</span>
                         {% elif resource.status == 'PENDING' %}
-                            <span style="color: #856404;">⏳ Waiting for admin approval. It will be available once approved.</span>
+                            <span style="color: #856404;">Waiting for admin approval. It will be available once approved.</span>
                         {% elif resource.status == 'REJECTED' %}
-                            <span style="color: #dc3545;">❌ This resource has been rejected. Please contact admin for details.</span>
+                            <span style="color: #dc3545;">This resource has been rejected. Please contact admin for details.</span>
                         {% else %}
-                            <span style="color: #6c757d;">⛔ This resource has been deactivated. Contact admin to reactivate.</span>
+                            <span style="color: #6c757d;">This resource has been deactivated. Contact admin to reactivate.</span>
                         {% endif %}
                     </div>
                     
