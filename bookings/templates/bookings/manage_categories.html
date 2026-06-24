@@ -36,16 +36,16 @@
                 <!-- Category Rules -->
                 <div style="margin: 10px 0; padding: 10px; background: #f8f9fa; font-size: 0.75rem;">
                     {% if category.min_booking_duration %}
-                        <div>⏱️ Min duration: {{ category.min_booking_duration }} hour(s)</div>
+                        <div>Min duration: {{ category.min_booking_duration }} hour(s)</div>
                     {% endif %}
                     {% if category.max_booking_duration %}
-                        <div>⏱️ Max duration: {{ category.max_booking_duration }} hour(s)</div>
+                        <div>Max duration: {{ category.max_booking_duration }} hour(s)</div>
                     {% endif %}
                     {% if category.requires_approval %}
-                        <div>✅ Requires approval</div>
+                        <div>Requires approval</div>
                     {% endif %}
                     {% if category.booking_fee > 0 %}
-                        <div>💰 Booking fee: ${{ category.booking_fee }}</div>
+                        <div>Booking fee: ${{ category.booking_fee }}</div>
                     {% endif %}
                 </div>
                 

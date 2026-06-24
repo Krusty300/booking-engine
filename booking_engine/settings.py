@@ -39,6 +39,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'bookings.middleware.AnalyticsMiddleware',  # Updated path
 ]
 
 ROOT_URLCONF = 'booking_engine.urls'
@@ -87,9 +88,18 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # Internationalization
 LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Africa/Nairobi'  # Change to your local timezone
 USE_I18N = True
 USE_TZ = True
+
+# these are for date/time formatting
+DATE_FORMAT = 'M d, Y'
+DATETIME_FORMAT = 'M d, Y H:i'
+SHORT_DATE_FORMAT = 'm/d/Y'
+SHORT_DATETIME_FORMAT = 'm/d/Y H:i'
+
+# Timezone support
+USE_DEPRECATED_PYTZ = False
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = 'static/'
@@ -136,3 +146,6 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 # Maximum file upload size (5MB)
 MAX_UPLOAD_SIZE = 5242880
+
+# Dark Mode Settings
+SESSION_COOKIE_AGE = 1209600  # 2 weeks in seconds

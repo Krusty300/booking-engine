@@ -2,6 +2,9 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    # Calendar View
+    path('calendar/', views.CalendarView.as_view(), name='calendar_view'),
+
     # Resource listing and booking
     path('', views.resource_list, name='resource_list'),
     path('resource/<int:resource_id>/', views.resource_detail, name='resource_detail'),
@@ -38,5 +41,4 @@ urlpatterns = [
     path('category/create/', views.create_category, name='create_category'),
     path('category/<int:category_id>/edit/', views.edit_category, name='edit_category'),
     path('category/<int:category_id>/delete/', views.delete_category, name='delete_category'),
-
 ]

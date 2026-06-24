@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: 'Arial', sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #1a1a2e; color: white; padding: 20px; text-align: center; }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; }
+        .stat-card { background: #f8f9fa; padding: 12px; text-align: center; }
+        .stat-number { font-size: 24px; font-weight: bold; }
+        .stat-label { font-size: 12px; color: #6c757d; }
+        .section { margin: 20px 0; }
+        .section h2 { border-bottom: 2px solid #e9ecef; padding-bottom: 10px; }
+        .footer { text-align: center; padding: 20px; font-size: 12px; color: #6c757d; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #e9ecef; }
+        th { background: #f8f9fa; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 11px; font-weight: 600; }
+        .badge-confirmed { background: #d4edda; color: #155724; }
+        .badge-pending { background: #fff3cd; color: #856404; }
+        .badge-cancelled { background: #f8d7da; color: #721c24; }
+        .badge-completed { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Weekly Analytics Report</h1>
+        <p>{{ report_date|date:"F j, Y" }}</p>
+    </div>
+    
+    <!-- Summary Stats -->
+    <div class="section">
+        <h2>Summary Statistics</h2>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number" style="color: #007bff;">{{ stats.total_bookings }}</div>
+                <div class="stat-label">Total Bookings</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" style="color: #28a745;">{{ stats.confirmed_bookings }}</div>
+                <div class="stat-label">Confirmed</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" style="color: #dc3545;">{{ stats.cancelled_bookings }}</div>
+                <div class="stat-label">Cancelled</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" style="color: #17a2b8;">{{ stats.completed_bookings }}</div>
+                <div class="stat-label">Completed</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" style="color: #6c757d;">{{ stats.total_users }}</div>
+                <div class="stat-label">Total Users</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" style="color: #28a745;">{{ stats.active_users }}</div>
+                <div class="stat-label">Active Users</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Weekly Trends -->
+    <div class="section">
+        <h2>Weekly Trends</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Day</th>
+                    <th>Bookings</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in weekly_data %}
+                    <tr>
+                        <td>{{ item.day }}</td>
+                        <td>{{ item.count }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Status Distribution -->
+    <div class="section">
+        <h2>Status Distribution</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Status</th>
+                    <th>Count</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in status_data %}
+                    <tr>
+                        <td><span class="badge badge-{{ item.status|lower }}">{{ item.status }}</span></td>
+                        <td>{{ item.count }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Popular Resources -->
+    <div class="section">
+        <h2>Popular Resources</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Resource</th>
+                    <th>Bookings</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for resource in top_resources|slice:":5" %}
+                    <tr>
+                        <td>{{ resource.name }}</td>
+                        <td>{{ resource.booking_count }}</td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="2" style="text-align: center; color: #6c757d;">No bookings yet</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="footer">
+        <p>This is an automated weekly report. For full analytics, visit your dashboard.</p>
+        <p>&copy; {{ report_date|date:"Y" }} Booking Engine. All rights reserved.</p>
+    </div>
+</body>
+</html>

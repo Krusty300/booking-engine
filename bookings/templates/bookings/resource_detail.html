@@ -52,11 +52,11 @@
         {% endif %}
         
         {% if resource.location %}
-            <p style="font-size: 0.85rem; margin: 5px 0;">📍 <strong>Location:</strong> {{ resource.location }}</p>
+            <p style="font-size: 0.85rem; margin: 5px 0;"><strong>Location:</strong> {{ resource.location }}</p>
         {% endif %}
         
         {% if resource.max_capacity %}
-            <p style="font-size: 0.85rem; margin: 5px 0;">👥 <strong>Capacity:</strong> {{ resource.max_capacity }} people</p>
+            <p style="font-size: 0.85rem; margin: 5px 0;"><strong>Capacity:</strong> {{ resource.max_capacity }} people</p>
         {% endif %}
         
         {% if resource.price_per_hour %}
@@ -156,7 +156,7 @@
     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 12px;">
         <h3 style="font-size: 1rem; font-weight: 700; margin: 0;">Check Availability</h3>
         <span style="font-size: 0.7rem; color: #6c757d; background: #e9ecef; padding: 3px 10px; font-weight: 600;">
-            Nairobi (UTC+3)
+        Nairobi (UTC+3)
         </span>
     </div>
     <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
@@ -249,7 +249,7 @@ function loadSlots() {
             
             let html = '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap;">';
             html += '<h3 style="font-size: 1rem; font-weight: 700; margin: 0;">Available Time Slots</h3>';
-            html += '<span style="font-size: 0.65rem; color: #6c757d; background: #e9ecef; padding: 2px 10px; font-weight: 600;">🕐 Nairobi (UTC+3)</span>';
+            html += '<span style="font-size: 0.65rem; color: #6c757d; background: #e9ecef; padding: 2px 10px; font-weight: 600;">Nairobi (UTC+3)</span>';
             html += '</div>';
             html += '<div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px;">';
             
@@ -271,12 +271,12 @@ function loadSlots() {
                 
                 if (slot.available && !isPast) {
                     status = 'available';
-                    displayText += 'Available';
+                    displayText += ' Available';
                     clickable = true;
                     hasAvailable = true;
                 } else if (slot.available && isPast) {
                     status = 'past';
-                    displayText += 'Past';
+                    displayText += ' Past';
                     clickable = false;
                 } else {
                     status = 'booked';

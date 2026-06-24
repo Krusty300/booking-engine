@@ -5,14 +5,15 @@
     
     <!-- Header -->
     <div style="text-align: center; margin-bottom: 30px;">
-        <div style="font-size: 40px; margin-bottom: 8px;">🔐</div>
-        <h1 style="margin: 0; font-size: 1.6rem; font-weight: 800; color: #1a1a2e;">Welcome Back</h1>
-        <p style="color: #6c757d; margin-top: 6px; font-size: 0.85rem;">Sign in to access your bookings</p>
+        <img src="/static/bookings/images/registration-icon.png" alt="Login" 
+        style="width: 60px; height: 60px; object-fit: contain;">
+        <h1 style="margin: 0; font-size: 1.6rem; font-weight: 800; color: var(--text-primary);">Welcome Back</h1>
+        <p style="color: var(--text-secondary); margin-top: 6px; font-size: 0.85rem;">Sign in to access your bookings</p>
     </div>
 
     <!-- Error Messages -->
     {% if form.errors %}
-        <div style="padding: 10px 14px; margin-bottom: 20px; background: #f8d7da; border-left: 4px solid #dc3545; color: #721c24; font-weight: 500; font-size: 0.85rem;">
+        <div style="padding: 10px 14px; margin-bottom: 20px; background: var(--message-bg-error); border-left: 4px solid #dc3545; color: var(--message-text-error); font-weight: 500; font-size: 0.85rem;">
             <div style="display: flex; align-items: center; gap: 8px;">
                 <span>Your username and password didn't match. Please try again.</span>
             </div>
@@ -21,13 +22,13 @@
 
     {% if next %}
         {% if user.is_authenticated %}
-            <div style="padding: 10px 14px; margin-bottom: 20px; background: #fff3cd; border-left: 4px solid #ffc107; color: #856404; font-size: 0.85rem;">
+            <div style="padding: 10px 14px; margin-bottom: 20px; background: var(--message-bg-warning); border-left: 4px solid #ffc107; color: var(--message-text-warning); font-size: 0.85rem;">
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <span>Your account doesn't have access to this page. Please login with an account that has access.</span>
                 </div>
             </div>
         {% else %}
-            <div style="padding: 10px 14px; margin-bottom: 20px; background: #d1ecf1; border-left: 4px solid #17a2b8; color: #0c5460; font-size: 0.85rem;">
+            <div style="padding: 10px 14px; margin-bottom: 20px; background: var(--message-bg-info); border-left: 4px solid #17a2b8; color: var(--message-text-info); font-size: 0.85rem;">
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <span>Please login to see this page.</span>
                 </div>
@@ -36,12 +37,12 @@
     {% endif %}
 
     <!-- Login Form -->
-    <form method="post" action="{% url 'login' %}" style="background: white; padding: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.08);">
+    <form method="post" action="{% url 'login' %}" style="background: var(--bg-secondary); padding: 25px; box-shadow: 0 2px 10px var(--shadow-color);">
         {% csrf_token %}
         
         <!-- Username Field -->
         <div style="margin-bottom: 16px;">
-            <label for="id_username" style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.8rem; color: #1a1a2e;">
+            <label for="id_username" style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.8rem; color: var(--text-primary);">
                 Username
             </label>
             <input type="text" 
@@ -49,37 +50,52 @@
                    id="id_username" 
                    required 
                    placeholder="Enter your username"
-                   style="width: 100%; padding: 10px 12px; border: 2px solid #e9ecef; font-size: 0.85rem; transition: all 0.2s ease;"
+                   style="width: 100%; padding: 10px 12px; border: 2px solid var(--input-border); font-size: 0.85rem; transition: all 0.2s ease; background: var(--bg-input); color: var(--text-primary);"
                    onfocus="this.style.borderColor='#007bff'; this.style.boxShadow='0 0 0 3px rgba(0,123,255,0.1)'"
-                   onblur="this.style.borderColor='#e9ecef'; this.style.boxShadow='none'">
+                   onblur="this.style.borderColor='var(--input-border)'; this.style.boxShadow='none'">
         </div>
         
-        <!-- Password Field -->
+        <!-- Password Field with SVG Toggle -->
         <div style="margin-bottom: 20px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-                <label for="id_password" style="font-weight: 600; font-size: 0.8rem; color: #1a1a2e;">
+                <label for="id_password" style="font-weight: 600; font-size: 0.8rem; color: var(--text-primary);">
                     Password
                 </label>
-                <a href="{% url 'password_reset' %}" style="color: #007bff; text-decoration: none; font-size: 0.75rem; font-weight: 500; transition: opacity 0.2s ease;"
+                <a href="{% url 'password_reset' %}" style="color: var(--link-color); text-decoration: none; font-size: 0.75rem; font-weight: 500; transition: opacity 0.2s ease;"
                    onmouseover="this.style.opacity='0.8'"
                    onmouseout="this.style.opacity='1'">
                     Forgot password?
                 </a>
             </div>
-            <input type="password" 
-                   name="password" 
-                   id="id_password" 
-                   required 
-                   placeholder="Enter your password"
-                   style="width: 100%; padding: 10px 12px; border: 2px solid #e9ecef; font-size: 0.85rem; transition: all 0.2s ease;"
-                   onfocus="this.style.borderColor='#007bff'; this.style.boxShadow='0 0 0 3px rgba(0,123,255,0.1)'"
-                   onblur="this.style.borderColor='#e9ecef'; this.style.boxShadow='none'">
+            <div style="position: relative;">
+                <input type="password" 
+                       name="password" 
+                       id="id_password" 
+                       required 
+                       placeholder="Enter your password"
+                       style="width: 100%; padding: 10px 12px; border: 2px solid var(--input-border); font-size: 0.85rem; transition: all 0.2s ease; padding-right: 40px; background: var(--bg-input); color: var(--text-primary);"
+                       onfocus="this.style.borderColor='#007bff'; this.style.boxShadow='0 0 0 3px rgba(0,123,255,0.1)'"
+                       onblur="this.style.borderColor='var(--input-border)'; this.style.boxShadow='none'">
+                <button type="button" 
+                        onclick="togglePassword()" 
+                        id="togglePasswordBtn"
+                        style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+                               background: none; border: none; cursor: pointer; padding: 4px 6px; color: var(--text-secondary); display: flex; align-items: center; justify-content: center;"
+                        onmouseover="this.style.color='var(--text-primary)'"
+                        onmouseout="this.style.color='var(--text-secondary)'"
+                        title="Show/Hide password">
+                    <svg id="eyeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: block; flex-shrink: 0;">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                </button>
+            </div>
         </div>
         
         <!-- Remember Me -->
         <div style="margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
             <input type="checkbox" id="remember" style="width: 16px; height: 16px; cursor: pointer;">
-            <label for="remember" style="font-size: 0.8rem; color: #6c757d; cursor: pointer;">Remember me</label>
+            <label for="remember" style="font-size: 0.8rem; color: var(--text-secondary); cursor: pointer;">Remember me</label>
         </div>
         
         <!-- Submit Button -->
@@ -94,25 +110,78 @@
     </form>
 
     <!-- Sign Up Link -->
-    <div style="text-align: center; margin-top: 25px; padding-top: 18px; border-top: 1px solid #e9ecef;">
-        <p style="color: #6c757d; font-size: 0.85rem; margin: 0;">
+    <div style="text-align: center; margin-top: 25px; padding-top: 18px; border-top: 1px solid var(--border-color);">
+        <p style="color: var(--text-secondary); font-size: 0.85rem; margin: 0;">
             Don't have an account? 
-            <a href="{% url 'signup' %}" style="color: #007bff; text-decoration: none; font-weight: 600; font-size: 0.85rem; transition: opacity 0.2s ease;"
+            <a href="{% url 'signup' %}" style="color: var(--link-color); text-decoration: none; font-weight: 600; font-size: 0.85rem; transition: opacity 0.2s ease;"
                onmouseover="this.style.opacity='0.8'"
                onmouseout="this.style.opacity='1'">
                 Create one now
             </a>
         </p>
-        <p style="color: #999; font-size: 0.7rem; margin-top: 8px;">
+        <p style="color: var(--text-secondary); font-size: 0.7rem; margin-top: 8px; opacity: 0.7;">
             By signing in, you agree to our Terms of Service and Privacy Policy
         </p>
     </div>
 
 </div>
 
+<script>
+    function togglePassword() {
+        const passwordField = document.getElementById('id_password');
+        const eyeIcon = document.getElementById('eyeIcon');
+        
+        if (passwordField.type === 'password') {
+            passwordField.type = 'text';
+            eyeIcon.innerHTML = `
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                <line x1="1" y1="1" x2="23" y2="23"/>
+            `;
+            document.getElementById('togglePasswordBtn').title = 'Hide password';
+        } else {
+            passwordField.type = 'password';
+            eyeIcon.innerHTML = `
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+            `;
+            document.getElementById('togglePasswordBtn').title = 'Show password';
+        }
+    }
+
+    // Also allow toggling with keyboard (Escape key to hide)
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            const passwordField = document.getElementById('id_password');
+            const eyeIcon = document.getElementById('eyeIcon');
+            if (passwordField.type === 'text') {
+                passwordField.type = 'password';
+                eyeIcon.innerHTML = `
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                `;
+                document.getElementById('togglePasswordBtn').title = 'Show password';
+            }
+        }
+    });
+</script>
+
 <style>
     input {
         box-sizing: border-box;
+    }
+    
+    /* Dark mode support for SVG icons */
+    [data-theme="dark"] #eyeIcon {
+        stroke: var(--text-secondary);
+    }
+    
+    /* Ensure icon is properly aligned */
+    #togglePasswordBtn {
+        line-height: 1;
+    }
+    
+    #togglePasswordBtn svg {
+        vertical-align: middle;
     }
     
     @media (max-width: 480px) {

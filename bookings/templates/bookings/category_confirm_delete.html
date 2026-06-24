@@ -17,7 +17,7 @@
     
     {% if category.resources.exists %}
         <div style="background: #f8d7da; padding: 12px; margin-bottom: 20px; border-left: 4px solid #dc3545; color: #721c24; font-size: 0.85rem;">
-            ⚠️ This category has resources assigned to it. You cannot delete it until you remove or reassign them.
+            This category has resources assigned to it. You cannot delete it until you remove or reassign them.
         </div>
         <a href="{% url 'manage_categories' %}" 
            style="padding: 10px 30px; background: #6c757d; color: white; text-decoration: none; font-size: 0.9rem; font-weight: 600; display: inline-block;"

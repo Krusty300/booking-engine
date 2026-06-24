@@ -2,16 +2,26 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import login, authenticate
 from django.contrib import messages
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.core.exceptions import ValidationError, PermissionDenied
 from django.utils import timezone
 from django.db import models
 from datetime import datetime, timedelta
-from .models import Resource, Booking, Category, UserProfile
+from .models import Resource, Booking, Category, UserProfile, AnalyticsEvent, DailyAnalytics
 from .services import BookingService
+from .export_service import ExportService
 from .forms import SignUpForm, ResourceForm, ResourceStatusForm, CategoryForm, UserProfileForm, UserSettingsForm
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.forms import PasswordChangeForm
+from django.contrib.admin.views.decorators import staff_member_required
+from django.views.generic import TemplateView
+from calendar import monthcalendar, month_name
+from datetime import datetime, timedelta
+import calendar
+import json
+
+# Import analytics service after all other imports
+from .analytics_service import AnalyticsService
 
 # ============ AUTHENTICATION VIEWS ============
 
@@ -404,7 +414,7 @@ def get_available_times(request):
             slot_end = slot_start + timedelta(hours=1)
             
             # Check if the slot is in the past
-            is_past = slot_start < now
+            is_past_slot = slot_start < now
             
             # Check if the slot is booked
             is_booked = Booking.objects.filter(
@@ -415,7 +425,7 @@ def get_available_times(request):
             ).exists()
             
             # A slot is available if it's not booked AND not in the past
-            is_available = not is_booked and not is_past
+            is_available = not is_booked and not is_past_slot
             
             slots.append({
                 'start': slot_start.isoformat(),
@@ -423,7 +433,7 @@ def get_available_times(request):
                 'available': is_available,
                 'start_display': slot_start.strftime('%I:%M %p'),
                 'end_display': slot_end.strftime('%I:%M %p'),
-                'is_past': is_past,
+                'is_past': is_past_slot,
                 'is_booked': is_booked,
             })
         
@@ -472,13 +482,8 @@ def book_slot(request):
     except ValidationError as e:
         return JsonResponse({'error': str(e)}, status=400)
     except Exception as e:
-        # Print the full error to terminal
-        import traceback
-        print("=" * 50)
-        print("ERROR IN BOOKING:")
-        traceback.print_exc()
-        print("=" * 50)
         return JsonResponse({'error': f'Error: {str(e)}'}, status=500)
+
 
 @login_required
 def profile(request):
@@ -606,3 +611,408 @@ def booking_history(request):
         'status_choices': Booking.STATUS_CHOICES,
     }
     return render(request, 'bookings/booking_history.html', context)
+
+
+# ============ ANALYTICS VIEWS ============
+
+@staff_member_required
+def admin_dashboard(request):
+    """Admin dashboard with analytics"""
+    context = {
+        'stats': AnalyticsService.get_dashboard_stats(request),
+        'booking_analytics': AnalyticsService.get_booking_analytics('month'),
+        'user_analytics': AnalyticsService.get_user_analytics(),
+        'resource_analytics': AnalyticsService.get_resource_analytics(),
+        # New chart data
+        'hourly_patterns': AnalyticsService.get_hourly_patterns(),
+        'weekly_trends': AnalyticsService.get_weekly_trends(),
+        'status_distribution': AnalyticsService.get_status_distribution(),
+        'monthly_trends': AnalyticsService.get_monthly_trends(),
+    }
+    return render(request, 'bookings/admin_dashboard.html', context)
+
+@staff_member_required
+def analytics_data(request):
+    """API endpoint for analytics data (for charts)"""
+    data_type = request.GET.get('type', 'dashboard')
+    
+    if data_type == 'dashboard':
+        stats = AnalyticsService.get_dashboard_stats(request)
+        # Convert QuerySets to lists for JSON serialization
+        data = {
+            'total_bookings': stats.get('total_bookings', 0),
+            'confirmed_bookings': stats.get('confirmed_bookings', 0),
+            'cancelled_bookings': stats.get('cancelled_bookings', 0),
+            'completed_bookings': stats.get('completed_bookings', 0),
+            'total_users': stats.get('total_users', 0),
+            'active_users': stats.get('active_users', 0),
+            'new_users': stats.get('new_users', 0),
+            'total_revenue': str(stats.get('total_revenue', 0)),
+            'booking_trends': stats.get('booking_trends', []),
+            'category_distribution': stats.get('category_distribution', []),
+            'status_distribution': stats.get('status_distribution', []),
+            'popular_resources': [
+                {
+                    'name': r.name,
+                    'booking_count': r.booking_count,
+                    'category': r.category.name if r.category else 'Uncategorized'
+                }
+                for r in stats.get('popular_resources', [])
+            ],
+            'recent_bookings': [
+                {
+                    'id': b.id,
+                    'resource': b.resource.name,
+                    'customer': b.customer.username,
+                    'status': b.get_status_display(),
+                    'start_time': b.start_time.strftime('%Y-%m-%d %H:%M')
+                }
+                for b in stats.get('recent_bookings', [])
+            ]
+        }
+    elif data_type == 'bookings':
+        period = request.GET.get('period', 'month')
+        data = AnalyticsService.get_booking_analytics(period)
+    elif data_type == 'users':
+        user_data = AnalyticsService.get_user_analytics()
+        # Convert QuerySets to lists
+        data = {
+            'active_users': user_data.get('active_users', 0),
+            'inactive_users': user_data.get('inactive_users', 0),
+            'new_users_trend': user_data.get('new_users_trend', []),
+            'total_users': user_data.get('total_users', 0),
+            'users_with_bookings': user_data.get('users_with_bookings', 0),
+            'users_with_resources': user_data.get('users_with_resources', 0),
+            'engagement_rate': user_data.get('engagement_rate', 0),
+            'top_users': [
+                {
+                    'username': u.username,
+                    'booking_count': u.booking_count
+                }
+                for u in user_data.get('top_users', [])
+            ]
+        }
+    elif data_type == 'resources':
+        resource_data = AnalyticsService.get_resource_analytics()
+        # Convert QuerySets to lists
+        data = {
+            'resource_popularity': [
+                {
+                    'name': r.name,
+                    'booking_count': r.booking_count,
+                    'category': r.category.name if r.category else 'Uncategorized',
+                    'status': r.get_status_display()
+                }
+                for r in resource_data.get('resource_popularity', [])
+            ],
+            'category_counts': list(resource_data.get('category_counts', [])),
+            'status_counts': list(resource_data.get('status_counts', [])),
+            'popular_hours': resource_data.get('popular_hours', {})
+        }
+    else:
+        data = {'error': 'Invalid data type'}
+    
+    return JsonResponse(data, safe=False)
+
+@staff_member_required
+def export_report(request):
+    """Export reports in various formats"""
+    report_type = request.GET.get('type', 'bookings')
+    format_type = request.GET.get('format', 'csv')
+    
+    if format_type == 'csv':
+        # CSV export (existing)
+        if report_type == 'bookings':
+            content = AnalyticsService.export_bookings_csv()
+            filename = f'bookings_export_{timezone.now().strftime("%Y%m%d")}.csv'
+        elif report_type == 'users':
+            content = AnalyticsService.export_users_csv()
+            filename = f'users_export_{timezone.now().strftime("%Y%m%d")}.csv'
+        elif report_type == 'resources':
+            content = AnalyticsService.export_resources_csv()
+            filename = f'resources_export_{timezone.now().strftime("%Y%m%d")}.csv'
+        else:
+            return HttpResponse('Invalid report type', status=400)
+        
+        response = HttpResponse(content, content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
+    
+    elif format_type == 'excel':
+        excel_file = ExportService.export_to_excel(report_type)
+        response = HttpResponse(excel_file.getvalue(), 
+                                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = f'attachment; filename="{report_type}_{timezone.now().strftime("%Y%m%d")}.xlsx"'
+        return response
+    
+    elif format_type == 'pdf':
+        pdf_file = ExportService.export_to_pdf(report_type)
+        response = HttpResponse(pdf_file.getvalue(), content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{report_type}_{timezone.now().strftime("%Y%m%d")}.pdf"'
+        return response
+    
+    return HttpResponse('Invalid format', status=400)
+
+
+class CalendarView(TemplateView):
+    """Calendar view showing resource availability with direct booking"""
+    template_name = 'bookings/calendar.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Get month and year from URL params, default to current month
+        year = int(self.request.GET.get('year', timezone.now().year))
+        month = int(self.request.GET.get('month', timezone.now().month))
+        
+        # Get the resource ID if specified
+        resource_id = self.request.GET.get('resource')
+        selected_date = self.request.GET.get('date')
+        
+        # Get all approved resources for the calendar
+        if self.request.user.is_staff:
+            resources = Resource.objects.all()
+        else:
+            resources = Resource.objects.filter(status='APPROVED')
+        
+        # If a specific resource is selected, use it
+        selected_resource = None
+        if resource_id:
+            try:
+                selected_resource = resources.get(id=resource_id)
+            except Resource.DoesNotExist:
+                pass
+        
+        # Build calendar data
+        calendar_data = self.build_calendar_data(year, month, selected_resource)
+        
+        # Get time slots for selected date
+        time_slots = []
+        selected_date_obj = None
+        if selected_date:
+            try:
+                selected_date_obj = datetime.strptime(selected_date, '%Y-%m-%d').date()
+                time_slots = self.get_time_slots_for_date(selected_date_obj, selected_resource)
+            except ValueError:
+                pass
+        
+        # Get month navigation
+        prev_month = month - 1
+        prev_year = year
+        if prev_month == 0:
+            prev_month = 12
+            prev_year = year - 1
+        
+        next_month = month + 1
+        next_year = year
+        if next_month == 13:
+            next_month = 1
+            next_year = year + 1
+        
+        context.update({
+            'year': year,
+            'month': month,
+            'month_name': month_name[month],
+            'calendar_data': calendar_data,
+            'resources': resources,
+            'selected_resource': selected_resource,
+            'selected_date': selected_date_obj,
+            'time_slots': time_slots,
+            'prev_year': prev_year,
+            'prev_month': prev_month,
+            'next_year': next_year,
+            'next_month': next_month,
+            'today': timezone.now().date(),
+        })
+        
+        return context
+    
+    def build_calendar_data(self, year, month, selected_resource=None):
+        """Build calendar data with availability information"""
+        cal = monthcalendar(year, month)
+        today = timezone.now().date()
+        
+        calendar_data = []
+        
+        for week in cal:
+            week_data = []
+            for day in week:
+                if day == 0:
+                    week_data.append(None)
+                else:
+                    date_obj = datetime(year, month, day).date()
+                    
+                    # Check if this date is available for booking
+                    availability = self.get_day_availability(date_obj, selected_resource)
+                    
+                    week_data.append({
+                        'day': day,
+                        'date': date_obj,
+                        'is_today': date_obj == today,
+                        'is_past': date_obj < today,
+                        'availability': availability,
+                        'available_count': availability.get('available_count', 0),
+                        'total_slots': availability.get('total_slots', 0),
+                        'is_fully_booked': availability.get('is_fully_booked', False),
+                        'has_availability': availability.get('available_count', 0) > 0,
+                    })
+            
+            calendar_data.append(week_data)
+        
+        return calendar_data
+    
+    def get_day_availability(self, date_obj, resource=None):
+        """Get availability for a specific day"""
+        # If date is in the past, mark as unavailable
+        if date_obj < timezone.now().date():
+            return {
+                'available_count': 0,
+                'total_slots': 0,
+                'is_fully_booked': True,
+                'is_past': True
+            }
+        
+        # Generate time slots for the day (9 AM - 5 PM)
+        start_hour = 9
+        end_hour = 17
+        total_slots = end_hour - start_hour
+        available_count = 0
+        
+        # Get bookings for this day
+        day_start = timezone.make_aware(datetime.combine(date_obj, datetime.min.time()))
+        day_end = timezone.make_aware(datetime.combine(date_obj, datetime.max.time()))
+        
+        # Filter resources
+        if resource:
+            resources_list = [resource]
+        else:
+            resources_list = Resource.objects.filter(status='APPROVED')
+        
+        # Check each time slot
+        for hour in range(start_hour, end_hour):
+            slot_start = timezone.make_aware(datetime.combine(date_obj, datetime.min.time().replace(hour=hour)))
+            slot_end = slot_start + timedelta(hours=1)
+            
+            # Check if any resource is available for this slot
+            is_available = False
+            for res in resources_list:
+                # Check if slot is booked for this resource
+                is_booked = Booking.objects.filter(
+                    resource=res,
+                    start_time__lt=slot_end,
+                    end_time__gt=slot_start,
+                    status__in=['PENDING', 'CONFIRMED']
+                ).exists()
+                
+                if not is_booked:
+                    is_available = True
+                    break
+            
+            if is_available:
+                available_count += 1
+        
+        is_fully_booked = available_count == 0
+        
+        return {
+            'available_count': available_count,
+            'total_slots': total_slots,
+            'is_fully_booked': is_fully_booked,
+            'is_past': False,
+            'available_percentage': (available_count / total_slots * 100) if total_slots > 0 else 0
+        }
+    
+    def get_time_slots_for_date(self, date_obj, resource=None):
+        """Get available time slots for a specific date"""
+        from datetime import datetime, timedelta
+        from django.utils import timezone
+        
+        now = timezone.now()
+        slots = []
+        start_hour = 9
+        end_hour = 17
+        
+        # Get resources
+        if resource:
+            resources_list = [resource]
+        else:
+            resources_list = Resource.objects.filter(status='APPROVED')
+        
+        for hour in range(start_hour, end_hour):
+            slot_start = timezone.make_aware(datetime.combine(date_obj, datetime.min.time().replace(hour=hour)))
+            slot_end = slot_start + timedelta(hours=1)
+            
+            # Check if slot is in the past
+            is_past = slot_start < now
+            
+            # Check availability for this slot across all resources
+            available_resources = []
+            for res in resources_list:
+                is_booked = Booking.objects.filter(
+                    resource=res,
+                    start_time__lt=slot_end,
+                    end_time__gt=slot_start,
+                    status__in=['PENDING', 'CONFIRMED']
+                ).exists()
+                
+                if not is_booked and not is_past:
+                    available_resources.append({
+                        'id': res.id,
+                        'name': res.name,
+                        'category': res.category.name if res.category else 'Uncategorized'
+                    })
+            
+            slots.append({
+                'start_time': slot_start,
+                'end_time': slot_end,
+                'start_display': slot_start.strftime('%I:%M %p'),
+                'end_display': slot_end.strftime('%I:%M %p'),
+                'is_past': is_past,
+                'is_available': len(available_resources) > 0 and not is_past,
+                'available_resources': available_resources,
+                'resource_count': len(available_resources)
+            })
+        
+        return slots
+    
+    def post(self, request, *args, **kwargs):
+        """Handle AJAX booking requests from the calendar"""
+        import json
+        from .services import BookingService
+        from django.core.exceptions import ValidationError
+        
+        try:
+            data = json.loads(request.body)
+            resource_id = data.get('resource_id')
+            start_time_str = data.get('start_time')
+            end_time_str = data.get('end_time')
+            notes = data.get('notes', '')
+            
+            if not all([resource_id, start_time_str, end_time_str]):
+                return JsonResponse({'error': 'Missing parameters'}, status=400)
+            
+            start_time = datetime.fromisoformat(start_time_str)
+            end_time = datetime.fromisoformat(end_time_str)
+            
+            if timezone.is_naive(start_time):
+                start_time = timezone.make_aware(start_time)
+            if timezone.is_naive(end_time):
+                end_time = timezone.make_aware(end_time)
+            
+            booking = BookingService.create_booking(
+                resource_id=resource_id,
+                customer=request.user,
+                start_time=start_time,
+                end_time=end_time,
+                notes=notes
+            )
+            
+            return JsonResponse({
+                'success': True,
+                'booking_id': booking.id,
+                'message': f'Booking confirmed for {booking.start_time.strftime("%I:%M %p")}'
+            })
+            
+        except ValidationError as e:
+            return JsonResponse({'error': str(e)}, status=400)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)

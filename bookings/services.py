@@ -1,8 +1,9 @@
 from django.db import transaction
 from django.core.exceptions import ValidationError
 from django.utils import timezone
-from datetime import datetime
+from datetime import datetime, timedelta
 from .models import Booking, Resource
+from .utils.timezone_utils import validate_booking_time, make_aware_if_naive, is_past
 
 class BookingService:
     """Service class to handle booking creation with concurrency control"""
@@ -14,12 +15,14 @@ class BookingService:
         Create a booking with database-level locking to prevent double-booking.
         Returns the created Booking object or raises an exception.
         """
-        # Validate times
-        if start_time >= end_time:
-            raise ValidationError("End time must be after start time")
+        # Make times aware if needed
+        start_time = make_aware_if_naive(start_time)
+        end_time = make_aware_if_naive(end_time)
         
-        if start_time < timezone.now():
-            raise ValidationError("Cannot book in the past")
+        # Validate times
+        errors = validate_booking_time(start_time, end_time)
+        if errors:
+            raise ValidationError(" ".join(errors))
         
         # Lock the resource to check for conflicts
         resource = Resource.objects.select_for_update().get(id=resource_id)
@@ -35,14 +38,14 @@ class BookingService:
         if overlapping:
             raise ValidationError("This time slot is already booked")
         
-        # Create the booking with notes
+        # Create the booking
         booking = Booking.objects.create(
             resource=resource,
             customer=customer,
             start_time=start_time,
             end_time=end_time,
             status='CONFIRMED',
-            notes=notes,
+            notes=notes
         )
         
         return booking
