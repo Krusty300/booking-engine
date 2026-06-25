@@ -381,7 +381,7 @@ class MeetingRoomForm(forms.ModelForm):
             'has_smart_tv', 'has_audio_system', 'has_wifi', 'has_air_conditioning',
             'is_accessible', 'amenities', 'room_size_sqft', 'natural_light', 'has_window',
             'default_setup_time', 'default_teardown_time',
-            'floor_plan', 'room_photo',  # Make sure these are included
+            'floor_plan', 'room_photo',
             'notes'
         ]
         widgets = {
@@ -466,12 +466,20 @@ class ReviewFilterForm(forms.Form):
 class EquipmentForm(forms.ModelForm):
     """Form for creating and editing equipment"""
     
+    owner = forms.ModelChoiceField(
+        queryset=User.objects.all().order_by('username'),
+        required=False,
+        empty_label="Select an owner (optional)",
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    
     class Meta:
         model = Equipment
         fields = [
             'name', 'category', 'description', 'serial_number', 
             'asset_tag', 'barcode', 'condition', 'location',
-            'purchase_date', 'purchase_price', 'warranty_expiry', 'notes'
+            'purchase_date', 'purchase_price', 'warranty_expiry',
+            'notes', 'owner'
         ]
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Equipment name'}),
@@ -488,6 +496,7 @@ class EquipmentForm(forms.ModelForm):
         labels = {
             'serial_number': 'Serial Number *',
             'condition': 'Condition',
+            'owner': 'Equipment Owner',
         }
         help_texts = {
             'serial_number': 'Must be unique for each equipment item',
@@ -495,7 +504,10 @@ class EquipmentForm(forms.ModelForm):
         }
     
     def __init__(self, *args, **kwargs):
+        # Get the user from kwargs before calling super()
+        self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
+        
         # Make serial_number required
         self.fields['serial_number'].required = True
         
@@ -503,10 +515,42 @@ class EquipmentForm(forms.ModelForm):
         self.fields['category'].queryset = EquipmentCategory.objects.all().order_by('name')
         self.fields['category'].empty_label = 'Select a category...'
         
-        # Add CSS classes
-        for field in self.fields.values():
-            if 'class' not in field.widget.attrs:
-                field.widget.attrs['class'] = 'form-control'
+        # Set owner field based on user permissions
+        if self.user:
+            if not self.user.is_staff:
+                # Regular users can only see their own equipment
+                self.fields['owner'].queryset = User.objects.filter(id=self.user.id)
+                
+                # If editing existing equipment, preserve the current owner
+                if self.instance and self.instance.pk:
+                    # Keep the existing owner
+                    self.fields['owner'].initial = self.instance.owner
+                    # Hide the field (regular users can't change owner)
+                    self.fields['owner'].widget = forms.HiddenInput()
+                else:
+                    # New equipment - set owner to current user
+                    self.fields['owner'].initial = self.user
+                    self.fields['owner'].widget = forms.HiddenInput()
+            else:
+                # Staff can assign any owner
+                self.fields['owner'].queryset = User.objects.all().order_by('username')
+                self.fields['owner'].empty_label = 'Select an owner (optional)'
+                if self.instance and self.instance.pk:
+                    self.fields['owner'].initial = self.instance.owner
+        
+        # Add CSS classes for all visible fields
+        for field_name, field in self.fields.items():
+            if not isinstance(field.widget, forms.HiddenInput):
+                if 'class' not in field.widget.attrs:
+                    field.widget.attrs['class'] = 'form-control'
+    
+    def clean_owner(self):
+        """Preserve owner when editing"""
+        # If the owner field is not in the data (hidden for regular users)
+        if 'owner' not in self.data and self.instance and self.instance.pk:
+            # Keep the existing owner
+            return self.instance.owner
+        return self.cleaned_data.get('owner')
     
     def clean_serial_number(self):
         """Validate serial number uniqueness"""
@@ -517,7 +561,7 @@ class EquipmentForm(forms.ModelForm):
             if self.instance.pk:
                 existing = existing.exclude(pk=self.instance.pk)
             if existing.exists():
-                raise forms.ValidationError('A equipment with this serial number already exists.')
+                raise forms.ValidationError('Equipment with this serial number already exists.')
         return serial_number
     
     def clean_purchase_price(self):

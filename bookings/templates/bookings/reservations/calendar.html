@@ -1,0 +1,343 @@
+{% extends 'bookings/base.html' %}
+
+{% block content %}
+<div class="calendar-container">
+    <!-- Header -->
+    <div class="calendar-header">
+        <h1>Reservation Calendar</h1>
+        <div class="calendar-nav">
+            <a href="?year={{ prev_year }}&month={{ prev_month }}" class="btn-nav">←</a>
+            <span class="current-month">{{ month_name }} {{ year }}</span>
+            <a href="?year={{ next_year }}&month={{ next_month }}" class="btn-nav">→</a>
+            <a href="{% url 'create_reservation' %}" class="btn-primary">New Reservation</a>
+        </div>
+    </div>
+
+    <!-- Calendar Grid -->
+    <div class="calendar-grid">
+        <div class="calendar-weekdays">
+            <div>Sun</div>
+            <div>Mon</div>
+            <div>Tue</div>
+            <div>Wed</div>
+            <div>Thu</div>
+            <div>Fri</div>
+            <div>Sat</div>
+        </div>
+        
+        {% for week in calendar_data.calendar_data %}
+            <div class="calendar-week">
+                {% for day in week %}
+                    {% if day %}
+                        <div class="calendar-day {% if day.date|date:'Y-m-d' == today|date:'Y-m-d' %}today{% endif %}">
+                            <div class="day-number">{{ day.day }}</div>
+                            {% if day.count > 0 %}
+                                <div class="day-reservations">
+                                    <span class="reservation-count">{{ day.count }}</span>
+                                    <span class="reservation-label">reservation{{ day.count|pluralize }}</span>
+                                </div>
+                            {% endif %}
+                            <div class="day-tooltip">
+                                {% for reservation in day.reservations %}
+                                    <div class="tooltip-item">
+                                        <strong>{{ reservation.equipment.name }}</strong>
+                                        <span class="tooltip-status status-{{ reservation.status|lower }}">
+                                            {{ reservation.get_status_display }}
+                                        </span>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="calendar-day empty"></div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        {% endfor %}
+    </div>
+
+    <!-- Legend -->
+    <div class="calendar-legend">
+        <div class="legend-item">
+            <span class="legend-color pending"></span>
+            <span>Pending</span>
+        </div>
+        <div class="legend-item">
+            <span class="legend-color confirmed"></span>
+            <span>Confirmed</span>
+        </div>
+        <div class="legend-item">
+            <span class="legend-color cancelled"></span>
+            <span>Cancelled</span>
+        </div>
+        <div class="legend-item">
+            <span class="legend-color completed"></span>
+            <span>Completed</span>
+        </div>
+    </div>
+</div>
+
+<style>
+.calendar-container {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.calendar-header h1 {
+    margin: 0;
+    font-size: 1.6rem;
+    font-weight: 700;
+}
+
+.calendar-nav {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.btn-nav {
+    padding: 6px 14px;
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    text-decoration: none;
+    color: #495057;
+    font-size: 1.2rem;
+    transition: all 0.2s;
+}
+
+.btn-nav:hover {
+    background: #e9ecef;
+}
+
+.current-month {
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.btn-primary {
+    padding: 6px 16px;
+    background: #007bff;
+    color: white;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: background 0.2s;
+}
+
+.btn-primary:hover {
+    background: #0056b3;
+    color: white;
+}
+
+.calendar-grid {
+    background: white;
+    border: 1px solid #e9ecef;
+    overflow: hidden;
+}
+
+.calendar-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    background: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.calendar-weekdays div {
+    padding: 10px;
+    text-align: center;
+    font-weight: 600;
+    color: #495057;
+    font-size: 0.85rem;
+}
+
+.calendar-week {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+}
+
+.calendar-day {
+    position: relative;
+    min-height: 80px;
+    padding: 8px;
+    border-right: 1px solid #e9ecef;
+    border-bottom: 1px solid #e9ecef;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.calendar-day:hover {
+    background: #f8f9fa;
+}
+
+.calendar-day:hover .day-tooltip {
+    display: block;
+}
+
+.calendar-day:nth-child(7n) {
+    border-right: none;
+}
+
+.calendar-day.empty {
+    background: #f8f9fa;
+    cursor: default;
+}
+
+.calendar-day.today {
+    background: #e3f2fd;
+}
+
+.day-number {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #1a1a2e;
+}
+
+.day-reservations {
+    margin-top: 4px;
+}
+
+.reservation-count {
+    display: inline-block;
+    padding: 2px 8px;
+    background: #007bff;
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 600;
+    border-radius: 12px;
+}
+
+.reservation-label {
+    font-size: 0.6rem;
+    color: #6c757d;
+    margin-left: 4px;
+}
+
+.day-tooltip {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-top: none;
+    padding: 8px;
+    min-width: 150px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.tooltip-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+    border-bottom: 1px solid #f1f3f5;
+    font-size: 0.8rem;
+}
+
+.tooltip-item:last-child {
+    border-bottom: none;
+}
+
+.tooltip-status {
+    padding: 1px 8px;
+    font-size: 0.6rem;
+    font-weight: 600;
+}
+
+.tooltip-status.status-pending { background: #fff3cd; color: #856404; }
+.tooltip-status.status-confirmed { background: #d4edda; color: #155724; }
+.tooltip-status.status-cancelled { background: #f8d7da; color: #721c24; }
+.tooltip-status.status-completed { background: #d1ecf1; color: #0c5460; }
+
+.calendar-legend {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-top: 20px;
+    padding: 12px;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+}
+
+.legend-color {
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+}
+
+.legend-color.pending { background: #ffc107; }
+.legend-color.confirmed { background: #28a745; }
+.legend-color.cancelled { background: #dc3545; }
+.legend-color.completed { background: #17a2b8; }
+
+@media (max-width: 768px) {
+    .calendar-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    
+    .calendar-nav {
+        width: 100%;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .calendar-day {
+        min-height: 60px;
+        padding: 4px;
+    }
+    
+    .day-number {
+        font-size: 0.8rem;
+    }
+    
+    .reservation-count {
+        font-size: 0.6rem;
+        padding: 1px 6px;
+    }
+    
+    .calendar-weekdays div {
+        font-size: 0.7rem;
+        padding: 6px;
+    }
+}
+
+@media (max-width: 480px) {
+    .calendar-day {
+        min-height: 50px;
+    }
+    
+    .day-number {
+        font-size: 0.7rem;
+    }
+    
+    .reservation-label {
+        display: none;
+    }
+    
+    .calendar-legend {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+}
+</style>
+{% endblock %}

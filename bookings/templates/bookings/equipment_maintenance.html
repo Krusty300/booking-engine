@@ -2,34 +2,52 @@
 
 {% block content %}
 <div class="maintenance-container">
+    <!-- Page Header -->
     <div class="page-header">
-    <div>
-        <h1>Equipment Maintenance</h1>
-        <p class="subtitle">Schedule and track maintenance for all equipment</p>
+        <div>
+            <h1>Equipment Maintenance</h1>
+            <p class="subtitle">
+                {% if is_staff %}
+                    Schedule and track maintenance for all equipment
+                {% else %}
+                    Schedule and track maintenance for your equipment
+                {% endif %}
+            </p>
+        </div>
+        <div class="header-stats">
+            <div class="stat-item">
+                <span class="stat-number">{{ total_records }}</span>
+                <span class="stat-label">Total Records</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number scheduled-count">{{ scheduled_count }}</span>
+                <span class="stat-label">Scheduled</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number in-progress-count">{{ in_progress_count }}</span>
+                <span class="stat-label">In Progress</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number completed-count">{{ completed_count }}</span>
+                <span class="stat-label">Completed</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number cancelled-count">{{ cancelled_count }}</span>
+                <span class="stat-label">Cancelled</span>
+            </div>
+        </div>
     </div>
-    <div class="header-stats">
-        <div class="stat-item">
-            <span class="stat-number">{{ total_records }}</span>
-            <span class="stat-label">Total Records</span>
+
+    <!-- Staff/User Info Banner -->
+    {% if not is_staff %}
+        <div class="user-info-banner">
+            <span>You are managing maintenance for <strong>{{ equipment_list|length }}</strong> equipment items you own.</span>
         </div>
-        <div class="stat-item">
-            <span class="stat-number scheduled-count">{{ scheduled_count }}</span>
-            <span class="stat-label">Scheduled</span>
+    {% else %}
+        <div class="staff-info-banner">
+            <span>Staff Mode - Managing maintenance for all equipment.</span>
         </div>
-        <div class="stat-item">
-            <span class="stat-number in-progress-count">{{ in_progress_count }}</span>
-            <span class="stat-label">In Progress</span>
-        </div>
-        <div class="stat-item">
-            <span class="stat-number completed-count">{{ completed_count }}</span>
-            <span class="stat-label">Completed</span>
-        </div>
-        <div class="stat-item">
-            <span class="stat-number cancelled-count">{{ cancelled_count }}</span>
-            <span class="stat-label">Cancelled</span>
-        </div>
-    </div>
-</div>
+    {% endif %}
 
     <!-- Main Grid -->
     <div class="maintenance-grid">
@@ -57,10 +75,21 @@
                                     {% elif eq.status == 'LOST' %}
                                     {% endif %}
                                     - {{ eq.get_status_display }}
+                                    {% if not is_staff %}
+                                        <span class="owner-badge">(Your Equipment)</span>
+                                    {% endif %}
                                 </option>
+                            {% empty %}
+                                <option value="">No equipment available for maintenance</option>
                             {% endfor %}
                         </select>
-                        <div class="form-hint">Select the equipment that needs maintenance</div>
+                        <div class="form-hint">
+                            {% if is_staff %}
+                                Select the equipment that needs maintenance
+                            {% else %}
+                                Select your equipment that needs maintenance
+                            {% endif %}
+                        </div>
                     </div>
                     
                     <!-- Maintenance Type -->
@@ -141,7 +170,13 @@
         <!-- Right Column: Maintenance History -->
         <div class="maintenance-history-section">
             <div class="history-header">
-                <h2>Recent Maintenance Records</h2>
+                <h2>
+                    {% if is_staff %}
+                        Recent Maintenance Records
+                    {% else %}
+                        Your Maintenance Records
+                    {% endif %}
+                </h2>
                 <div class="history-actions">
                     <button onclick="refreshHistory()" class="btn-refresh">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -174,6 +209,9 @@
                                         <div class="equipment-cell">
                                             <strong>{{ record.equipment.name }}</strong>
                                             <span class="serial-text">{{ record.equipment.serial_number }}</span>
+                                            {% if not is_staff %}
+                                                <span class="owner-badge-small">(Your Equipment)</span>
+                                            {% endif %}
                                         </div>
                                     </td>
                                     <td>
@@ -210,13 +248,15 @@
                                     </td>
                                     <td>
                                         <div class="action-buttons">
-                                            {% if record.status != 'COMPLETED' and record.status != 'CANCELLED' %}
+                                            <!-- Complete button - Staff only -->
+                                            {% if is_staff and record.status != 'COMPLETED' and record.status != 'CANCELLED' %}
                                                 <button onclick="completeMaintenance({{ record.id }})" 
                                                         class="btn-complete" 
                                                         title="Mark as completed">
                                                     ✓ Complete
                                                 </button>
                                             {% endif %}
+                                            <!-- View Details - Both Staff and Owners -->
                                             <button onclick="viewMaintenanceDetails({{ record.id }})" 
                                                     class="btn-view-details" 
                                                     title="View details">
@@ -231,7 +271,13 @@
             {% else %}
                 <div class="empty-state">
                     <h3>No Maintenance Records</h3>
-                    <p>No maintenance records have been created yet. Schedule your first maintenance using the form.</p>
+                    <p>
+                        {% if is_staff %}
+                            No maintenance records have been created yet. Schedule your first maintenance using the form.
+                        {% else %}
+                            You haven't scheduled any maintenance for your equipment yet.
+                        {% endif %}
+                    </p>
                 </div>
             {% endif %}
         </div>
@@ -240,6 +286,24 @@
 
 <!-- JavaScript -->
 <script>
+// Get CSRF token from cookie
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+const csrftoken = getCookie('csrftoken');
+
 document.addEventListener('DOMContentLoaded', function() {
     // Set default date to tomorrow
     const dateInput = document.getElementById('scheduled_date');
@@ -256,15 +320,13 @@ document.addEventListener('DOMContentLoaded', function() {
             const selectedOption = this.options[this.selectedIndex];
             const status = selectedOption.dataset.status;
             
-            // Warn if equipment is already in maintenance
             if (status === 'MAINTENANCE') {
-                alert('Warning: This equipment is already under maintenance.\n\n' +
+                alert('⚠️ Warning: This equipment is already under maintenance.\n\n' +
                       'Scheduling another maintenance task will keep it in maintenance status.');
             }
             
-            // Warn if equipment is not available
             if (status === 'RENTED') {
-                alert('Notice: This equipment is currently rented.\n\n' +
+                alert('⚠️ Notice: This equipment is currently rented.\n\n' +
                       'Scheduling maintenance will make it unavailable for rental.');
             }
         });
@@ -278,7 +340,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const btnContent = submitBtn.querySelector('.btn-content');
             const btnLoading = submitBtn.querySelector('.btn-loading');
             
-            // Show loading state
             btnContent.style.display = 'none';
             btnLoading.style.display = 'flex';
             submitBtn.disabled = true;
@@ -286,7 +347,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Complete Maintenance
+// Complete Maintenance - Staff Only
 function completeMaintenance(maintenanceId) {
     const confirmComplete = confirm(
         'Are you sure you want to mark this maintenance as completed?\n\n' +
@@ -296,12 +357,11 @@ function completeMaintenance(maintenanceId) {
     if (!confirmComplete) return;
     
     const notes = prompt('Add completion notes (optional):', 'Maintenance completed successfully.');
-    if (notes === null) return; // User cancelled
+    if (notes === null) return;
     
-    // Show loading state
     const btn = event.target;
     const originalText = btn.textContent;
-    btn.textContent = 'Processing...';
+    btn.textContent = '⏳ Processing...';
     btn.disabled = true;
     
     const formData = new FormData();
@@ -323,22 +383,21 @@ function completeMaintenance(maintenanceId) {
     })
     .then(data => {
         if (data.error) {
-            alert('Error: ' + data.error);
+            alert('❌ Error: ' + data.error);
         } else {
-            alert('Success! ' + data.message);
+            alert('✅ Success! ' + data.message);
             location.reload();
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Error: ' + error.message);
+        alert('❌ Error: ' + error.message);
     })
     .finally(() => {
         btn.textContent = originalText;
         btn.disabled = false;
     });
 }
-
 
 // View Maintenance Details
 function viewMaintenanceDetails(maintenanceId) {
@@ -347,19 +406,7 @@ function viewMaintenanceDetails(maintenanceId) {
 
 // Refresh History
 function refreshHistory() {
-    const btn = document.querySelector('.btn-refresh');
-    const originalText = btn.innerHTML;
-    btn.innerHTML = 'Refreshing...';
-    btn.disabled = true;
-    
     location.reload();
-}
-
-// Filter maintenance records by status
-function filterMaintenance(status) {
-    const url = new URL(window.location.href);
-    url.searchParams.set('status', status);
-    window.location.href = url.toString();
 }
 </script>
 
@@ -378,6 +425,8 @@ function filterMaintenance(status) {
     margin-bottom: 24px;
     padding-bottom: 16px;
     border-bottom: 2px solid #e9ecef;
+    flex-wrap: wrap;
+    gap: 15px;
 }
 
 .page-header h1 {
@@ -394,11 +443,16 @@ function filterMaintenance(status) {
 
 .header-stats {
     display: flex;
-    gap: 20px;
+    gap: 15px;
+    flex-wrap: wrap;
 }
 
 .stat-item {
     text-align: center;
+    padding: 8px 16px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    min-width: 80px;
 }
 
 .stat-number {
@@ -420,11 +474,36 @@ function filterMaintenance(status) {
     color: #28a745;
 }
 
+.stat-number.cancelled-count {
+    color: #dc3545;
+}
+
 .stat-label {
     font-size: 0.7rem;
     color: #6c757d;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+}
+
+/* Info Banners */
+.user-info-banner,
+.staff-info-banner {
+    padding: 10px 16px;
+    margin-bottom: 20px;
+    border-radius: 4px;
+    border-left: 4px solid;
+}
+
+.user-info-banner {
+    background: #e3f2fd;
+    border-left-color: #007bff;
+    color: #004085;
+}
+
+.staff-info-banner {
+    background: #cce5ff;
+    border-left-color: #007bff;
+    color: #004085;
 }
 
 /* Main Grid */
@@ -484,14 +563,25 @@ function filterMaintenance(status) {
     box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
 }
 
-.maintenance-form .form-control.error {
-    border-color: #dc3545;
-}
-
 .maintenance-form .form-hint {
     font-size: 0.7rem;
     color: #6c757d;
     margin-top: 4px;
+}
+
+.owner-badge {
+    font-size: 0.65rem;
+    color: #28a745;
+    font-weight: 600;
+    margin-left: 4px;
+}
+
+.owner-badge-small {
+    font-size: 0.6rem;
+    color: #28a745;
+    font-weight: 600;
+    margin-left: 4px;
+    display: block;
 }
 
 .form-row {
@@ -500,7 +590,6 @@ function filterMaintenance(status) {
     gap: 16px;
 }
 
-/* Submit Button */
 .btn-submit {
     width: 100%;
     padding: 12px;
@@ -513,17 +602,12 @@ function filterMaintenance(status) {
     font-weight: 600;
     transition: all 0.3s ease;
     font-family: inherit;
-    position: relative;
 }
 
 .btn-submit:hover:not(:disabled) {
     background: #0056b3;
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
-}
-
-.btn-submit:active:not(:disabled) {
-    transform: translateY(0);
 }
 
 .btn-submit:disabled {
@@ -606,7 +690,6 @@ function filterMaintenance(status) {
 /* Table */
 .table-responsive {
     overflow-x: auto;
-    margin: 0 -8px;
 }
 
 .maintenance-table {
@@ -638,7 +721,6 @@ function filterMaintenance(status) {
     background: #f8f9fa;
 }
 
-/* Row States */
 .row-scheduled {
     border-left: 3px solid #ffc107;
 }
@@ -651,7 +733,6 @@ function filterMaintenance(status) {
     border-left: 3px solid #28a745;
 }
 
-/* Equipment Cell */
 .equipment-cell {
     display: flex;
     flex-direction: column;
@@ -666,7 +747,6 @@ function filterMaintenance(status) {
     color: #6c757d;
 }
 
-/* Maintenance Type Badge */
 .maintenance-type-badge {
     display: inline-block;
     padding: 2px 10px;
@@ -683,7 +763,6 @@ function filterMaintenance(status) {
 .type-upgrade { background: #e2e3e5; color: #383d41; }
 .type-other { background: #e9ecef; color: #495057; }
 
-/* Title Cell */
 .title-cell {
     display: flex;
     flex-direction: column;
@@ -698,7 +777,6 @@ function filterMaintenance(status) {
     color: #6c757d;
 }
 
-/* Date Cell */
 .date-cell {
     display: flex;
     flex-direction: column;
@@ -709,7 +787,6 @@ function filterMaintenance(status) {
     color: #6c757d;
 }
 
-/* Status Badge */
 .status-badge {
     display: inline-block;
     padding: 3px 12px;
@@ -730,7 +807,6 @@ function filterMaintenance(status) {
     margin-top: 2px;
 }
 
-/* Cost */
 .cost-value {
     font-weight: 600;
 }
@@ -739,7 +815,6 @@ function filterMaintenance(status) {
     color: #adb5bd;
 }
 
-/* Action Buttons */
 .action-buttons {
     display: flex;
     gap: 4px;
@@ -764,6 +839,11 @@ function filterMaintenance(status) {
     background: #218838;
 }
 
+.btn-complete:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 .btn-view-details {
     padding: 4px 8px;
     background: #17a2b8;
@@ -779,7 +859,6 @@ function filterMaintenance(status) {
     background: #138496;
 }
 
-/* Empty State */
 .empty-state {
     text-align: center;
     padding: 60px 20px;
@@ -816,7 +895,6 @@ function filterMaintenance(status) {
     .page-header {
         flex-direction: column;
         align-items: flex-start;
-        gap: 16px;
     }
     
     .header-stats {
@@ -831,12 +909,20 @@ function filterMaintenance(status) {
     }
     
     .header-stats {
-        gap: 12px;
-        flex-wrap: wrap;
+        gap: 8px;
+    }
+    
+    .stat-item {
+        padding: 6px 12px;
+        min-width: 60px;
     }
     
     .stat-number {
         font-size: 1.2rem;
+    }
+    
+    .stat-label {
+        font-size: 0.6rem;
     }
     
     .form-row {
@@ -880,10 +966,6 @@ function filterMaintenance(status) {
     
     .stat-number {
         font-size: 1rem;
-    }
-    
-    .stat-label {
-        font-size: 0.6rem;
     }
 }
 </style>

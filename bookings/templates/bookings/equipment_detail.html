@@ -9,10 +9,20 @@
             <div class="equipment-meta">
                 <span class="status-badge status-{{ equipment.status|lower }}">{{ equipment.get_status_display }}</span>
                 <span class="condition-badge condition-{{ equipment.condition|lower }}">{{ equipment.get_condition_display }}</span>
+                <span class="owner-badge-detail">
+                    {% if equipment.owner %}
+                        {{ equipment.owner.username }}
+                        {% if equipment.owner == request.user %}
+                            <span class="owner-label">(Your Equipment)</span>
+                        {% endif %}
+                    {% else %}
+                        <span class="no-owner">No owner assigned</span>
+                    {% endif %}
+                </span>
             </div>
         </div>
         <div class="header-actions">
-            <a href="{% url 'equipment_list' %}" class="btn-back">← Back to Equipment</a>
+            <a href="{% url 'equipment_list' %}" class="btn-back">Back to Equipment</a>
         </div>
     </div>
 

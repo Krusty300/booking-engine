@@ -79,13 +79,21 @@ class EquipmentCategoryAdmin(admin.ModelAdmin):
 
 @admin.register(Equipment)
 class EquipmentAdmin(admin.ModelAdmin):
-    list_display = ['name', 'serial_number', 'category', 'status', 'condition', 'location']
-    list_filter = ['status', 'condition', 'category', 'created_at']
-    search_fields = ['name', 'serial_number', 'asset_tag', 'barcode']
-    readonly_fields = ['created_at']
+    list_display = ['name', 'serial_number', 'category', 'owner', 'status', 'condition', 'location', 'created_at']
+    list_filter = ['status', 'condition', 'category', 'owner', 'created_at']
+    search_fields = ['name', 'serial_number', 'asset_tag', 'barcode', 'owner__username', 'owner__email']
+    readonly_fields = ['created_at', 'updated_at']
+    autocomplete_fields = ['owner']
+    list_editable = ['status', 'condition']
+    
     fieldsets = (
         ('Basic Information', {
             'fields': ('name', 'category', 'description', 'location')
+        }),
+        ('Owner Information', {
+            'fields': ('owner',),
+            'classes': ('wide',),
+            'description': 'Select the user who owns this equipment. If left blank, the equipment will have no owner.'
         }),
         ('Tracking', {
             'fields': ('serial_number', 'asset_tag', 'barcode')
@@ -97,9 +105,32 @@ class EquipmentAdmin(admin.ModelAdmin):
             'fields': ('purchase_date', 'purchase_price', 'warranty_expiry')
         }),
         ('Additional', {
-            'fields': ('notes', 'created_at')
+            'fields': ('notes', 'created_at', 'updated_at')
         }),
     )
+    
+    def assign_owner(self, request, queryset):
+        """Admin action to assign owner to selected equipment"""
+        if 'apply' in request.POST:
+            owner_id = request.POST.get('owner')
+            if owner_id:
+                from django.contrib.auth.models import User
+                owner = User.objects.get(id=owner_id)
+                updated = queryset.update(owner=owner)
+                self.message_user(request, f'Owner assigned to {updated} equipment items.')
+                return
+        
+        from django.shortcuts import render
+        from django.contrib.auth.models import User
+        
+        users = User.objects.all()
+        return render(request, 'admin/assign_owner.html', {
+            'queryset': queryset,
+            'users': users,
+        })
+    
+    assign_owner.short_description = "Assign owner to selected equipment"
+    actions = ['assign_owner']
 
 @admin.register(EquipmentRental)
 class EquipmentRentalAdmin(admin.ModelAdmin):

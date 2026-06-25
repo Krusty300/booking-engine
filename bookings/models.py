@@ -629,6 +629,7 @@ class Equipment(models.Model):
     """Individual equipment item with serial number tracking"""
     STATUS_CHOICES = [
         ('AVAILABLE', 'Available'),
+        ('RESERVED', 'Reserved'),
         ('RENTED', 'Rented Out'),
         ('MAINTENANCE', 'Under Maintenance'),
         ('RETIRED', 'Retired'),
@@ -670,7 +671,7 @@ class Equipment(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    # ============ NEW: OWNER FIELD ============
+    # Owner field
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -686,7 +687,7 @@ class Equipment(models.Model):
             models.Index(fields=['serial_number']),
             models.Index(fields=['status']),
             models.Index(fields=['category']),
-            models.Index(fields=['owner']),  # Add index for owner field
+            models.Index(fields=['owner']),
         ]
 
     def __str__(self):
@@ -779,6 +780,185 @@ class EquipmentRental(models.Model):
         
         super().save(*args, **kwargs)
 
+
+class EquipmentReservation(models.Model):
+    """Equipment reservation for future dates"""
+    
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('CONFIRMED', 'Confirmed'),
+        ('CANCELLED', 'Cancelled'),
+        ('EXPIRED', 'Expired'),
+        ('COMPLETED', 'Completed'),
+    ]
+    
+    equipment = models.ForeignKey(
+        Equipment, 
+        on_delete=models.CASCADE, 
+        related_name='reservations'
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.CASCADE, 
+        related_name='equipment_reservations'
+    )
+    
+    # Date and time
+    start_date = models.DateTimeField()
+    end_date = models.DateTimeField()
+    
+    # Status
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    
+    # Additional info
+    purpose = models.TextField(blank=True, help_text="Purpose of reservation")
+    notes = models.TextField(blank=True)
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['equipment', 'status']),
+            models.Index(fields=['user', 'status']),
+            models.Index(fields=['start_date', 'end_date']),
+            models.Index(fields=['expires_at']),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['equipment', 'start_date', 'end_date'],
+                name='unique_reservation_slot'
+            )
+        ]
+    
+    def __str__(self):
+        return f"{self.equipment.name} - {self.user.username} ({self.start_date.strftime('%Y-%m-%d')})"
+    
+    def clean(self):
+        """Validate reservation dates"""
+        if self.start_date and self.end_date and self.end_date <= self.start_date:
+            raise ValidationError("End date must be after start date")
+        
+        if self.start_date and self.start_date < timezone.now():
+            raise ValidationError("Cannot make reservations in the past")
+    
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        if not self.expires_at and self.status == 'PENDING':
+            # Set expiration to 24 hours from creation
+            self.expires_at = timezone.now() + timedelta(days=1)
+        super().save(*args, **kwargs)
+    
+    def is_active(self):
+        """Check if reservation is still active"""
+        return self.status in ['PENDING', 'CONFIRMED']
+    
+    def is_expired(self):
+        """Check if reservation has expired"""
+        if self.expires_at and self.status == 'PENDING':
+            return timezone.now() > self.expires_at
+        return False
+    
+    def get_duration_days(self):
+        """Get reservation duration in days"""
+        return (self.end_date - self.start_date).days
+    
+    def can_cancel(self):
+        """Check if reservation can be cancelled"""
+        return self.status in ['PENDING', 'CONFIRMED']
+    
+    def confirm(self):
+        """Confirm the reservation"""
+        self.status = 'CONFIRMED'
+        self.confirmed_at = timezone.now()
+        self.save()
+        
+        # Update equipment status to RESERVED
+        self.equipment.status = 'RESERVED'
+        self.equipment.save()
+        
+        # Send notification to user
+        try:
+            from .services.notification_service import NotificationService
+            NotificationService.send_reservation_confirmed(self)
+        except Exception as e:
+            print(f"Error sending confirmation email: {e}")
+    
+    def cancel(self):
+        """Cancel the reservation"""
+        self.status = 'CANCELLED'
+        self.save()
+        
+        # Revert equipment status if it was reserved
+        if self.equipment.status == 'RESERVED':
+            self.equipment.status = 'AVAILABLE'
+            self.equipment.save()
+        
+        # Send notification to user
+        try:
+            from .services.notification_service import NotificationService
+            NotificationService.send_reservation_cancelled(self)
+        except Exception as e:
+            print(f"Error sending cancellation email: {e}")
+    
+    def expire(self):
+        """Expire the reservation"""
+        self.status = 'EXPIRED'
+        self.save()
+        
+        # Revert equipment status if it was reserved
+        if self.equipment.status == 'RESERVED':
+            self.equipment.status = 'AVAILABLE'
+            self.equipment.save()
+    
+    def complete(self):
+        """Mark reservation as completed"""
+        self.status = 'COMPLETED'
+        self.save()
+        
+        # Revert equipment status if it was reserved
+        if self.equipment.status == 'RESERVED':
+            self.equipment.status = 'AVAILABLE'
+            self.equipment.save()
+    
+    def to_calendar_event(self):
+        """Convert to calendar event format"""
+        return {
+            'id': self.id,
+            'title': f'{self.equipment.name} - {self.user.username}',
+            'start': self.start_date.isoformat(),
+            'end': self.end_date.isoformat(),
+            'status': self.status,
+            'color': self.get_status_color(),
+            'url': f'/equipment/reservations/{self.id}/',
+        }
+    
+    def get_status_color(self):
+        """Get color for calendar display"""
+        colors = {
+            'PENDING': '#ffc107',
+            'CONFIRMED': '#28a745',
+            'CANCELLED': '#dc3545',
+            'EXPIRED': '#6c757d',
+            'COMPLETED': '#17a2b8',
+        }
+        return colors.get(self.status, '#6c757d')
+    
+    def get_display_status(self):
+        """Get display status with icon"""
+        icons = {
+            'PENDING': '⏳',
+            'CONFIRMED': '✅',
+            'CANCELLED': '❌',
+            'EXPIRED': '⌛',
+            'COMPLETED': '📌',
+        }
+        return f"{icons.get(self.status, '')} {self.get_status_display()}"
+
 class MaintenanceRecord(models.Model):
     """Track maintenance and repairs for equipment"""
     MAINTENANCE_TYPES = [
@@ -832,6 +1012,51 @@ class MaintenanceRecord(models.Model):
         self.equipment.status = 'AVAILABLE'
         self.equipment.save()
         self.save()
+
+class SavedSearch(models.Model):
+    """Save user searches for later use"""
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='saved_searches'
+    )
+    name = models.CharField(max_length=200, help_text="Name of the saved search")
+    search_query = models.CharField(max_length=500, blank=True, help_text="The search text")
+    filters = models.JSONField(default=dict, help_text="All filter parameters")
+    sort_by = models.CharField(max_length=50, default='name')
+    per_page = models.IntegerField(default=12)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    last_used = models.DateTimeField(null=True, blank=True)
+    is_favorite = models.BooleanField(default=False)
+    notification_enabled = models.BooleanField(default=False)
+    
+    class Meta:
+        ordering = ['-created_at']
+        unique_together = ['user', 'name']
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.name}"
+    
+    def get_search_url(self):
+        """Get URL for this saved search"""
+        import urllib.parse
+        params = []
+        if self.search_query:
+            params.append(f"search={urllib.parse.quote_plus(self.search_query)}")
+        for key, value in self.filters.items():
+            if value:
+                params.append(f"{key}={urllib.parse.quote_plus(str(value))}")
+        if self.sort_by:
+            params.append(f"sort={self.sort_by}")
+        if self.per_page:
+            params.append(f"per_page={self.per_page}")
+        return f"/equipment/search/?{'&'.join(params)}"
+    
+    def update_last_used(self):
+        """Update last_used timestamp"""
+        self.last_used = timezone.now()
+        self.save(update_fields=['last_used'])
 
 
 # ============ SIGNALS ============

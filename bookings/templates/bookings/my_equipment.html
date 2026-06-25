@@ -36,28 +36,37 @@
     </div>
 
     <!-- Filter Section -->
-    <div class="filter-section">
-        <div class="filter-header">
-            <span class="filter-label">Filter by status:</span>
-            <div class="filter-buttons">
-                <a href="?status=all" class="filter-btn {% if current_filter == 'all' %}active{% endif %}">
-                    All <span class="filter-count">{{ total }}</span>
-                </a>
-                {% for value, label in status_choices %}
-                    <a href="?status={{ value }}" class="filter-btn {% if current_filter == value %}active{% endif %}">
-                        {{ label }}
-                        <span class="filter-count">{{ equipment_list|length }}</span>
-                    </a>
-                {% endfor %}
-            </div>
+<div class="filter-section">
+    <div class="filter-header">
+        <span class="filter-label">Filter by status:</span>
+        <div class="filter-buttons">
+            <a href="?status=all" class="filter-btn {% if current_filter == 'all' %}active{% endif %}">
+                All <span class="filter-count">{{ total }}</span>
+            </a>
+            <a href="?status=AVAILABLE" class="filter-btn {% if current_filter == 'AVAILABLE' %}active{% endif %}">
+                Available <span class="filter-count">{{ available }}</span>
+            </a>
+            <a href="?status=RENTED" class="filter-btn {% if current_filter == 'RENTED' %}active{% endif %}">
+                Rented Out <span class="filter-count">{{ rented }}</span>
+            </a>
+            <a href="?status=MAINTENANCE" class="filter-btn {% if current_filter == 'MAINTENANCE' %}active{% endif %}">
+                Under Maintenance <span class="filter-count">{{ maintenance }}</span>
+            </a>
+            <a href="?status=RETIRED" class="filter-btn {% if current_filter == 'RETIRED' %}active{% endif %}">
+                Retired <span class="filter-count">{{ retired }}</span>
+            </a>
+            <a href="?status=LOST" class="filter-btn {% if current_filter == 'LOST' %}active{% endif %}">
+                Lost <span class="filter-count">{{ lost }}</span>
+            </a>
         </div>
-        {% if current_filter != 'all' %}
-            <div class="filter-info">
-                Showing <strong>{{ equipment_list|length }}</strong> {{ current_filter|lower }} item{{ equipment_list|length|pluralize }}
-                <a href="?status=all" class="clear-filter">Clear filter</a>
-            </div>
-        {% endif %}
     </div>
+    {% if current_filter != 'all' %}
+        <div class="filter-info">
+            Showing <strong>{{ current_count }}</strong> {{ current_filter|lower }} item{{ current_count|pluralize }}
+            <a href="?status=all" class="clear-filter">Clear filter</a>
+        </div>
+    {% endif %}
+</div>
 
     <!-- Equipment Grid -->
     {% if equipment_list %}
@@ -79,6 +88,10 @@
                         {% if equipment.purchase_price %}
                             <p><span class="label">Price:</span> ${{ equipment.purchase_price }}</p>
                         {% endif %}
+                        <p><span class="label">Owner:</span>
+                        <strong>You</strong>
+                        <span class="owner-badge">(Your Equipment)</span>
+                        </p>
                     </div>
                     
                     <div class="card-actions">

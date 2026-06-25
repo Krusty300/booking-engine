@@ -1,564 +1,590 @@
 {% extends 'bookings/base.html' %}
-{% load static %}
 
 {% block content %}
-<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 20px;">
-    <h1 style="font-size: 1.6rem; font-weight: 800; margin: 0;">My Bookings</h1>
-    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-        <button onclick="window.print()" style="background: #6c757d; color: white; padding: 8px 16px; border: none; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease;"
-                onmouseover="this.style.background='#5a6268'"
-                onmouseout="this.style.background='#6c757d'">
-            Print
-        </button>
-        <button onclick="exportBookings()" style="background: #28a745; color: white; padding: 8px 16px; border: none; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease;"
-                onmouseover="this.style.background='#218838'"
-                onmouseout="this.style.background='#28a745'">
-            Export
-        </button>
-    </div>
-</div>
-
-<!-- Statistics Cards -->
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 20px;">
-    <div class="stat-card" style="background: var(--bg-card); padding: 14px 10px; text-align: center; border-left: 4px solid #007bff; cursor: pointer; transition: all 0.2s ease;"
-         onclick="location.href='?status=all'"
-         onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)'"
-         onmouseout="this.style.transform='none'; this.style.boxShadow='none'">
-        <div style="font-size: 1.3rem; font-weight: 700; color: #007bff;">{{ total }}</div>
-        <div style="font-size: 0.65rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600; letter-spacing: 0.3px;">Total</div>
-    </div>
-    <div class="stat-card" style="background: var(--bg-card); padding: 14px 10px; text-align: center; border-left: 4px solid #28a745; cursor: pointer; transition: all 0.2s ease;"
-         onclick="location.href='?status=upcoming'"
-         onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)'"
-         onmouseout="this.style.transform='none'; this.style.boxShadow='none'">
-        <div style="font-size: 1.3rem; font-weight: 700; color: #28a745;">{{ upcoming }}</div>
-        <div style="font-size: 0.65rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600; letter-spacing: 0.3px;">Upcoming</div>
-    </div>
-    <div class="stat-card" style="background: var(--bg-card); padding: 14px 10px; text-align: center; border-left: 4px solid #17a2b8; cursor: pointer; transition: all 0.2s ease;"
-         onclick="location.href='?status=past'"
-         onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)'"
-         onmouseout="this.style.transform='none'; this.style.boxShadow='none'">
-        <div style="font-size: 1.3rem; font-weight: 700; color: #17a2b8;">{{ past }}</div>
-        <div style="font-size: 0.65rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600; letter-spacing: 0.3px;">Past</div>
-    </div>
-    <div class="stat-card" style="background: var(--bg-card); padding: 14px 10px; text-align: center; border-left: 4px solid #ffc107; cursor: pointer; transition: all 0.2s ease;"
-         onclick="location.href='?status=pending'"
-         onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)'"
-         onmouseout="this.style.transform='none'; this.style.boxShadow='none'">
-        <div style="font-size: 1.3rem; font-weight: 700; color: #ffc107;">{{ pending }}</div>
-        <div style="font-size: 0.65rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600; letter-spacing: 0.3px;">Pending</div>
-    </div>
-    <div class="stat-card" style="background: var(--bg-card); padding: 14px 10px; text-align: center; border-left: 4px solid #dc3545; cursor: pointer; transition: all 0.2s ease;"
-         onclick="location.href='?status=cancelled'"
-         onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)'"
-         onmouseout="this.style.transform='none'; this.style.boxShadow='none'">
-        <div style="font-size: 1.3rem; font-weight: 700; color: #dc3545;">{{ cancelled }}</div>
-        <div style="font-size: 0.65rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600; letter-spacing: 0.3px;">Cancelled</div>
-    </div>
-    <div class="stat-card" style="background: var(--bg-card); padding: 14px 10px; text-align: center; border-left: 4px solid #28a745; cursor: pointer; transition: all 0.2s ease;"
-         onclick="location.href='?status=confirmed'"
-         onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)'"
-         onmouseout="this.style.transform='none'; this.style.boxShadow='none'">
-        <div style="font-size: 1.3rem; font-weight: 700; color: #28a745;">{{ confirmed }}</div>
-        <div style="font-size: 0.65rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600; letter-spacing: 0.3px;">Confirmed</div>
-    </div>
-</div>
-
-<!-- Upcoming Bookings Quick View -->
-{% if upcoming_bookings %}
-    <div style="background: var(--bg-card); padding: 15px 18px; margin-bottom: 20px; border-left: 4px solid #28a745;">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
-            <div>
-                <strong style="font-size: 0.9rem;">Upcoming Bookings</strong>
-                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 2px;">Your next {{ upcoming_bookings|length }} booking(s)</div>
-            </div>
-            <a href="?status=upcoming" style="font-size: 0.8rem; color: #007bff; text-decoration: none; font-weight: 600; transition: opacity 0.2s ease;"
-               onmouseover="this.style.opacity='0.8'"
-               onmouseout="this.style.opacity='1'">
-                View all →
-            </a>
+<div class="my-bookings-container">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div>
+            <h1>My Bookings</h1>
+            <p class="subtitle">Manage your resource bookings and reservations</p>
         </div>
-        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px;">
-            {% for booking in upcoming_bookings %}
-                <div style="background: var(--bg-hover); padding: 6px 12px; font-size: 0.75rem; display: flex; align-items: center; gap: 8px; border: 1px solid var(--border-color);">
-                    <span style="font-weight: 600;">{{ booking.resource.name }}</span>
-                    <span style="color: var(--text-secondary);">{{ booking.start_time|date:"M d" }}</span>
-                    <span style="color: var(--text-secondary);">{{ booking.start_time|date:"g:i A" }}</span>
-                    <span style="background: #28a745; color: white; padding: 1px 8px; font-size: 0.55rem; font-weight: 600; text-transform: uppercase;">Upcoming</span>
-                </div>
-            {% empty %}
-                <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 5px 0;">No upcoming bookings</p>
-            {% endfor %}
-        </div>
-    </div>
-{% endif %}
-
-<!-- Filters -->
-<div style="margin: 15px 0 20px 0; padding: 15px 18px; background: var(--bg-card); border: 1px solid var(--border-color);">
-    <!-- Status Filters -->
-    <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px;">
-        <span style="font-size: 0.75rem; font-weight: 700; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.3px;">Status:</span>
-        <a href="?status=all&date={{ current_date_filter }}&search={{ search_query }}" 
-           class="filter-btn" style="padding: 4px 14px; background: {% if current_filter == 'all' %}#007bff; color: white;{% else %}#e9ecef; color: #333;{% endif %} text-decoration: none; font-size: 0.7rem; font-weight: 600; transition: all 0.2s ease; border-radius: 0;">
-            All
-        </a>
-        <a href="?status=upcoming&date={{ current_date_filter }}&search={{ search_query }}" 
-           class="filter-btn" style="padding: 4px 14px; background: {% if current_filter == 'upcoming' %}#28a745; color: white;{% else %}#e9ecef; color: #333;{% endif %} text-decoration: none; font-size: 0.7rem; font-weight: 600; transition: all 0.2s ease; border-radius: 0;">
-            Upcoming
-        </a>
-        <a href="?status=past&date={{ current_date_filter }}&search={{ search_query }}" 
-           class="filter-btn" style="padding: 4px 14px; background: {% if current_filter == 'past' %}#6c757d; color: white;{% else %}#e9ecef; color: #333;{% endif %} text-decoration: none; font-size: 0.7rem; font-weight: 600; transition: all 0.2s ease; border-radius: 0;">
-            Past
-        </a>
-        <a href="?status=pending&date={{ current_date_filter }}&search={{ search_query }}" 
-           class="filter-btn" style="padding: 4px 14px; background: {% if current_filter == 'pending' %}#ffc107; color: #856404;{% else %}#e9ecef; color: #333;{% endif %} text-decoration: none; font-size: 0.7rem; font-weight: 600; transition: all 0.2s ease; border-radius: 0;">
-            Pending
-        </a>
-        <a href="?status=confirmed&date={{ current_date_filter }}&search={{ search_query }}" 
-           class="filter-btn" style="padding: 4px 14px; background: {% if current_filter == 'confirmed' %}#28a745; color: white;{% else %}#e9ecef; color: #333;{% endif %} text-decoration: none; font-size: 0.7rem; font-weight: 600; transition: all 0.2s ease; border-radius: 0;">
-            Confirmed
-        </a>
-        <a href="?status=cancelled&date={{ current_date_filter }}&search={{ search_query }}" 
-           class="filter-btn" style="padding: 4px 14px; background: {% if current_filter == 'cancelled' %}#dc3545; color: white;{% else %}#e9ecef; color: #333;{% endif %} text-decoration: none; font-size: 0.7rem; font-weight: 600; transition: all 0.2s ease; border-radius: 0;">
-            Cancelled
-        </a>
-    </div>
-    
-    <!-- Date Filters -->
-    <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px;">
-        <span style="font-size: 0.75rem; font-weight: 700; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.3px;">Date:</span>
-        <a href="?date=all&status={{ current_filter }}&search={{ search_query }}" 
-           class="filter-btn" style="padding: 4px 14px; background: {% if current_date_filter == 'all' %}#007bff; color: white;{% else %}#e9ecef; color: #333;{% endif %} text-decoration: none; font-size: 0.7rem; font-weight: 600; transition: all 0.2s ease; border-radius: 0;">
-            All
-        </a>
-        <a href="?date=today&status={{ current_filter }}&search={{ search_query }}" 
-           class="filter-btn" style="padding: 4px 14px; background: {% if current_date_filter == 'today' %}#007bff; color: white;{% else %}#e9ecef; color: #333;{% endif %} text-decoration: none; font-size: 0.7rem; font-weight: 600; transition: all 0.2s ease; border-radius: 0;">
-            Today
-        </a>
-        <a href="?date=week&status={{ current_filter }}&search={{ search_query }}" 
-           class="filter-btn" style="padding: 4px 14px; background: {% if current_date_filter == 'week' %}#007bff; color: white;{% else %}#e9ecef; color: #333;{% endif %} text-decoration: none; font-size: 0.7rem; font-weight: 600; transition: all 0.2s ease; border-radius: 0;">
-            This Week
-        </a>
-        <a href="?date=month&status={{ current_filter }}&search={{ search_query }}" 
-           class="filter-btn" style="padding: 4px 14px; background: {% if current_date_filter == 'month' %}#007bff; color: white;{% else %}#e9ecef; color: #333;{% endif %} text-decoration: none; font-size: 0.7rem; font-weight: 600; transition: all 0.2s ease; border-radius: 0;">
-            This Month
-        </a>
-        <a href="?date=upcoming_dates&status={{ current_filter }}&search={{ search_query }}" 
-           class="filter-btn" style="padding: 4px 14px; background: {% if current_date_filter == 'upcoming_dates' %}#28a745; color: white;{% else %}#e9ecef; color: #333;{% endif %} text-decoration: none; font-size: 0.7rem; font-weight: 600; transition: all 0.2s ease; border-radius: 0;">
-            Upcoming Dates
-        </a>
-    </div>
-    
-    <!-- Search & Sort -->
-    <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 5px;">
-        <form method="get" style="display: flex; gap: 8px; flex: 1; min-width: 200px; flex-wrap: wrap;">
-            <input type="hidden" name="status" value="{{ current_filter }}">
-            <input type="hidden" name="date" value="{{ current_date_filter }}">
-            <input type="text" name="search" placeholder="Search bookings..." value="{{ search_query }}" 
-                   style="flex: 1; min-width: 150px; padding: 6px 12px; border: 2px solid var(--input-border); font-size: 0.8rem; background: var(--bg-input); color: var(--text-primary); transition: border-color 0.2s ease;"
-                   onfocus="this.style.borderColor='#007bff'"
-                   onblur="this.style.borderColor='var(--input-border)'">
-            <button type="submit" style="padding: 6px 16px; background: #007bff; color: white; border: none; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease;"
-                    onmouseover="this.style.background='#0056b3'"
-                    onmouseout="this.style.background='#007bff'">
-                Search
+        <div class="header-actions">
+            <button onclick="printPage()" class="btn-print">
+                Print
             </button>
-            {% if search_query %}
-                <a href="?status={{ current_filter }}&date={{ current_date_filter }}" style="padding: 6px 16px; background: #6c757d; color: white; text-decoration: none; font-size: 0.75rem; font-weight: 600; transition: all 0.2s ease;"
-                   onmouseover="this.style.background='#5a6268'"
-                   onmouseout="this.style.background='#6c757d'">
-                    ✕ Clear
-                </a>
-            {% endif %}
-        </form>
-        
-        <!-- Sort -->
-        <div style="display: flex; gap: 6px; align-items: center;">
-            <span style="font-size: 0.7rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.3px;">Sort:</span>
-            <select name="sort" onchange="this.form.submit()" style="padding: 4px 8px; border: 2px solid var(--input-border); font-size: 0.7rem; background: var(--bg-input); color: var(--text-primary); cursor: pointer;">
-                <option value="-start_time" {% if sort_by == '-start_time' %}selected{% endif %}>Newest First</option>
-                <option value="start_time" {% if sort_by == 'start_time' %}selected{% endif %}>Oldest First</option>
-                <option value="resource" {% if sort_by == 'resource' %}selected{% endif %}>By Resource</option>
-                <option value="status" {% if sort_by == 'status' %}selected{% endif %}>By Status</option>
-            </select>
+            <div class="export-dropdown">
+                <button onclick="toggleExportMenu()" class="btn-export">
+                    Export
+                </button>
+                <div id="exportMenu" class="export-menu" style="display: none;">
+                    <a href="#" onclick="exportBookings('csv')">CSV</a>
+                    <a href="#" onclick="exportBookings('json')">JSON</a>
+                    <a href="#" onclick="exportBookings('pdf')">PDF</a>
+                </div>
+            </div>
         </div>
     </div>
-</div>
 
-<!-- Bookings Table -->
-{% if bookings %}
-    <div style="overflow-x: auto;">
-        <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem;">
-            <thead>
-                <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">
-                    <th style="padding: 10px 12px; text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700;">Resource</th>
-                    <th style="padding: 10px 12px; text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700;">Date & Time</th>
-                    <th style="padding: 10px 12px; text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700;">Duration</th>
-                    <th style="padding: 10px 12px; text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700;">Status</th>
-                    <th style="padding: 10px 12px; text-align: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700;">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for booking in bookings %}
-                    <tr style="border-bottom: 1px solid #dee2e6; 
-                               {% if booking.is_upcoming %}background: #f0fff4;{% endif %}
-                               {% if booking.is_past %}background: #f8f9fa;{% endif %}"
-                        data-id="{{ booking.id }}"
-                        data-resource="{{ booking.resource.name }}"
-                        data-start="{{ booking.start_time|date:'M d, Y g:i A' }}"
-                        data-end="{{ booking.end_time|date:'g:i A' }}"
-                        data-duration="{{ booking.get_duration }}h"
-                        data-status="{{ booking.get_status_display }}"
-                        data-notes="{{ booking.notes|default:'No notes provided.'|escapejs }}">
-                        
-                        <td style="padding: 10px 12px;">
-                            <strong style="font-size: 0.85rem;">{{ booking.resource.name }}</strong>
-                            {% if booking.resource.location %}
-                                <div style="font-size: 0.65rem; color: var(--text-secondary); margin-top: 2px;">{{ booking.resource.location }}</div>
-                            {% endif %}
-                        </td>
-                        <td style="padding: 10px 12px;">
-                            <div><strong style="font-size: 0.8rem;">{{ booking.start_time|date:"M d, Y" }}</strong></div>
-                            <div style="font-size: 0.75rem; color: var(--text-secondary);">
-                                {{ booking.start_time|date:"g:i A" }} - {{ booking.end_time|date:"g:i A" }}
-                            </div>
-                            {% if booking.is_upcoming %}
-                                <span style="font-size: 0.65rem; color: #28a745; display: inline-block; margin-top: 2px;">{{ booking.start_time|timeuntil }} from now</span>
-                            {% elif booking.is_past %}
-                                <span style="font-size: 0.65rem; color: #6c757d; display: inline-block; margin-top: 2px;">Completed</span>
-                            {% endif %}
-                        </td>
-                        <td style="padding: 10px 12px; font-size: 0.75rem; text-align: center;">
-                            {{ booking.get_duration }}h
-                        </td>
-                        <td style="padding: 10px 12px;">
-                            <span style="display: inline-block; padding: 3px 10px; font-size: 0.7rem; font-weight: 600; 
-                                {% if booking.status == 'CONFIRMED' %}background: #d4edda; color: #155724;
-                                {% elif booking.status == 'CANCELLED' %}background: #f8d7da; color: #721c24;
-                                {% elif booking.status == 'COMPLETED' %}background: #d1ecf1; color: #0c5460;
-                                {% else %}background: #fff3cd; color: #856404;{% endif %}">
-                                {{ booking.get_status_display }}
-                            </span>
-                        </td>
-                        <td style="padding: 10px 12px; text-align: center;">
-                            <div style="display: flex; flex-direction: column; gap: 4px; align-items: center;">
-                                {% if booking.can_cancel %}
-                                    <a href="{% url 'cancel_booking' booking.id %}" 
-                                       onclick="return confirm('Are you sure you want to cancel this booking?')"
-                                       class="cancel-btn"
-                                       style="background: #dc3545; color: white; padding: 4px 12px; text-decoration: none; font-size: 0.65rem; font-weight: 600; display: inline-block; width: 100%; transition: all 0.2s ease;"
-                                       onmouseover="this.style.background='#c82333'"
-                                       onmouseout="this.style.background='#dc3545'">
-                                    Cancel
-                                    </a>
-                                {% endif %}
-                                
-                                <button onclick="showDetails('{{ booking.id }}')" 
-                                        style="background: #007bff; color: white; padding: 4px 12px; border: none; font-size: 0.65rem; font-weight: 600; cursor: pointer; width: 100%; transition: all 0.2s ease;"
-                                        onmouseover="this.style.background='#0056b3'"
-                                        onmouseout="this.style.background='#007bff'">
-                                    View
-                                </button>
-                                
-                                {% if booking.is_upcoming %}
-                                    <button onclick="addToCalendar('{{ booking.id }}')" 
-                                            style="background: #28a745; color: white; padding: 4px 12px; border: none; font-size: 0.65rem; font-weight: 600; cursor: pointer; width: 100%; transition: all 0.2s ease;"
-                                            onmouseover="this.style.background='#218838'"
-                                            onmouseout="this.style.background='#28a745'">
-                                        Add to Calendar
-                                    </button>
-                                {% endif %}
-                            </div>
-                        </td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <!-- Statistics Cards -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-number">{{ total }}</div>
+            <div class="stat-label">Total Bookings</div>
+        </div>
+        <div class="stat-card stat-upcoming">
+            <div class="stat-number">{{ upcoming }}</div>
+            <div class="stat-label">Upcoming</div>
+        </div>
+        <div class="stat-card stat-past">
+            <div class="stat-number">{{ past }}</div>
+            <div class="stat-label">Past</div>
+        </div>
+        <div class="stat-card stat-cancelled">
+            <div class="stat-number">{{ cancelled }}</div>
+            <div class="stat-label">Cancelled</div>
+        </div>
     </div>
-    
-    <!-- Pagination -->
-    {% if bookings.paginator.num_pages > 1 %}
-        <div style="display: flex; justify-content: center; gap: 5px; margin-top: 20px; flex-wrap: wrap;">
-            {% if bookings.has_previous %}
-                <a href="?page=1&status={{ current_filter }}&date={{ current_date_filter }}&search={{ search_query }}&sort={{ sort_by }}" 
-                   style="padding: 6px 14px; background: #e9ecef; color: #333; text-decoration: none; font-size: 0.75rem; font-weight: 600; transition: all 0.2s ease;"
-                   onmouseover="this.style.background='#dee2e6'"
-                   onmouseout="this.style.background='#e9ecef'">
-                    First
-                </a>
-                <a href="?page={{ bookings.previous_page_number }}&status={{ current_filter }}&date={{ current_date_filter }}&search={{ search_query }}&sort={{ sort_by }}" 
-                   style="padding: 6px 14px; background: #e9ecef; color: #333; text-decoration: none; font-size: 0.75rem; font-weight: 600; transition: all 0.2s ease;"
-                   onmouseover="this.style.background='#dee2e6'"
-                   onmouseout="this.style.background='#e9ecef'">
-                    Previous
-                </a>
-            {% endif %}
-            
-            {% for num in bookings.paginator.page_range %}
-                {% if bookings.number == num %}
-                    <span style="padding: 6px 14px; background: #007bff; color: white; font-size: 0.75rem; font-weight: 700;">{{ num }}</span>
-                {% elif num > bookings.number|add:'-3' and num < bookings.number|add:'3' %}
-                    <a href="?page={{ num }}&status={{ current_filter }}&date={{ current_date_filter }}&search={{ search_query }}&sort={{ sort_by }}" 
-                       style="padding: 6px 14px; background: #e9ecef; color: #333; text-decoration: none; font-size: 0.75rem; font-weight: 600; transition: all 0.2s ease;"
-                       onmouseover="this.style.background='#dee2e6'"
-                       onmouseout="this.style.background='#e9ecef'">
-                        {{ num }}
-                    </a>
+
+    <!-- Filters -->
+    <div class="filter-section">
+        <div class="filter-actions">
+            <a href="?status=all" class="filter-btn {% if current_filter == 'all' %}active{% endif %}">All</a>
+            <a href="?status=upcoming" class="filter-btn {% if current_filter == 'upcoming' %}active{% endif %}">Upcoming</a>
+            <a href="?status=past" class="filter-btn {% if current_filter == 'past' %}active{% endif %}">Past</a>
+            <a href="?status=pending" class="filter-btn {% if current_filter == 'pending' %}active{% endif %}">Pending</a>
+            <a href="?status=confirmed" class="filter-btn {% if current_filter == 'confirmed' %}active{% endif %}">Confirmed</a>
+            <a href="?status=cancelled" class="filter-btn {% if current_filter == 'cancelled' %}active{% endif %}">Cancelled</a>
+        </div>
+    </div>
+
+    <!-- Bookings List -->
+    {% if bookings %}
+        <div class="bookings-table-wrapper">
+            <table class="bookings-table">
+                <thead>
+                    <tr>
+                        <th>Resource</th>
+                        <th>Start Time</th>
+                        <th>End Time</th>
+                        <th>Duration</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for booking in bookings %}
+                        <tr class="{% if booking.status == 'CANCELLED' %}cancelled{% endif %}">
+                            <td>
+                                <strong>{{ booking.resource.name }}</strong>
+                                {% if booking.notes %}
+                                    <span class="booking-note">{{ booking.notes|truncatewords:5 }}</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ booking.start_time|date:"M d, Y H:i" }}</td>
+                            <td>{{ booking.end_time|date:"M d, Y H:i" }}</td>
+                            <td>{{ booking.get_duration }}h</td>
+                            <td>
+                                <span class="status-badge status-{{ booking.status|lower }}">
+                                    {{ booking.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="action-buttons">
+                                    {% if booking.can_cancel %}
+                                        <a href="{% url 'cancel_booking' booking.id %}" 
+                                           class="btn-cancel" 
+                                           onclick="return confirm('Are you sure you want to cancel this booking?')">
+                                            Cancel
+                                        </a>
+                                    {% else %}
+                                        <span class="no-action">—</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if bookings.has_other_pages %}
+            <div class="pagination">
+                {% if bookings.has_previous %}
+                    <a href="?page={{ bookings.previous_page_number }}" class="page-link">← Previous</a>
                 {% endif %}
-            {% endfor %}
-            
-            {% if bookings.has_next %}
-                <a href="?page={{ bookings.next_page_number }}&status={{ current_filter }}&date={{ current_date_filter }}&search={{ search_query }}&sort={{ sort_by }}" 
-                   style="padding: 6px 14px; background: #e9ecef; color: #333; text-decoration: none; font-size: 0.75rem; font-weight: 600; transition: all 0.2s ease;"
-                   onmouseover="this.style.background='#dee2e6'"
-                   onmouseout="this.style.background='#e9ecef'">
-                    Next
-                </a>
-                <a href="?page={{ bookings.paginator.num_pages }}&status={{ current_filter }}&date={{ current_date_filter }}&search={{ search_query }}&sort={{ sort_by }}" 
-                   style="padding: 6px 14px; background: #e9ecef; color: #333; text-decoration: none; font-size: 0.75rem; font-weight: 600; transition: all 0.2s ease;"
-                   onmouseover="this.style.background='#dee2e6'"
-                   onmouseout="this.style.background='#e9ecef'">
-                    Last
-                </a>
-            {% endif %}
+                <span class="page-info">Page {{ bookings.number }} of {{ bookings.paginator.num_pages }}</span>
+                {% if bookings.has_next %}
+                    <a href="?page={{ bookings.next_page_number }}" class="page-link">Next →</a>
+                {% endif %}
+            </div>
+        {% endif %}
+    {% else %}
+        <div class="empty-state">
+            <h2>No Bookings Found</h2>
+            <p>You don't have any bookings yet.</p>
+            <div class="empty-actions">
+                <a href="{% url 'resource_list' %}" class="btn-primary">Browse Resources</a>
+            </div>
         </div>
     {% endif %}
-{% else %}
-    <div style="text-align: center; padding: 60px 20px; background: var(--bg-hover); margin-top: 20px; border: 1px solid var(--border-color);">
-        <div style="font-size: 48px; margin-bottom: 15px;">📭</div>
-        <h3 style="font-size: 1.2rem; color: var(--text-primary); margin-bottom: 10px;">No bookings found</h3>
-        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 20px;">
-            {% if search_query %}
-                No bookings match your search "<strong>{{ search_query }}</strong>".
-            {% elif current_filter != 'all' %}
-                No <strong>{{ current_filter }}</strong> bookings found.
-            {% else %}
-                You haven't made any bookings yet.
-            {% endif %}
-        </p>
-        <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-            <a href="{% url 'resource_list' %}" style="background: #007bff; color: white; padding: 10px 25px; text-decoration: none; font-size: 0.85rem; font-weight: 600; display: inline-block; transition: all 0.2s ease;"
-               onmouseover="this.style.background='#0056b3'"
-               onmouseout="this.style.background='#007bff'">
-                Browse Resources
-            </a>
-            {% if search_query or current_filter != 'all' %}
-                <a href="?status=all&date=all" style="background: #6c757d; color: white; padding: 10px 25px; text-decoration: none; font-size: 0.85rem; font-weight: 600; display: inline-block; transition: all 0.2s ease;"
-                   onmouseover="this.style.background='#5a6268'"
-                   onmouseout="this.style.background='#6c757d'">
-                    Clear Filters
-                </a>
-            {% endif %}
-        </div>
-    </div>
-{% endif %}
-
-<!-- Booking Details Modal -->
-<div id="bookingModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(4px);">
-    <div style="background: var(--bg-secondary); padding: 25px 30px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; position: relative; box-shadow: 0 20px 60px rgba(0,0,0,0.3); border: 1px solid var(--border-color);">
-        <button onclick="closeModal()" style="position: absolute; top: 10px; right: 15px; background: none; border: none; font-size: 22px; cursor: pointer; color: var(--text-secondary); transition: color 0.2s ease;"
-                onmouseover="this.style.color='var(--text-primary)'"
-                onmouseout="this.style.color='var(--text-secondary)'">
-            ✕
-        </button>
-        <h2 id="modalTitle" style="margin-top: 0; font-size: 1.2rem; font-weight: 700; color: var(--text-primary);"> Booking Details</h2>
-        <div id="modalContent">
-            <p style="font-size: 0.85rem; color: var(--text-secondary);">Loading...</p>
-        </div>
-    </div>
 </div>
 
 <script>
-// Show booking details in modal
-function showDetails(bookingId) {
-    const modal = document.getElementById('bookingModal');
-    const content = document.getElementById('modalContent');
-    const title = document.getElementById('modalTitle');
-    
-    modal.style.display = 'flex';
-    content.innerHTML = '<p style="font-size: 0.85rem; color: var(--text-secondary);">Loading booking details...</p>';
-    
-    // Find the row with the matching booking ID
-    const rows = document.querySelectorAll('tbody tr');
-    let row = null;
-    for (let r of rows) {
-        if (r.dataset.id == bookingId) {
-            row = r;
-            break;
+// Get CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
         }
     }
-    
-    if (row) {
-        const resource = row.dataset.resource || 'Unknown';
-        const startTime = row.dataset.start || 'Unknown';
-        const endTime = row.dataset.end || 'Unknown';
-        const duration = row.dataset.duration || 'Unknown';
-        const status = row.dataset.status || 'Unknown';
-        const notes = row.dataset.notes || 'No notes provided.';
-        const id = row.dataset.id || bookingId;
-        
-        title.textContent = ` Booking: ${resource}`;
-        content.innerHTML = `
-            <div style="margin: 15px 0; padding: 15px; background: var(--bg-hover);">
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                    <div>
-                        <p style="font-size: 0.8rem; margin: 4px 0;"><strong> Resource:</strong> ${resource}</p>
-                        <p style="font-size: 0.8rem; margin: 4px 0;"><strong> Date:</strong> ${startTime}</p>
-                        <p style="font-size: 0.8rem; margin: 4px 0;"><strong> Duration:</strong> ${duration}</p>
-                    </div>
-                    <div>
-                        <p style="font-size: 0.8rem; margin: 4px 0;"><strong> Status:</strong> ${status}</p>
-                        <p style="font-size: 0.8rem; margin: 4px 0;"><strong> ID:</strong> #${id}</p>
-                    </div>
-                </div>
-                <hr style="margin: 12px 0; border: none; border-top: 1px solid var(--border-color);">
-                <div style="background: var(--bg-card); padding: 10px 12px; border-left: 3px solid #007bff;">
-                    <strong style="font-size: 0.75rem;"> Notes:</strong>
-                    <p style="margin: 4px 0 0 0; font-size: 0.8rem; white-space: pre-wrap; word-wrap: break-word; color: var(--text-primary);">${notes}</p>
-                </div>
-            </div>
-            <div style="margin-top: 15px; text-align: center; font-size: 0.7rem; color: var(--text-secondary);">
-                Need help? Contact support at support@yourapp.com
-            </div>
-        `;
+    return cookieValue;
+}
+const csrftoken = getCookie('csrftoken');
+
+// Print Function
+function printPage() {
+    window.print();
+}
+
+// Export Function
+function exportBookings(format) {
+    const url = `/my-bookings/export/?format=${format}`;
+    window.location.href = url;
+}
+
+// Toggle Export Menu
+function toggleExportMenu() {
+    const menu = document.getElementById('exportMenu');
+    if (menu.style.display === 'none' || menu.style.display === '') {
+        menu.style.display = 'block';
     } else {
-        content.innerHTML = '<p style="font-size: 0.85rem; color: var(--text-secondary);">Booking not found.</p>';
+        menu.style.display = 'none';
     }
 }
 
-function closeModal() {
-    document.getElementById('bookingModal').style.display = 'none';
-}
-
-function cancelBooking(bookingId) {
-    if (confirm('Are you sure you want to cancel this booking?')) {
-        window.location.href = `/cancel-booking/${bookingId}/`;
-    }
-}
-
-function addToCalendar(bookingId) {
-    const row = document.querySelector(`tr[data-id="${bookingId}"]`);
-    if (row) {
-        const resource = row.dataset.resource || 'Unknown';
-        const start = row.dataset.start || '';
-        const end = row.dataset.end || '';
-        
-        // Create ICS content
-        const icsContent = [
-            'BEGIN:VCALENDAR',
-            'VERSION:2.0',
-            'BEGIN:VEVENT',
-            `SUMMARY:Booking: ${resource}`,
-            `DTSTART:${start}`,
-            `DTEND:${end}`,
-            'END:VEVENT',
-            'END:VCALENDAR'
-        ].join('\n');
-        
-        // Download ICS file
-        const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = `booking_${bookingId}.ics`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(link.href);
-        
-        // Show success message
-        alert('Calendar event downloaded successfully!');
-    }
-}
-
-function exportBookings() {
-    const currentUrl = window.location.href;
-    window.location.href = currentUrl + (currentUrl.includes('?') ? '&' : '?') + 'export=csv';
-}
-
-// Close modal on outside click
-document.getElementById('bookingModal').addEventListener('click', function(e) {
-    if (e.target === this) {
-        closeModal();
-    }
-});
-
-// Close modal on Escape key
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        closeModal();
+// Close export menu on click outside
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.export-dropdown')) {
+        const menu = document.getElementById('exportMenu');
+        if (menu) {
+            menu.style.display = 'none';
+        }
     }
 });
 </script>
 
 <style>
-    /* Responsive design */
-    @media (max-width: 768px) {
-        table {
-            font-size: 0.7rem !important;
-        }
-        th, td {
-            padding: 6px 8px !important;
-        }
-        .filter-btn {
-            font-size: 0.6rem !important;
-            padding: 3px 8px !important;
-        }
-        .stat-cards {
-            grid-template-columns: repeat(3, 1fr) !important;
-        }
-        .stat-card {
-            padding: 10px !important;
-        }
-        .stat-number {
-            font-size: 1rem !important;
-        }
-    }
-    
-    @media (max-width: 480px) {
-        .stat-cards {
-            grid-template-columns: repeat(2, 1fr) !important;
-        }
-        .modal-content {
-            padding: 15px !important;
-        }
-        .filter-section {
-            flex-direction: column !important;
-            align-items: stretch !important;
-        }
-        .filter-section a {
-            text-align: center !important;
-        }
-        .stat-card {
-            padding: 8px !important;
-        }
-        .stat-number {
-            font-size: 0.9rem !important;
-        }
-    }
-    
-    /* Hover effect for table rows */
-    tbody tr:hover {
-        background: var(--bg-hover) !important;
-    }
-    
-    /* Animation for filter buttons */
-    .filter-btn {
-        transition: all 0.2s ease;
-    }
-    .filter-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-    
-    /* Status card click effect */
-    .stat-card {
-        transition: all 0.2s ease;
-        cursor: pointer;
-    }
-    .stat-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-</style>
+/* Container */
+.my-bookings-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
 
+/* Page Header */
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.page-header h1 {
+    margin: 0;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #1a1a2e;
+}
+
+.page-header .subtitle {
+    margin: 4px 0 0;
+    color: #6c757d;
+    font-size: 0.85rem;
+}
+
+.header-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+/* Print & Export Buttons */
+.btn-print,
+.btn-export {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: white;
+    border: 1px solid #dee2e6;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    color: #495057;
+}
+
+.btn-print:hover,
+.btn-export:hover {
+    background: #f8f9fa;
+    border-color: #adb5bd;
+}
+
+.btn-print svg,
+.btn-export svg {
+    flex-shrink: 0;
+}
+
+/* Export Dropdown */
+.export-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.export-menu {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    background: white;
+    border: 1px solid #dee2e6;
+    min-width: 150px;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.export-menu a {
+    display: block;
+    padding: 10px 16px;
+    text-decoration: none;
+    color: #1a1a2e;
+    font-size: 0.85rem;
+    transition: background 0.2s;
+}
+
+.export-menu a:hover {
+    background: #f8f9fa;
+}
+
+/* Statistics Cards */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.stat-card {
+    background: white;
+    padding: 14px 18px;
+    border: 1px solid #e9ecef;
+    text-align: center;
+}
+
+.stat-card .stat-number {
+    display: block;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #1a1a2e;
+    line-height: 1.2;
+}
+
+.stat-card .stat-label {
+    font-size: 0.75rem;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 2px;
+}
+
+.stat-upcoming .stat-number { color: #28a745; }
+.stat-past .stat-number { color: #6c757d; }
+.stat-cancelled .stat-number { color: #dc3545; }
+
+/* Filters */
+.filter-section {
+    margin-bottom: 24px;
+    background: #f8f9fa;
+    padding: 12px 16px;
+    border: 1px solid #e9ecef;
+}
+
+.filter-actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.filter-btn {
+    padding: 5px 14px;
+    background: white;
+    border: 1px solid #dee2e6;
+    text-decoration: none;
+    color: #495057;
+    font-size: 0.75rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.filter-btn:hover {
+    background: #e9ecef;
+}
+
+.filter-btn.active {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+/* Bookings Table */
+.bookings-table-wrapper {
+    overflow-x: auto;
+}
+
+.bookings-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.bookings-table thead {
+    background: #f8f9fa;
+}
+
+.bookings-table th {
+    text-align: left;
+    padding: 10px 12px;
+    font-weight: 600;
+    color: #495057;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.bookings-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #e9ecef;
+    vertical-align: middle;
+}
+
+.bookings-table tr.cancelled {
+    opacity: 0.6;
+}
+
+.bookings-table tr:hover {
+    background: #f8f9fa;
+}
+
+.booking-note {
+    display: block;
+    font-size: 0.7rem;
+    color: #6c757d;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 3px 12px;
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+
+.status-pending { background: #fff3cd; color: #856404; }
+.status-confirmed { background: #d4edda; color: #155724; }
+.status-cancelled { background: #f8d7da; color: #721c24; }
+.status-completed { background: #d1ecf1; color: #0c5460; }
+
+.action-buttons {
+    display: flex;
+    gap: 4px;
+}
+
+.btn-cancel {
+    padding: 4px 12px;
+    background: #dc3545;
+    color: white;
+    text-decoration: none;
+    font-size: 0.7rem;
+    font-weight: 500;
+    transition: background 0.2s;
+}
+
+.btn-cancel:hover {
+    background: #c82333;
+    color: white;
+}
+
+.no-action {
+    color: #adb5bd;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+}
+
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 16px;
+}
+
+.empty-state h2 {
+    margin: 0 0 8px;
+    font-size: 1.3rem;
+}
+
+.empty-state p {
+    color: #6c757d;
+    margin-bottom: 20px;
+}
+
+.btn-primary {
+    display: inline-block;
+    padding: 10px 24px;
+    background: #007bff;
+    color: white;
+    text-decoration: none;
+    font-weight: 600;
+    transition: background 0.2s;
+}
+
+.btn-primary:hover {
+    background: #0056b3;
+    color: white;
+}
+
+/* Pagination */
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+    margin-top: 20px;
+    padding: 16px;
+    background: #f8f9fa;
+}
+
+.page-link {
+    padding: 8px 16px;
+    background: white;
+    border: 1px solid #dee2e6;
+    text-decoration: none;
+    color: #007bff;
+    transition: all 0.2s;
+}
+
+.page-link:hover {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+.page-info {
+    font-weight: 600;
+    color: #495057;
+}
+
+/* Print Styles */
+@media print {
+    .filter-section,
+    .pagination,
+    .header-actions,
+    .btn-print,
+    .btn-export,
+    .export-dropdown,
+    .btn-cancel {
+        display: none !important;
+    }
+    
+    .page-header {
+        border-bottom: 2px solid #000;
+    }
+    
+    .stat-card {
+        border: 1px solid #000;
+    }
+    
+    .bookings-table th {
+        background: #f0f0f0 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    
+    .status-badge {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    
+    .bookings-table tr {
+        page-break-inside: avoid;
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    
+    .header-actions {
+        width: 100%;
+    }
+    
+    .btn-print,
+    .btn-export {
+        width: 50%;
+        justify-content: center;
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .bookings-table {
+        font-size: 0.75rem;
+    }
+    
+    .bookings-table th,
+    .bookings-table td {
+        padding: 6px 8px;
+    }
+    
+    .export-menu {
+        position: static;
+    }
+}
+
+@media (max-width: 480px) {
+    .stats-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+    
+    .stat-card {
+        padding: 10px 12px;
+    }
+    
+    .stat-card .stat-number {
+        font-size: 1.2rem;
+    }
+    
+    .filter-actions {
+        flex-wrap: wrap;
+    }
+    
+    .filter-btn {
+        font-size: 0.7rem;
+        padding: 4px 10px;
+    }
+}
+</style>
 {% endblock %}

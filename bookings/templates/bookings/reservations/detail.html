@@ -1,0 +1,467 @@
+{% extends 'bookings/base.html' %}
+
+{% block content %}
+<div class="reservation-detail-container">
+    <!-- Header -->
+    <div class="page-header">
+        <div>
+            <h1>Reservation Details</h1>
+            <p class="subtitle">View and manage reservation information</p>
+        </div>
+        <div class="header-actions">
+            <a href="{% url 'reservation_list' %}" class="btn-back">← Back to Reservations</a>
+        </div>
+    </div>
+
+    <!-- Status Banner -->
+    <div class="status-banner status-{{ reservation.status|lower }}">
+        <span class="status-icon">
+            {% if reservation.status == 'PENDING' %}
+            {% elif reservation.status == 'CONFIRMED' %}
+            {% elif reservation.status == 'CANCELLED' %}
+            {% elif reservation.status == 'EXPIRED' %}
+            {% elif reservation.status == 'COMPLETED' %}
+            {% endif %}
+        </span>
+        <span class="status-text">
+            Status: <strong>{{ reservation.get_status_display }}</strong>
+        </span>
+        {% if reservation.status == 'PENDING' and reservation.expires_at %}
+            <span class="status-expiry">
+                Expires: {{ reservation.expires_at|date:"M d, Y H:i" }}
+            </span>
+        {% endif %}
+    </div>
+
+    <!-- Detail Grid -->
+    <div class="detail-grid">
+        <!-- Left Column: Reservation Info -->
+        <div class="detail-card">
+            <h2>Reservation Information</h2>
+            <table class="detail-table">
+                <tr>
+                    <th>Equipment</th>
+                    <td>
+                        <strong>{{ reservation.equipment.name }}</strong>
+                        <span class="serial-text">{{ reservation.equipment.serial_number }}</span>
+                    </td>
+                </tr>
+                <tr>
+                    <th>Reserved By</th>
+                    <td>{{ reservation.user.username }}</td>
+                </tr>
+                <tr>
+                    <th>Start Date</th>
+                    <td>{{ reservation.start_date|date:"M d, Y H:i" }}</td>
+                </tr>
+                <tr>
+                    <th>End Date</th>
+                    <td>{{ reservation.end_date|date:"M d, Y H:i" }}</td>
+                </tr>
+                <tr>
+                    <th>Duration</th>
+                    <td>{{ reservation.get_duration_days }} days</td>
+                </tr>
+                <tr>
+                    <th>Status</th>
+                    <td>
+                        <span class="status-badge status-{{ reservation.status|lower }}">
+                            {{ reservation.get_status_display }}
+                        </span>
+                    </td>
+                </tr>
+                <tr>
+                    <th>Created</th>
+                    <td>{{ reservation.created_at|date:"M d, Y H:i" }}</td>
+                </tr>
+                <tr>
+                    <th>Last Updated</th>
+                    <td>{{ reservation.updated_at|date:"M d, Y H:i" }}</td>
+                </tr>
+            </table>
+            
+            {% if reservation.purpose %}
+                <div class="purpose-section">
+                    <h3>Purpose</h3>
+                    <p>{{ reservation.purpose }}</p>
+                </div>
+            {% endif %}
+            
+            {% if reservation.notes %}
+                <div class="notes-section">
+                    <h3>Notes</h3>
+                    <p>{{ reservation.notes }}</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Right Column: Actions -->
+<div class="detail-card">
+    <h2>Actions</h2>
+    <div class="action-buttons">
+        
+        <!-- CONFIRM BUTTON - ONLY FOR STAFF -->
+        {% if can_confirm %}
+            <form method="post" action="{% url 'confirm_reservation' reservation.id %}" style="width: 100%;">
+                {% csrf_token %}
+                <button type="submit" class="btn-confirm-reservation" 
+                        onclick="return confirm('Confirm this reservation?')">
+                    Confirm Reservation
+                </button>
+            </form>
+        {% endif %}
+        
+        <!-- CANCEL BUTTON - FOR USER OR STAFF -->
+        {% if can_cancel %}
+            <form method="post" action="{% url 'cancel_reservation' reservation.id %}" style="width: 100%;">
+                {% csrf_token %}
+                <button type="submit" class="btn-cancel-reservation" 
+                        onclick="return confirm('Cancel this reservation?')">
+                    Cancel Reservation
+                </button>
+            </form>
+        {% endif %}
+        
+        <a href="{% url 'equipment_detail' reservation.equipment.id %}" class="btn-view-equipment">
+            View Equipment
+        </a>
+        
+        <a href="{% url 'reservation_calendar' %}" class="btn-view-calendar">
+            View Calendar
+        </a>
+    </div>
+</div>
+    </div>
+</div>
+
+<style>
+.reservation-detail-container {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.page-header h1 {
+    margin: 0;
+    font-size: 1.6rem;
+    font-weight: 700;
+}
+
+.page-header .subtitle {
+    margin: 4px 0 0;
+    color: #6c757d;
+    font-size: 0.85rem;
+}
+
+.btn-back {
+    display: inline-block;
+    padding: 8px 16px;
+    background: #f8f9fa;
+    color: #495057;
+    text-decoration: none;
+    border: 1px solid #dee2e6;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.btn-back:hover {
+    background: #e9ecef;
+}
+
+.status-banner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 20px;
+    margin-bottom: 24px;
+    border-left: 4px solid;
+}
+
+.status-banner.status-pending {
+    background: #fff3cd;
+    border-left-color: #ffc107;
+}
+
+.status-banner.status-confirmed {
+    background: #d4edda;
+    border-left-color: #28a745;
+}
+
+.status-banner.status-cancelled {
+    background: #f8d7da;
+    border-left-color: #dc3545;
+}
+
+.status-banner.status-expired {
+    background: #e2e3e5;
+    border-left-color: #6c757d;
+}
+
+.status-banner.status-completed {
+    background: #d1ecf1;
+    border-left-color: #17a2b8;
+}
+
+.status-icon {
+    font-size: 1.5rem;
+}
+
+.status-text {
+    font-size: 0.95rem;
+}
+
+.status-expiry {
+    margin-left: auto;
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 24px;
+}
+
+.detail-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    padding: 20px;
+}
+
+.detail-card h2 {
+    margin: 0 0 16px 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.detail-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.detail-table tr {
+    border-bottom: 1px solid #f1f3f5;
+}
+
+.detail-table tr:last-child {
+    border-bottom: none;
+}
+
+.detail-table th {
+    text-align: left;
+    padding: 8px 12px 8px 0;
+    font-weight: 600;
+    color: #495057;
+    width: 35%;
+}
+
+.detail-table td {
+    padding: 8px 0;
+    color: #1a1a2e;
+}
+
+.serial-text {
+    display: block;
+    font-size: 0.7rem;
+    color: #6c757d;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 3px 12px;
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+
+.status-pending .status-badge { background: #fff3cd; color: #856404; }
+.status-confirmed .status-badge { background: #d4edda; color: #155724; }
+.status-cancelled .status-badge { background: #f8d7da; color: #721c24; }
+.status-expired .status-badge { background: #e2e3e5; color: #383d41; }
+.status-completed .status-badge { background: #d1ecf1; color: #0c5460; }
+
+.purpose-section,
+.notes-section {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #e9ecef;
+}
+
+.purpose-section h3,
+.notes-section h3 {
+    margin: 0 0 6px 0;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #495057;
+}
+
+.purpose-section p,
+.notes-section p {
+    margin: 0;
+    font-size: 0.85rem;
+    color: #6c757d;
+    line-height: 1.6;
+}
+
+.action-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.action-buttons button,
+.action-buttons a {
+    padding: 10px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+    text-align: center;
+    transition: all 0.2s;
+    width: 100%;
+}
+
+.btn-cancel-reservation {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-cancel-reservation:hover {
+    background: #c82333;
+}
+
+.btn-confirm-reservation {
+    background: #28a745;
+    color: white;
+}
+
+.btn-confirm-reservation:hover {
+    background: #218838;
+}
+
+.btn-view-equipment {
+    background: #17a2b8;
+    color: white;
+}
+
+.btn-view-equipment:hover {
+    background: #138496;
+    color: white;
+}
+
+.btn-view-calendar {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-view-calendar:hover {
+    background: #5a6268;
+    color: white;
+}
+
+/* Confirm Button - Staff Only */
+.btn-confirm-reservation {
+    padding: 10px 16px;
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    width: 100%;
+    transition: all 0.2s ease;
+}
+
+.btn-confirm-reservation:hover {
+    background: #218838;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+}
+
+/* Cancel Button */
+.btn-cancel-reservation {
+    padding: 10px 16px;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    width: 100%;
+    transition: all 0.2s ease;
+}
+
+.btn-cancel-reservation:hover {
+    background: #c82333;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
+}
+
+/* Confirm button in list view */
+.btn-confirm {
+    padding: 4px 12px;
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-weight: 600;
+    transition: background 0.2s;
+}
+
+.btn-confirm:hover {
+    background: #218838;
+}
+
+/* Admin Banner */
+.admin-banner {
+    background: #cce5ff;
+    padding: 10px 16px;
+    margin-bottom: 16px;
+    border-left: 4px solid #007bff;
+    color: #004085;
+    font-weight: 500;
+}
+
+/* Staff-only stat cards */
+.stat-expired .stat-number { color: #6c757d; }
+.stat-completed .stat-number { color: #17a2b8; }
+
+
+
+@media (max-width: 768px) {
+    .detail-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    
+    .status-banner {
+        flex-wrap: wrap;
+    }
+    
+    .status-expiry {
+        margin-left: 0;
+        width: 100%;
+    }
+}
+</style>
+{% endblock %}

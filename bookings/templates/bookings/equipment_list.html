@@ -36,6 +36,19 @@
                 {% endfor %}
             </select>
         </div>
+
+        <!-- ADD OWNER FILTER -->
+        <div class="filter-group">
+            <label for="owner">Owner:</label>
+            <select name="owner" id="owner">
+                <option value="">All Owners</option>
+                {% for owner in owners %}
+                    <option value="{{ owner.id }}" {% if current_owner == owner.id|stringformat:"s" %}selected{% endif %}>
+                        {{ owner.username }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
         
         <div class="filter-group">
             <label for="search">Search:</label>
@@ -57,6 +70,18 @@
                 <p><span class="label">Category:</span> {{ equipment.category.name|default:"Uncategorized" }}</p>
                 <p><span class="label">Condition:</span> {{ equipment.get_condition_display }}</p>
                 <p><span class="label">Location:</span> {{ equipment.location|default:"Not specified" }}</p>
+                <!--  Owner Display -->
+                <p>
+                    <span class="label">Owner:</span>
+                    {% if equipment.owner %}
+                        {{ equipment.owner.username }}
+                        {% if equipment.owner == request.user %}
+                            <span class="owner-badge">(You)</span>
+                        {% endif %}
+                    {% else %}
+                        <span class="no-owner">No owner assigned</span>
+                    {% endif %}
+                </p>
             </div>
             <div class="equipment-actions">
                 <a href="{% url 'equipment_detail' equipment.id %}" class="btn-view">View Details</a>

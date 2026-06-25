@@ -1,0 +1,418 @@
+{% extends 'bookings/base.html' %}
+
+{% block content %}
+<div class="reservations-container">
+    <!-- Header -->
+    <div class="page-header">
+        <div>
+            <h1>My Reservations</h1>
+            <p class="subtitle">View and manage your equipment reservations</p>
+        </div>
+        <div class="header-actions">
+            <a href="{% url 'create_reservation' %}" class="btn-primary">
+                New Reservation
+            </a>
+            <a href="{% url 'reservation_calendar' %}" class="btn-secondary">Calendar View</a>
+        </div>
+    </div>
+
+<!-- Statistics -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-number">{{ total }}</div>
+        <div class="stat-label">Total Reservations</div>
+    </div>
+    <div class="stat-card stat-pending">
+        <div class="stat-number">{{ pending }}</div>
+        <div class="stat-label">Pending</div>
+    </div>
+    <div class="stat-card stat-confirmed">
+        <div class="stat-number">{{ confirmed }}</div>
+        <div class="stat-label">Confirmed</div>
+    </div>
+    <div class="stat-card stat-cancelled">
+        <div class="stat-number">{{ cancelled }}</div>
+        <div class="stat-label">Cancelled</div>
+    </div>
+    {% if is_staff %}
+        <div class="stat-card stat-expired">
+            <div class="stat-number">{{ expired }}</div>
+            <div class="stat-label">Expired</div>
+        </div>
+        <div class="stat-card stat-completed">
+            <div class="stat-number">{{ completed }}</div>
+            <div class="stat-label">Completed</div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Admin: Show all reservations with user info -->
+{% if is_staff %}
+    <div class="admin-banner">
+        <span>Showing all reservations only for staff/admin view</span>
+    </div>
+{% endif %}
+
+    <!-- Filters -->
+    <div class="filter-section">
+        <div class="filter-actions">
+            <a href="?status=all" class="filter-btn {% if status_filter == 'all' %}active{% endif %}">All</a>
+            {% for value, label in status_choices %}
+                <a href="?status={{ value }}" class="filter-btn {% if status_filter == value %}active{% endif %}">
+                    {{ label }}
+                </a>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Reservations List -->
+    {% if reservations %}
+        <div class="reservations-grid">
+            {% for reservation in reservations %}
+    <div class="reservation-card status-{{ reservation.status|lower }}">
+        <div class="card-header">
+            <h3>{{ reservation.equipment.name }}</h3>
+            <span class="status-badge status-{{ reservation.status|lower }}">
+                {{ reservation.get_display_status }}
+            </span>
+        </div>
+        
+        <div class="card-details">
+            <!--  Show user info for staff -->
+            {% if is_staff %}
+                <p><span class="label"> User:</span> {{ reservation.user.username }}</p>
+            {% endif %}
+            <p><span class="label"> Start:</span> {{ reservation.start_date|date:"M d, Y H:i" }}</p>
+            <p><span class="label"> End:</span> {{ reservation.end_date|date:"M d, Y H:i" }}</p>
+            <p><span class="label"> Duration:</span> {{ reservation.get_duration_days }} days</p>
+            <p><span class="label"> Serial:</span> {{ reservation.equipment.serial_number }}</p>
+            {% if reservation.purpose %}
+                <p><span class="label">Purpose:</span> {{ reservation.purpose|truncatewords:10 }}</p>
+            {% endif %}
+        </div>
+        
+        <div class="card-actions">
+            <a href="{% url 'reservation_detail' reservation.id %}" class="btn-view">View Details</a>
+            
+            <!-- Cancel button - visible to user or staff -->
+            {% if reservation.can_cancel %}
+                {% if reservation.user == request.user or is_staff %}
+                    <form method="post" action="{% url 'cancel_reservation' reservation.id %}" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn-cancel" onclick="return confirm('Cancel this reservation?')">
+                            Cancel
+                        </button>
+                    </form>
+                {% endif %}
+            {% endif %}
+            
+            <!-- Confirm button - ONLY visible to staff with PENDING status -->
+            {% if is_staff and reservation.status == 'PENDING' %}
+                <form method="post" action="{% url 'confirm_reservation' reservation.id %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-confirm" onclick="return confirm('Confirm this reservation?')">
+                        Confirm
+                    </button>
+                </form>
+            {% endif %}
+        </div>
+    </div>
+{% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <h2>No Reservations Found</h2>
+            <p>You haven't made any equipment reservations yet.</p>
+            <div class="empty-actions">
+                <a href="{% url 'create_reservation' %}" class="btn-primary">Make a Reservation</a>
+                <a href="{% url 'equipment_list' %}" class="btn-secondary">Browse Equipment</a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+.reservations-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.page-header h1 {
+    margin: 0;
+    font-size: 1.6rem;
+    font-weight: 700;
+}
+
+.page-header .subtitle {
+    margin: 4px 0 0;
+    color: #6c757d;
+    font-size: 0.85rem;
+}
+
+.header-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 18px;
+    background: #007bff;
+    color: white;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+}
+
+.btn-primary:hover {
+    background: #0056b3;
+    color: white;
+}
+
+.btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 18px;
+    background: #6c757d;
+    color: white;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+    color: white;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.stat-card {
+    background: white;
+    padding: 14px 18px;
+    border: 1px solid #e9ecef;
+    text-align: center;
+}
+
+.stat-card .stat-number {
+    display: block;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #1a1a2e;
+}
+
+.stat-card .stat-label {
+    font-size: 0.75rem;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stat-pending .stat-number { color: #ffc107; }
+.stat-confirmed .stat-number { color: #28a745; }
+.stat-cancelled .stat-number { color: #dc3545; }
+
+.filter-section {
+    margin-bottom: 24px;
+    background: #f8f9fa;
+    padding: 12px 16px;
+    border: 1px solid #e9ecef;
+}
+
+.filter-actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.filter-btn {
+    padding: 5px 14px;
+    background: white;
+    border: 1px solid #dee2e6;
+    text-decoration: none;
+    color: #495057;
+    font-size: 0.75rem;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.filter-btn:hover {
+    background: #e9ecef;
+}
+
+.filter-btn.active {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+.reservations-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+}
+
+.reservation-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    padding: 18px;
+    transition: all 0.2s;
+}
+
+.reservation-card:hover {
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    transform: translateY(-2px);
+}
+
+.reservation-card.status-pending { border-left: 4px solid #ffc107; }
+.reservation-card.status-confirmed { border-left: 4px solid #28a745; }
+.reservation-card.status-cancelled { border-left: 4px solid #dc3545; }
+.reservation-card.status-expired { border-left: 4px solid #6c757d; }
+.reservation-card.status-completed { border-left: 4px solid #17a2b8; }
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+}
+
+.card-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.status-badge {
+    padding: 2px 10px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.status-pending .status-badge { background: #fff3cd; color: #856404; }
+.status-confirmed .status-badge { background: #d4edda; color: #155724; }
+.status-cancelled .status-badge { background: #f8d7da; color: #721c24; }
+.status-expired .status-badge { background: #e2e3e5; color: #383d41; }
+.status-completed .status-badge { background: #d1ecf1; color: #0c5460; }
+
+.card-details p {
+    margin: 4px 0;
+    font-size: 0.85rem;
+    color: #495057;
+}
+
+.card-details .label {
+    font-weight: 600;
+    color: #6c757d;
+}
+
+.card-actions {
+    margin-top: 12px;
+    display: flex;
+    gap: 8px;
+}
+
+.card-actions a,
+.card-actions button {
+    padding: 4px 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-view {
+    background: #17a2b8;
+    color: white;
+}
+
+.btn-view:hover {
+    background: #138496;
+}
+
+.btn-cancel {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-cancel:hover {
+    background: #c82333;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+}
+
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 16px;
+}
+
+.empty-state h2 {
+    margin: 0 0 8px;
+    font-size: 1.3rem;
+}
+
+.empty-state p {
+    color: #6c757d;
+    margin-bottom: 20px;
+}
+
+.empty-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    
+    .header-actions {
+        width: 100%;
+    }
+    
+    .btn-primary,
+    .btn-secondary {
+        flex: 1;
+        justify-content: center;
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .reservations-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}

@@ -48,6 +48,38 @@
             </div>
         </div>
 
+        <!-- OWNER SECTION -->
+        <div class="form-section owner-section">
+            <h2>Owner Information</h2>
+            <div class="form-group">
+                <label for="{{ form.owner.id_for_label }}">{{ form.owner.label }}</label>
+                {{ form.owner }}
+                <small class="help-text">{{ form.owner.help_text }}</small>
+                {% if form.owner.errors %}
+                    <div class="field-error">{{ form.owner.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <!-- Display current owner info if editing -->
+            {% if equipment and equipment.owner %}
+                <div class="current-owner-info">
+                    <span class="owner-label">Current Owner:</span>
+                    <span class="owner-name">
+                        {% if equipment.owner.profile.profile_picture %}
+                            <img src="{{ equipment.owner.profile.profile_picture.url }}" alt="{{ equipment.owner.username }}" class="owner-avatar-small">
+                        {% else %}
+                            <span class="owner-avatar-placeholder">{{ equipment.owner.username|first|upper }}</span>
+                        {% endif %}
+                        {{ equipment.owner.username }}
+                        ({{ equipment.owner.email }})
+                    </span>
+                    {% if equipment.owner == request.user %}
+                        <span class="you-badge">You</span>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+
         <!-- Tracking Information -->
         <div class="form-section">
             <h2>Tracking Information</h2>
@@ -152,6 +184,73 @@
 </div>
 
 <style>
+/* Owner Section */
+.owner-section {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 0px;
+    border-left: 4px solid #11151a;
+}
+
+.owner-section h2 {
+    margin-top: 0;
+    color: #007bff;
+}
+
+.current-owner-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background: white;
+    border-radius: 4px;
+    border: 1px solid #e9ecef;
+    margin-top: 10px;
+}
+
+.current-owner-info .owner-label {
+    font-weight: 600;
+    color: #495057;
+    font-size: 0.85rem;
+}
+
+.current-owner-info .owner-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+}
+
+.owner-avatar-small {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.owner-avatar-placeholder {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #007bff;
+    color: white;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+.you-badge {
+    background: #28a745;
+    color: white;
+    padding: 1px 10px;
+    border-radius: 12px;
+    font-size: 0.65rem;
+    font-weight: 600;
+}
+
+/* Form Styles */
 .equipment-form-container {
     max-width: 800px;
     margin: 0 auto;
@@ -178,7 +277,7 @@
 .equipment-form {
     background: white;
     padding: 24px;
-    border-radius: 0px;
+    border-radius: 8px;
     border: 1px solid #e9ecef;
 }
 
@@ -227,7 +326,7 @@
     width: 100%;
     padding: 8px 12px;
     border: 1px solid #ddd;
-    border-radius: 0px;
+    border-radius: 4px;
     font-size: 0.9rem;
     transition: border-color 0.2s, box-shadow 0.2s;
     box-sizing: border-box;
@@ -239,8 +338,10 @@
     box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
 }
 
-.form-group .form-control.error {
-    border-color: #dc3545;
+.form-group .form-control:disabled,
+.form-group .form-control[readonly] {
+    background: #e9ecef;
+    cursor: not-allowed;
 }
 
 .help-text {
@@ -263,7 +364,7 @@
 
 .alert {
     padding: 12px 16px;
-    border-radius: 0px;
+    border-radius: 4px;
     margin-bottom: 20px;
 }
 
@@ -311,7 +412,7 @@
     border-radius: 0px;
     font-size: 0.95rem;
     font-weight: 600;
-    transition: all 0.2s;
+    transition: background 0.2s;
 }
 
 .btn-cancel:hover {
@@ -337,6 +438,10 @@
     .btn-cancel {
         width: 100%;
         text-align: center;
+    }
+    
+    .current-owner-info {
+        flex-wrap: wrap;
     }
 }
 </style>

@@ -1,0 +1,1242 @@
+{% extends 'bookings/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="search-container">
+    <!-- Search Header -->
+    <div class="search-header">
+        <h1>Search Equipment</h1>
+        <p class="subtitle">Find the perfect equipment for your needs</p>
+    </div>
+
+    <!-- Search Form -->
+    <div class="search-form-section">
+        <form method="get" action="{% url 'equipment_search' %}" class="search-form" id="searchForm">
+            <!-- Main Search Bar -->
+            <div class="search-bar">
+                <div class="search-input-wrapper">
+                    <input type="text" 
+                           name="search" 
+                           id="searchInput" 
+                           placeholder="Search by name, description, serial number, or location..."
+                           value="{{ search_query }}"
+                           class="search-input"
+                           autocomplete="off">
+                    <button type="submit" class="search-btn">Search</button>
+                </div>
+                <!-- Autocomplete Suggestions -->
+                <div id="suggestionsContainer" class="suggestions-container" style="display: none;"></div>
+            </div>
+
+            <!-- Advanced Filters -->
+            <div class="advanced-filters">
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label for="category">Category</label>
+                        <select name="category" id="category">
+                            <option value="">All Categories</option>
+                            {% for category in filter_options.categories %}
+                                <option value="{{ category.id }}" {% if selected_category == category.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ category.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="status">Status</label>
+                        <select name="status" id="status">
+                            <option value="">All Statuses</option>
+                            {% for value, label in filter_options.statuses %}
+                                <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="condition">Condition</label>
+                        <select name="condition" id="condition">
+                            <option value="">All Conditions</option>
+                            {% for value, label in filter_options.conditions %}
+                                <option value="{{ value }}" {% if selected_condition == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="location">Location</label>
+                        <select name="location" id="location">
+                            <option value="">All Locations</option>
+                            {% for location in filter_options.locations %}
+                                {% if location %}
+                                    <option value="{{ location }}" {% if selected_location == location %}selected{% endif %}>
+                                        {{ location }}
+                                    </option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="filter-row">
+                    <div class="filter-group price-range">
+                        <label>Price Range</label>
+                        <div class="price-inputs">
+                            <input type="number" name="min_price" id="minPrice" 
+                                   placeholder="Min $" value="{{ min_price }}" class="price-input">
+                            <span class="price-separator">-</span>
+                            <input type="number" name="max_price" id="maxPrice" 
+                                   placeholder="Max $" value="{{ max_price }}" class="price-input">
+                        </div>
+                    </div>
+                    
+                    <div class="filter-group availability-range">
+                        <label>Availability Date Range</label>
+                        <div class="date-inputs">
+                            <input type="date" name="start_date" id="startDate" 
+                                   value="{{ start_date }}" class="date-input">
+                            <span class="date-separator">to</span>
+                            <input type="date" name="end_date" id="endDate" 
+                                   value="{{ end_date }}" class="date-input">
+                        </div>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="sort">Sort By</label>
+                        <select name="sort" id="sort">
+                            <option value="name" {% if sort_by == 'name' %}selected{% endif %}>Name (A-Z)</option>
+                            <option value="-name" {% if sort_by == '-name' %}selected{% endif %}>Name (Z-A)</option>
+                            <option value="-created_at" {% if sort_by == '-created_at' %}selected{% endif %}>Newest</option>
+                            <option value="created_at" {% if sort_by == 'created_at' %}selected{% endif %}>Oldest</option>
+                            <option value="price" {% if sort_by == 'price' %}selected{% endif %}>Price (Low-High)</option>
+                            <option value="-price" {% if sort_by == '-price' %}selected{% endif %}>Price (High-Low)</option>
+                            <option value="status" {% if sort_by == 'status' %}selected{% endif %}>Status</option>
+                            <option value="condition" {% if sort_by == 'condition' %}selected{% endif %}>Condition</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group per-page">
+                        <label for="perPage">Results Per Page</label>
+                        <select name="per_page" id="perPage">
+                            <option value="12" {% if metadata.per_page == 12 %}selected{% endif %}>12</option>
+                            <option value="24" {% if metadata.per_page == 24 %}selected{% endif %}>24</option>
+                            <option value="48" {% if metadata.per_page == 48 %}selected{% endif %}>48</option>
+                            <option value="96" {% if metadata.per_page == 96 %}selected{% endif %}>96</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="filter-actions">
+                    <button type="submit" class="btn-apply-filters">Apply Filters</button>
+                    <a href="{% url 'equipment_search' %}" class="btn-clear-filters">Clear All</a>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Results Summary -->
+    <div class="results-summary">
+        <span class="results-count">
+            Found <strong>{{ metadata.total_results }}</strong> result{{ metadata.total_results|pluralize }}
+            {% if search_query %}
+                for "<strong>{{ search_query }}</strong>"
+            {% endif %}
+        </span>
+        <div class="results-actions">
+    <button onclick="saveSearch()" class="btn-save-search">Save Search</button>
+    <div class="export-dropdown">
+        <button onclick="toggleExportMenu()" class="btn-export-results">Export Results ▾</button>
+        <div id="exportMenu" class="export-menu" style="display: none;">
+            <a href="#" onclick="exportResults('csv')">CSV</a>
+            <a href="#" onclick="exportResults('excel')">Excel</a>
+            <a href="#" onclick="exportResults('pdf')">PDF</a>
+        </div>
+    </div>
+</div>
+    </div>
+
+    <!-- Search Results -->
+    {% if results %}
+        <div class="search-results-grid">
+            {% for equipment in results %}
+                <div class="equipment-card status-{{ equipment.status|lower }}">
+                    <div class="card-header">
+                        <h3>{{ equipment.name }}</h3>
+                        <span class="status-badge status-{{ equipment.status|lower }}">
+                            {{ equipment.get_status_display }}
+                        </span>
+                    </div>
+                    
+                    <div class="card-details">
+                        <p><span class="label">Serial:</span> {{ equipment.serial_number }}</p>
+                        <p><span class="label">Category:</span> {{ equipment.category.name|default:"Uncategorized" }}</p>
+                        <p><span class="label">Condition:</span> {{ equipment.get_condition_display }}</p>
+                        <p><span class="label">Location:</span> {{ equipment.location|default:"Not specified" }}</p>
+                        {% if equipment.purchase_price %}
+                            <p><span class="label">Price:</span> ${{ equipment.purchase_price }}</p>
+                        {% endif %}
+                        <p><span class="label">Owner:</span>
+                        {% if equipment.owner %}
+                        {{ equipment.owner.username }}
+                        {% if equipment.owner == request.user %}
+                        <span class="owner-badge">(You)</span>
+                        {% endif %}
+                        {% else %}
+                        <span class="no-owner">No owner assigned</span>
+                        {% endif %}
+                        </p>
+                    </div>
+                    
+                    <div class="card-actions">
+                        <a href="{% url 'equipment_detail' equipment.id %}" class="btn-view">View Details</a>
+                        {% if equipment.is_available %}
+                            <button onclick="quickRent({{ equipment.id }})" class="btn-rent">Rent Now</button>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <!-- Saved Searches Section -->
+                    <div class="saved-searches-section">
+                        <div class="saved-searches-header">
+                            <h3>Saved Searches</h3>
+                             <button onclick="loadSavedSearches()" class="btn-refresh-searches">Refresh</button>
+                          </div>
+                          <div id="savedSearchesList" class="saved-searches-list">
+                            <!-- Saved searches will be loaded here -->
+                        </div>
+                    </div>
+
+        <!-- Pagination -->
+        {% if results.has_other_pages %}
+            <div class="pagination">
+                {% if results.has_previous %}
+                    <a href="?page={{ results.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-link">Previous</a>
+                {% endif %}
+                
+                <span class="page-info">
+                    Page {{ results.number }} of {{ results.paginator.num_pages }}
+                </span>
+                
+                {% if results.has_next %}
+                    <a href="?page={{ results.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-link">Next</a>
+                {% endif %}
+            </div>
+        {% endif %}
+    {% else %}
+        <!-- Empty State -->
+        <div class="empty-state">
+            <h2>No Results Found</h2>
+            <p>We couldn't find any equipment matching your search criteria.</p>
+            <div class="empty-actions">
+                <a href="{% url 'equipment_search' %}" class="btn-secondary">Clear Filters</a>
+                <a href="{% url 'equipment_list' %}" class="btn-primary">Browse All Equipment</a>
+            </div>
+            <div class="empty-tips">
+                <h4>Search Tips:</h4>
+                <ul>
+                    <li>Try using different keywords</li>
+                    <li>Check your spelling</li>
+                    <li>Use fewer filters to broaden your search</li>
+                    <li>Try searching by serial number or asset tag</li>
+                </ul>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+// Get CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+const csrftoken = getCookie('csrftoken');
+
+// Autocomplete functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchInput');
+    const suggestionsContainer = document.getElementById('suggestionsContainer');
+    let debounceTimer;
+
+    searchInput.addEventListener('input', function() {
+        clearTimeout(debounceTimer);
+        const query = this.value.trim();
+        
+        if (query.length < 2) {
+            suggestionsContainer.style.display = 'none';
+            return;
+        }
+
+        debounceTimer = setTimeout(function() {
+            fetch(`/equipment/search/suggest/?q=${encodeURIComponent(query)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.suggestions && data.suggestions.length > 0) {
+                        renderSuggestions(data.suggestions);
+                        suggestionsContainer.style.display = 'block';
+                    } else {
+                        suggestionsContainer.style.display = 'none';
+                    }
+                })
+                .catch(error => console.error('Error fetching suggestions:', error));
+        }, 300);
+    });
+
+    function renderSuggestions(suggestions) {
+        let html = '';
+        suggestions.forEach(suggestion => {
+            html += `
+                <div class="suggestion-item" data-value="${suggestion.value}" data-type="${suggestion.type}">
+                    <span class="suggestion-category">${suggestion.category}</span>
+                    <span class="suggestion-label">${suggestion.label}</span>
+                </div>
+            `;
+        });
+        suggestionsContainer.innerHTML = html;
+
+        // Add click handlers
+        document.querySelectorAll('.suggestion-item').forEach(item => {
+            item.addEventListener('click', function() {
+                const value = this.dataset.value;
+                searchInput.value = value;
+                suggestionsContainer.style.display = 'none';
+                document.getElementById('searchForm').submit();
+            });
+        });
+    }
+
+    // Close suggestions on click outside
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.search-bar')) {
+            suggestionsContainer.style.display = 'none';
+        }
+    });
+
+    // Keyboard navigation for suggestions
+    let selectedIndex = -1;
+    searchInput.addEventListener('keydown', function(e) {
+        const items = document.querySelectorAll('.suggestion-item');
+        
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+            highlightSuggestion(items, selectedIndex);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            selectedIndex = Math.max(selectedIndex - 1, -1);
+            highlightSuggestion(items, selectedIndex);
+        } else if (e.key === 'Enter') {
+            if (selectedIndex >= 0 && items.length > selectedIndex) {
+                e.preventDefault();
+                items[selectedIndex].click();
+            }
+        }
+    });
+
+    function highlightSuggestion(items, index) {
+        items.forEach((item, i) => {
+            item.style.background = i === index ? '#f0f0f0' : '';
+        });
+    }
+});
+
+// Quick Rent Function
+function quickRent(equipmentId) {
+    const returnDate = prompt(
+        'Expected return date (YYYY-MM-DD HH:MM):',
+        new Date(Date.now() + 7*24*60*60*1000).toISOString().slice(0, 16)
+    );
+    
+    if (!returnDate) return;
+    
+    const conditionNotes = prompt('Condition notes (optional):', '');
+    
+    const formData = new FormData();
+    formData.append('equipment_id', equipmentId);
+    formData.append('expected_return_date', returnDate);
+    formData.append('condition_notes', conditionNotes || '');
+    
+    const btn = event.target;
+    const originalText = btn.textContent;
+    btn.textContent = '⏳';
+    btn.disabled = true;
+    
+    fetch('/equipment/rent/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrftoken,
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert('Error: ' + data.error);
+        } else {
+            alert('Success ' + data.message);
+            location.reload();
+        }
+    })
+    .catch(error => {
+        alert('Error: ' + error.message);
+    })
+    .finally(() => {
+        btn.textContent = originalText;
+        btn.disabled = false;
+    });
+}
+
+function saveSearch() {
+    const searchParams = new URLSearchParams(window.location.search);
+    const searchName = prompt('Name this search:', 'My Search');
+    
+    if (!searchName) return;
+    
+    const formData = new FormData();
+    formData.append('name', searchName);
+    
+    // Add all current search parameters
+    for (const [key, value] of searchParams) {
+        formData.append(key, value);
+    }
+    
+    const btn = event.target;
+    const originalText = btn.textContent;
+    btn.textContent = 'Saving...';
+    btn.disabled = true;
+    
+    fetch('/equipment/search/save/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrftoken,
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert('Error: ' + data.error);
+        } else {
+            alert('Success ' + data.message);
+            loadSavedSearches(); // Refresh the saved searches list
+        }
+    })
+    .catch(error => {
+        alert('Error: ' + error.message);
+    })
+    .finally(() => {
+        btn.textContent = originalText;
+        btn.disabled = false;
+    });
+}
+
+// Load Saved Searches
+function loadSavedSearches() {
+    fetch('/equipment/search/saved/')
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById('savedSearchesList');
+            if (!container) return;
+            
+            if (data.searches.length === 0) {
+                container.innerHTML = '<p class="no-saved-searches">No saved searches yet</p>';
+                return;
+            }
+            
+            let html = '';
+            data.searches.forEach(search => {
+                const favoriteIcon = search.is_favorite ? '⭐' : '☆';
+                html += `
+                    <div class="saved-search-item" data-id="${search.id}">
+                        <div class="search-info">
+                            <span class="search-name">${search.name}</span>
+                            <span class="search-query">${search.search_query || 'All equipment'}</span>
+                            <span class="search-date">${search.created_at}</span>
+                        </div>
+                        <div class="search-actions">
+                            <button onclick="loadSavedSearch(${search.id}, '${search.url}')" class="btn-load-search">Load</button>
+                            <button onclick="toggleFavorite(${search.id})" class="btn-favorite">${favoriteIcon}</button>
+                            <button onclick="deleteSavedSearch(${search.id})" class="btn-delete-search">Delete</button>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        })
+        .catch(error => console.error('Error loading saved searches:', error));
+}
+
+// Load a Saved Search
+function loadSavedSearch(searchId, url) {
+    window.location.href = url;
+}
+
+// Toggle Favorite
+function toggleFavorite(searchId) {
+    fetch(`/equipment/search/saved/${searchId}/favorite/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrftoken,
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            loadSavedSearches();
+        }
+    })
+    .catch(error => console.error('Error toggling favorite:', error));
+}
+
+// Delete Saved Search
+function deleteSavedSearch(searchId) {
+    if (!confirm('Delete this saved search?')) return;
+    
+    fetch(`/equipment/search/saved/${searchId}/delete/`, {
+        method: 'DELETE',
+        headers: {
+            'X-CSRFToken': csrftoken,
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            loadSavedSearches();
+        }
+    })
+    .catch(error => console.error('Error deleting search:', error));
+}
+
+// Export Results Function
+function exportResults(format) {
+    const currentParams = new URLSearchParams(window.location.search);
+    const url = `/equipment/search/export/?format=${format}&${currentParams.toString()}`;
+    window.location.href = url;
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // Load saved searches if container exists
+    const savedSearchesContainer = document.getElementById('savedSearchesList');
+    if (savedSearchesContainer) {
+        loadSavedSearches();
+    }
+});
+
+// Toggle Export Menu
+function toggleExportMenu() {
+    const menu = document.getElementById('exportMenu');
+    if (menu.style.display === 'none') {
+        menu.style.display = 'block';
+    } else {
+        menu.style.display = 'none';
+    }
+}
+
+// Close export menu on click outside
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.export-dropdown')) {
+        const menu = document.getElementById('exportMenu');
+        if (menu) {
+            menu.style.display = 'none';
+        }
+    }
+});
+
+
+</script>
+
+<style>
+.search-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* Search Header */
+.search-header {
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.search-header h1 {
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: 700;
+}
+
+.search-header .subtitle {
+    margin: 4px 0 0;
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+/* Search Form */
+.search-form-section {
+    background: white;
+    border: 1px solid #e9ecef;
+    padding: 20px;
+    margin-bottom: 24px;
+}
+
+.search-bar {
+    margin-bottom: 16px;
+    position: relative;
+}
+
+.search-input-wrapper {
+    display: flex;
+    align-items: center;
+    border: 2px solid #dee2e6;
+    transition: border-color 0.2s;
+    background: white;
+}
+
+.search-input-wrapper:focus-within {
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.search-icon {
+    padding: 0 12px;
+    font-size: 1.2rem;
+    color: #6c757d;
+}
+
+.search-input {
+    flex: 1;
+    padding: 12px 8px;
+    border: none;
+    font-size: 1rem;
+    outline: none;
+    background: transparent;
+}
+
+.search-btn {
+    padding: 12px 24px;
+    background: #007bff;
+    color: white;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.search-btn:hover {
+    background: #0056b3;
+}
+
+/* Suggestions */
+.suggestions-container {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-top: none;
+    max-height: 300px;
+    overflow-y: auto;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.suggestion-item {
+    padding: 10px 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid #f1f3f5;
+}
+
+.suggestion-item:hover {
+    background: #f8f9fa;
+}
+
+.suggestion-category {
+    font-size: 0.7rem;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background: #e9ecef;
+    padding: 2px 8px;
+    border-radius: 0;
+}
+
+.suggestion-label {
+    flex: 1;
+}
+
+/* Advanced Filters */
+.advanced-filters {
+    border-top: 1px solid #e9ecef;
+    padding-top: 16px;
+}
+
+.filter-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.filter-group label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #495057;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.filter-group select,
+.filter-group input {
+    padding: 8px 10px;
+    border: 1px solid #dee2e6;
+    font-size: 0.85rem;
+    transition: border-color 0.2s;
+    background: white;
+}
+
+.filter-group select:focus,
+.filter-group input:focus {
+    border-color: #007bff;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.price-inputs,
+.date-inputs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.price-input {
+    flex: 1;
+    min-width: 60px;
+}
+
+.price-separator,
+.date-separator {
+    color: #6c757d;
+}
+
+.date-input {
+    flex: 1;
+    min-width: 100px;
+}
+
+.filter-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.btn-apply-filters {
+    padding: 8px 24px;
+    background: #28a745;
+    color: white;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-apply-filters:hover {
+    background: #218838;
+}
+
+.btn-clear-filters {
+    padding: 8px 24px;
+    background: #6c757d;
+    color: white;
+    border: none;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 0.2s;
+}
+
+.btn-clear-filters:hover {
+    background: #5a6268;
+    color: white;
+}
+
+/* Results Summary */
+.results-summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid #e9ecef;
+    margin-bottom: 20px;
+}
+
+.results-count {
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+.results-count strong {
+    color: #1a1a2e;
+}
+
+.results-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-save-search,
+.btn-export-results {
+    padding: 6px 14px;
+    border: 1px solid #dee2e6;
+    text-decoration: none;
+    font-size: 0.8rem;
+    cursor: pointer;
+    background: white;
+    transition: all 0.2s;
+}
+
+.btn-save-search:hover,
+.btn-export-results:hover {
+    background: #f8f9fa;
+    border-color: #007bff;
+}
+
+/* Search Results Grid */
+.search-results-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+/* Saved Searches */
+.saved-searches-section {
+    margin-bottom: 24px;
+    background: #f8f9fa;
+    padding: 16px;
+    border: 1px solid #e9ecef;
+}
+
+.saved-searches-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.saved-searches-header h3 {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.btn-refresh-searches {
+    padding: 4px 12px;
+    background: #6c757d;
+    color: white;
+    border: none;
+    font-size: 0.75rem;
+    cursor: pointer;
+}
+
+.saved-search-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: white;
+    border: 1px solid #e9ecef;
+    margin-bottom: 4px;
+    transition: background 0.2s;
+}
+
+.saved-search-item:hover {
+    background: #f1f3f5;
+}
+
+.search-info {
+    flex: 1;
+}
+
+.search-name {
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.search-query {
+    color: #6c757d;
+    font-size: 0.75rem;
+    margin-left: 8px;
+}
+
+.search-date {
+    color: #adb5bd;
+    font-size: 0.7rem;
+    margin-left: 8px;
+}
+
+.search-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.search-actions button {
+    padding: 2px 8px;
+    border: none;
+    cursor: pointer;
+    font-size: 0.75rem;
+}
+
+.btn-load-search {
+    background: #007bff;
+    color: white;
+}
+
+.btn-load-search:hover {
+    background: #0056b3;
+}
+
+.btn-favorite {
+    background: transparent;
+    font-size: 0.85rem;
+}
+
+.btn-delete-search {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-delete-search:hover {
+    background: #c82333;
+}
+
+.no-saved-searches {
+    text-align: center;
+    color: #6c757d;
+    padding: 16px;
+}
+
+/* Export Dropdown */
+.export-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.export-menu {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    background: white;
+    border: 1px solid #dee2e6;
+    min-width: 120px;
+    z-index: 1000;
+}
+
+.export-menu a {
+    display: block;
+    padding: 8px 16px;
+    text-decoration: none;
+    color: #1a1a2e;
+    transition: background 0.2s;
+}
+
+.export-menu a:hover {
+    background: #f8f9fa;
+}
+
+.btn-export-results {
+    padding: 6px 14px;
+    border: 1px solid #dee2e6;
+    background: white;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: all 0.2s;
+}
+
+.btn-export-results:hover {
+    background: #f8f9fa;
+    border-color: #007bff;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .saved-search-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .search-info {
+        width: 100%;
+    }
+    
+    .search-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+    
+    .export-dropdown {
+        width: 100%;
+    }
+    
+    .export-menu {
+        position: static;
+    }
+}
+
+.equipment-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    padding: 18px;
+    transition: all 0.2s ease;
+}
+
+.equipment-card:hover {
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    transform: translateY(-2px);
+}
+
+.equipment-card.status-available { border-left: 4px solid #28a745; }
+.equipment-card.status-rented { border-left: 4px solid #ffc107; }
+.equipment-card.status-maintenance { border-left: 4px solid #dc3545; }
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+    gap: 8px;
+}
+
+.card-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.status-badge {
+    padding: 2px 10px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.status-available .status-badge { background: #d4edda; color: #155724; }
+.status-rented .status-badge { background: #fff3cd; color: #856404; }
+.status-maintenance .status-badge { background: #f8d7da; color: #721c24; }
+
+.card-details p {
+    margin: 3px 0;
+    font-size: 0.8rem;
+    color: #495057;
+}
+
+.card-details .label {
+    font-weight: 600;
+    color: #6c757d;
+    font-size: 0.75rem;
+}
+
+.card-actions {
+    margin-top: 12px;
+    display: flex;
+    gap: 6px;
+}
+
+.card-actions a,
+.card-actions button {
+    padding: 4px 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-view {
+    background: #17a2b8;
+    color: white;
+}
+
+.btn-view:hover {
+    background: #138496;
+}
+
+.btn-rent {
+    background: #28a745;
+    color: white;
+}
+
+.btn-rent:hover {
+    background: #218838;
+}
+
+/* Pagination */
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+    margin-top: 24px;
+    padding: 16px;
+    background: #f8f9fa;
+}
+
+.page-link {
+    padding: 8px 16px;
+    background: white;
+    border: 1px solid #dee2e6;
+    text-decoration: none;
+    color: #007bff;
+    transition: all 0.2s;
+}
+
+.page-link:hover {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+.page-info {
+    font-weight: 600;
+    color: #495057;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+}
+
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 16px;
+}
+
+.empty-state h2 {
+    margin: 0 0 8px;
+    font-size: 1.3rem;
+}
+
+.empty-state p {
+    color: #6c757d;
+    margin-bottom: 20px;
+}
+
+.empty-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.empty-actions .btn-secondary {
+    padding: 8px 20px;
+    background: #6c757d;
+    color: white;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.empty-actions .btn-primary {
+    padding: 8px 20px;
+    background: #007bff;
+    color: white;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.empty-tips {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid #e9ecef;
+    text-align: left;
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.empty-tips h4 {
+    margin: 0 0 8px 0;
+    font-size: 0.85rem;
+}
+
+.empty-tips ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.empty-tips li {
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin-bottom: 4px;
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+    .filter-row {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .filter-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .results-summary {
+        flex-direction: column;
+        gap: 10px;
+        align-items: flex-start;
+    }
+    
+    .search-input-wrapper {
+        flex-wrap: wrap;
+    }
+    
+    .search-btn {
+        width: 100%;
+    }
+    
+    .search-results-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .price-inputs,
+    .date-inputs {
+        flex-wrap: wrap;
+    }
+    
+    .price-input,
+    .date-input {
+        min-width: 100%;
+    }
+}
+</style>
+{% endblock %}

@@ -880,15 +880,18 @@
       <div class="nav-links" id="navLinks" role="menubar">
         <div class="nav-main" role="menu">
           <a href="{% url 'resource_list' %}" role="menuitem">Homepage</a>
-          <a href="{% url 'calendar_view' %}" role="menuitem">Calendar</a>
+          <a href="{% url 'calendar_view' %}" role="menuitem">Booking Calendar</a>
           <a href="{% url 'my_resources' %}" role="menuitem">My Resources</a>
           <a href="{% url 'my_bookings' %}" role="menuitem">My Bookings</a>
           <a href="{% url 'my_reviews' %}" role="menuitem">Reviews</a>
           <a href="{% url 'equipment_dashboard' %}">Dashboard</a>
           <a href="{% url 'equipment_list' %}">Equipment</a>
+          <a href="{% url 'equipment_search' %}">Equipment Search</a>
           <a href="{% url 'my_rentals' %}">My Rentals</a>
           <a href="{% url 'my_equipment' %}">My Equipment</a>
           <a href="{% url 'equipment_maintenance' %}">Maintenance</a>
+          <a href="{% url 'reservation_list' %}">Reservations</a>
+          <a href="{% url 'reservation_calendar' %}">Calendar</a>
         </div>
 
         {% if user.is_staff %}

@@ -17,7 +17,7 @@ from .export_service import ExportService
 from .forms import (
     SignUpForm, ResourceForm, ResourceStatusForm, CategoryForm, 
     UserProfileForm, UserSettingsForm, ReviewForm, ReviewFilterForm,
-    EquipmentForm  # ADD THIS
+    EquipmentForm
 )
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.forms import PasswordChangeForm
@@ -29,7 +29,17 @@ from django.core.paginator import Paginator
 from .email_service import send_review_submitted_email, send_review_approved_email, send_review_rejected_email
 from django.contrib.auth import logout
 import calendar
+from django.http import HttpResponse
+from django.template.loader import render_to_string
+from django.utils import timezone
+import csv
 import json
+from io import BytesIO
+from datetime import datetime
+from .services.search_service import SearchService
+from .models import SavedSearch
+from .services.reservation_service import ReservationService
+from .models import EquipmentReservation
 
 # Import analytics service after all other imports
 from .analytics_service import AnalyticsService
@@ -1463,6 +1473,10 @@ def equipment_list(request):
     category_filter = request.GET.get('category')
     if category_filter:
         equipment_list = equipment_list.filter(category_id=category_filter)
+
+    owner_filter = request.GET.get('owner')
+    if owner_filter:
+        equipment_list = equipment_list.filter(owner_id=owner_filter)
     
     # Search
     search_query = request.GET.get('search')
@@ -1642,9 +1656,21 @@ def my_rentals(request):
     return render(request, 'bookings/my_rentals.html', context)
 
 @login_required
-@user_passes_test(lambda u: u.is_staff)
 def equipment_maintenance(request):
-    """Admin view for managing equipment maintenance"""
+    """View for managing equipment maintenance - Users can manage their own equipment, Staff can manage all"""
+    
+    # Get equipment based on user role
+    if request.user.is_staff:
+        # Staff can see ALL equipment
+        equipment_list = Equipment.objects.all()
+        maintenance_records = MaintenanceRecord.objects.all().order_by('-scheduled_date')[:50]
+    else:
+        # Regular users can only see their OWN equipment
+        equipment_list = Equipment.objects.filter(owner=request.user)
+        maintenance_records = MaintenanceRecord.objects.filter(
+            equipment__owner=request.user
+        ).order_by('-scheduled_date')[:50]
+    
     if request.method == 'POST':
         equipment_id = request.POST.get('equipment_id')
         maintenance_type = request.POST.get('maintenance_type')
@@ -1653,6 +1679,12 @@ def equipment_maintenance(request):
         scheduled_date_str = request.POST.get('scheduled_date')
         cost = request.POST.get('cost')
         vendor = request.POST.get('vendor', '')
+        
+        # Validate equipment ownership
+        equipment = get_object_or_404(Equipment, id=equipment_id)
+        if not request.user.is_staff and equipment.owner != request.user:
+            messages.error(request, 'You do not have permission to schedule maintenance for this equipment.')
+            return redirect('equipment_maintenance')
         
         if all([equipment_id, maintenance_type, title, description, scheduled_date_str]):
             try:
@@ -1679,47 +1711,70 @@ def equipment_maintenance(request):
         else:
             messages.error(request, 'Please fill in all required fields')
     
-    # Get all equipment for maintenance scheduling
-    equipment_list = Equipment.objects.all()
-    maintenance_records = MaintenanceRecord.objects.all().order_by('-scheduled_date')[:50]
-    
-    # Calculate maintenance statistics
-    total_records = MaintenanceRecord.objects.count()
-    scheduled_count = MaintenanceRecord.objects.filter(status='SCHEDULED').count()
-    in_progress_count = MaintenanceRecord.objects.filter(status='IN_PROGRESS').count()
-    completed_count = MaintenanceRecord.objects.filter(status='COMPLETED').count()
-    cancelled_count = MaintenanceRecord.objects.filter(status='CANCELLED').count()
+    # Calculate maintenance statistics based on user role
+    if request.user.is_staff:
+        total_records = MaintenanceRecord.objects.count()
+        scheduled_count = MaintenanceRecord.objects.filter(status='SCHEDULED').count()
+        in_progress_count = MaintenanceRecord.objects.filter(status='IN_PROGRESS').count()
+        completed_count = MaintenanceRecord.objects.filter(status='COMPLETED').count()
+        cancelled_count = MaintenanceRecord.objects.filter(status='CANCELLED').count()
+    else:
+        # Users only see stats for their equipment
+        user_equipment_ids = Equipment.objects.filter(owner=request.user).values_list('id', flat=True)
+        total_records = MaintenanceRecord.objects.filter(equipment__id__in=user_equipment_ids).count()
+        scheduled_count = MaintenanceRecord.objects.filter(
+            equipment__id__in=user_equipment_ids,
+            status='SCHEDULED'
+        ).count()
+        in_progress_count = MaintenanceRecord.objects.filter(
+            equipment__id__in=user_equipment_ids,
+            status='IN_PROGRESS'
+        ).count()
+        completed_count = MaintenanceRecord.objects.filter(
+            equipment__id__in=user_equipment_ids,
+            status='COMPLETED'
+        ).count()
+        cancelled_count = MaintenanceRecord.objects.filter(
+            equipment__id__in=user_equipment_ids,
+            status='CANCELLED'
+        ).count()
     
     context = {
         'equipment_list': equipment_list,
         'maintenance_records': maintenance_records,
         'maintenance_types': MaintenanceRecord.MAINTENANCE_TYPES,
-        # Add statistics
         'total_records': total_records,
         'scheduled_count': scheduled_count,
         'in_progress_count': in_progress_count,
         'completed_count': completed_count,
         'cancelled_count': cancelled_count,
+        'is_staff': request.user.is_staff,
     }
     return render(request, 'bookings/equipment_maintenance.html', context)
 
 @login_required
-@user_passes_test(lambda u: u.is_staff)
 def maintenance_detail(request, maintenance_id):
     """View for displaying a single maintenance record"""
     maintenance = get_object_or_404(MaintenanceRecord, id=maintenance_id)
     
+    # Check if user can view this maintenance
+    if not request.user.is_staff and maintenance.equipment.owner != request.user:
+        messages.error(request, 'You do not have permission to view this maintenance record.')
+        return redirect('equipment_maintenance')
+    
     context = {
         'maintenance': maintenance,
         'equipment': maintenance.equipment,
+        'can_complete': request.user.is_staff,  # Only staff can complete
+        'can_edit': request.user.is_staff or maintenance.equipment.owner == request.user,
     }
     return render(request, 'bookings/maintenance_detail.html', context)
 
 
 @login_required
-@user_passes_test(lambda u: u.is_staff)
+@user_passes_test(lambda u: u.is_staff)  # Keep this staff-only
 def complete_maintenance(request):
-    """Handle completing maintenance via AJAX"""
+    """Handle completing maintenance via AJAX - Staff Only"""
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
     
@@ -1730,28 +1785,32 @@ def complete_maintenance(request):
         return JsonResponse({'error': 'Missing maintenance ID'}, status=400)
     
     try:
-        maintenance = MaintenanceRecord.objects.get(id=maintenance_id)
-        
-        # Check if already completed
-        if maintenance.status == 'COMPLETED':
-            return JsonResponse({'error': 'This maintenance is already completed'}, status=400)
-        
-        # Complete the maintenance
-        maintenance.status = 'COMPLETED'
-        maintenance.completed_date = timezone.now().date()
-        if notes:
-            maintenance.notes = notes
-        maintenance.save()
-        
-        # Update equipment status back to available
-        equipment = maintenance.equipment
-        equipment.status = 'AVAILABLE'
-        equipment.save()
-        
-        return JsonResponse({
-            'success': True,
-            'message': f'Maintenance for {equipment.name} completed successfully!'
-        })
+        with transaction.atomic():
+            maintenance = MaintenanceRecord.objects.select_for_update().get(id=maintenance_id)
+            
+            # Check if already completed
+            if maintenance.status == 'COMPLETED':
+                return JsonResponse({'error': 'This maintenance is already completed'}, status=400)
+            
+            if maintenance.status == 'CANCELLED':
+                return JsonResponse({'error': 'This maintenance has been cancelled'}, status=400)
+            
+            # Update maintenance record
+            maintenance.status = 'COMPLETED'
+            maintenance.completed_date = timezone.now().date()
+            if notes:
+                maintenance.notes = (maintenance.notes + '\n' + notes).strip() if maintenance.notes else notes
+            maintenance.save()
+            
+            # Update equipment status
+            equipment = maintenance.equipment
+            equipment.status = 'AVAILABLE'
+            equipment.save()
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Maintenance for "{equipment.name}" completed successfully!'
+            })
     
     except MaintenanceRecord.DoesNotExist:
         return JsonResponse({'error': 'Maintenance record not found'}, status=404)
@@ -1764,18 +1823,26 @@ def complete_maintenance(request):
 def my_equipment(request):
     """View for users to see and manage their own equipment"""
     # Get equipment owned by the user
-    equipment_list = Equipment.objects.filter(owner=request.user).order_by('-created_at')
+    equipment_list = Equipment.objects.filter(owner=request.user)
     
     # Get filter from query params
     status_filter = request.GET.get('status', 'all')
     if status_filter != 'all':
         equipment_list = equipment_list.filter(status=status_filter)
     
-    # Get statistics
-    total = equipment_list.count()
-    available = equipment_list.filter(status='AVAILABLE').count()
-    rented = equipment_list.filter(status='RENTED').count()
-    maintenance = equipment_list.filter(status='MAINTENANCE').count()
+    # Calculate statistics for all statuses
+    total = Equipment.objects.filter(owner=request.user).count()
+    available = Equipment.objects.filter(owner=request.user, status='AVAILABLE').count()
+    rented = Equipment.objects.filter(owner=request.user, status='RENTED').count()
+    maintenance = Equipment.objects.filter(owner=request.user, status='MAINTENANCE').count()
+    retired = Equipment.objects.filter(owner=request.user, status='RETIRED').count()
+    lost = Equipment.objects.filter(owner=request.user, status='LOST').count()
+    
+    # Get the count for the current filter
+    current_count = equipment_list.count()
+    
+    # Sort the filtered list
+    equipment_list = equipment_list.order_by('-created_at')
     
     context = {
         'equipment_list': equipment_list,
@@ -1783,7 +1850,10 @@ def my_equipment(request):
         'available': available,
         'rented': rented,
         'maintenance': maintenance,
+        'retired': retired,
+        'lost': lost,
         'current_filter': status_filter,
+        'current_count': current_count,
         'status_choices': Equipment.STATUS_CHOICES,
     }
     return render(request, 'bookings/my_equipment.html', context)
@@ -1792,10 +1862,14 @@ def my_equipment(request):
 def create_equipment(request):
     """View for users to create new equipment"""
     if request.method == 'POST':
-        form = EquipmentForm(request.POST)
+        form = EquipmentForm(request.POST, user=request.user)  # Pass user to form
         if form.is_valid():
             equipment = form.save(commit=False)
-            equipment.owner = request.user
+            
+            # If no owner is set, use current user
+            if not equipment.owner:
+                equipment.owner = request.user
+            
             equipment.status = 'AVAILABLE'  # Default status
             equipment.save()
             messages.success(request, f'Equipment "{equipment.name}" created successfully!')
@@ -1803,7 +1877,7 @@ def create_equipment(request):
         else:
             messages.error(request, 'Please correct the errors below.')
     else:
-        form = EquipmentForm()
+        form = EquipmentForm(user=request.user)  # Pass user to form
     
     context = {
         'form': form,
@@ -1823,15 +1897,23 @@ def edit_equipment(request, equipment_id):
         return redirect('my_equipment')
     
     if request.method == 'POST':
-        form = EquipmentForm(request.POST, instance=equipment)
+        form = EquipmentForm(request.POST, instance=equipment, user=request.user)
         if form.is_valid():
-            form.save()
+            # Save the form but ensure owner is preserved
+            equipment = form.save(commit=False)
+            
+            # If the user is not staff, ensure the owner doesn't change
+            if not request.user.is_staff:
+                # Keep the original owner
+                equipment.owner = Equipment.objects.get(id=equipment_id).owner
+            
+            equipment.save()
             messages.success(request, f'Equipment "{equipment.name}" updated successfully!')
             return redirect('my_equipment')
         else:
             messages.error(request, 'Please correct the errors below.')
     else:
-        form = EquipmentForm(instance=equipment)
+        form = EquipmentForm(instance=equipment, user=request.user)
     
     context = {
         'form': form,
@@ -1935,3 +2017,490 @@ def equipment_dashboard(request):
     }
     
     return render(request, 'bookings/equipment_dashboard.html', context)
+
+@login_required
+def equipment_search(request):
+    """Advanced equipment search view"""
+    
+    # Get search results
+    search_data = SearchService.search_equipment(request)
+    
+    # Get filter options
+    filter_options = SearchService.get_filter_options()
+    
+    # Get search suggestions for autocomplete
+    search_query = request.GET.get('search', '')
+    suggestions = []
+    if search_query and len(search_query) >= 2:
+        suggestions = SearchService.get_search_suggestions(search_query)
+    
+    context = {
+        'results': search_data['results'],
+        'metadata': search_data['metadata'],
+        'filter_options': filter_options,
+        'suggestions': suggestions,
+        'search_query': search_query,
+        # Preserve filters for form display
+        'selected_category': request.GET.get('category', ''),
+        'selected_status': request.GET.get('status', ''),
+        'selected_condition': request.GET.get('condition', ''),
+        'selected_location': request.GET.get('location', ''),
+        'min_price': request.GET.get('min_price', ''),
+        'max_price': request.GET.get('max_price', ''),
+        'start_date': request.GET.get('start_date', ''),
+        'end_date': request.GET.get('end_date', ''),
+        'sort_by': request.GET.get('sort', 'name'),
+    }
+    
+    return render(request, 'bookings/equipment_search.html', context)
+
+@login_required
+def search_suggestions(request):
+    """API endpoint for search autocomplete"""
+    query = request.GET.get('q', '')
+    suggestions = SearchService.get_search_suggestions(query)
+    return JsonResponse({'suggestions': suggestions})
+
+@login_required
+def save_search(request):
+    """Save current search"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    search_name = request.POST.get('name', '').strip()
+    if not search_name:
+        return JsonResponse({'error': 'Search name is required'}, status=400)
+    
+    try:
+        saved_search, created = SearchService.save_search(
+            user=request.user,
+            name=search_name,
+            request=request
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'created': created,
+            'search_id': saved_search.id,
+            'message': f'Search "{search_name}" {"created" if created else "updated"} successfully!'
+        })
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@login_required
+def get_saved_searches(request):
+    """Get all saved searches for the user"""
+    searches = SearchService.get_saved_searches(request.user)
+    data = []
+    for search in searches:
+        data.append({
+            'id': search.id,
+            'name': search.name,
+            'search_query': search.search_query,
+            'filters': search.filters,
+            'sort_by': search.sort_by,
+            'per_page': search.per_page,
+            'is_favorite': search.is_favorite,
+            'created_at': search.created_at.strftime('%Y-%m-%d %H:%M'),
+            'last_used': search.last_used.strftime('%Y-%m-%d %H:%M') if search.last_used else None,
+            'url': search.get_search_url(),
+        })
+    return JsonResponse({'searches': data})
+
+@login_required
+def delete_saved_search(request, search_id):
+    """Delete a saved search"""
+    if request.method != 'DELETE':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    try:
+        SearchService.delete_saved_search(request.user, search_id)
+        return JsonResponse({'success': True, 'message': 'Search deleted successfully'})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@login_required
+def toggle_search_favorite(request, search_id):
+    """Toggle favorite status of a saved search"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    try:
+        is_favorite = SearchService.toggle_favorite(request.user, search_id)
+        return JsonResponse({
+            'success': True,
+            'is_favorite': is_favorite,
+            'message': 'Favorite status updated'
+        })
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@login_required
+def export_search_results(request):
+    """Export search results"""
+    format_type = request.GET.get('format', 'csv')
+    
+    response = SearchService.export_search_results(request)
+    if response:
+        return response
+    
+    return JsonResponse({'error': 'Invalid export format'}, status=400)
+
+@login_required
+def export_bookings(request):
+    """Export bookings in various formats"""
+    format_type = request.GET.get('format', 'csv')
+    
+    # Get all bookings for the user
+    bookings = Booking.objects.filter(customer=request.user).order_by('-start_time')
+    
+    if format_type == 'csv':
+        return export_bookings_csv(request, bookings)
+    elif format_type == 'json':
+        return export_bookings_json(request, bookings)
+    elif format_type == 'pdf':
+        return export_bookings_pdf(request, bookings)
+    else:
+        messages.error(request, 'Invalid export format')
+        return redirect('my_bookings')
+
+def export_bookings_csv(request, bookings):
+    """Export bookings as CSV"""
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="my_bookings_{timezone.now().strftime("%Y%m%d_%H%M%S")}.csv"'
+    
+    writer = csv.writer(response)
+    
+    # Headers
+    writer.writerow([
+        'ID', 'Resource', 'Start Time', 'End Time', 'Duration (hours)', 
+        'Status', 'Notes', 'Created At'
+    ])
+    
+    # Data
+    for booking in bookings:
+        writer.writerow([
+            booking.id,
+            booking.resource.name,
+            booking.start_time.strftime('%Y-%m-%d %H:%M'),
+            booking.end_time.strftime('%Y-%m-%d %H:%M'),
+            booking.get_duration(),
+            booking.get_status_display(),
+            booking.notes or '',
+            booking.created_at.strftime('%Y-%m-%d %H:%M'),
+        ])
+    
+    return response
+
+def export_bookings_json(request, bookings):
+    """Export bookings as JSON"""
+    data = []
+    for booking in bookings:
+        data.append({
+            'id': booking.id,
+            'resource': booking.resource.name,
+            'start_time': booking.start_time.isoformat(),
+            'end_time': booking.end_time.isoformat(),
+            'duration_hours': booking.get_duration(),
+            'status': booking.get_status_display(),
+            'status_code': booking.status,
+            'notes': booking.notes or '',
+            'created_at': booking.created_at.isoformat(),
+        })
+    
+    response = HttpResponse(
+        json.dumps(data, indent=2),
+        content_type='application/json'
+    )
+    response['Content-Disposition'] = f'attachment; filename="my_bookings_{timezone.now().strftime("%Y%m%d_%H%M%S")}.json"'
+    return response
+
+def export_bookings_pdf(request, bookings):
+    """Export bookings as PDF"""
+    try:
+        from reportlab.lib import colors
+        from reportlab.lib.pagesizes import landscape, A4
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.units import inch
+    except ImportError:
+        # Fallback to CSV if reportlab is not installed
+        return export_bookings_csv(request, bookings)
+    
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="my_bookings_{timezone.now().strftime("%Y%m%d_%H%M%S")}.pdf"'
+    
+    # Create PDF
+    doc = SimpleDocTemplate(response, pagesize=landscape(A4))
+    elements = []
+    
+    # Styles
+    styles = getSampleStyleSheet()
+    title_style = styles['Title']
+    
+    # Title
+    elements.append(Paragraph(f"My Bookings - {request.user.username}", title_style))
+    elements.append(Paragraph(f"Generated on {timezone.now().strftime('%B %d, %Y at %H:%M')}", styles['Normal']))
+    elements.append(Spacer(1, 0.2*inch))
+    
+    # Summary stats
+    stats = f"Total Bookings: {bookings.count()} | Upcoming: {bookings.filter(start_time__gte=timezone.now(), status__in=['PENDING', 'CONFIRMED']).count()} | Completed: {bookings.filter(status='COMPLETED').count()}"
+    elements.append(Paragraph(stats, styles['Normal']))
+    elements.append(Spacer(1, 0.1*inch))
+    
+    # Table data
+    data = [['ID', 'Resource', 'Start Time', 'End Time', 'Duration', 'Status', 'Notes']]
+    
+    for booking in bookings[:50]:  # Limit to 50 for PDF
+        data.append([
+            str(booking.id),
+            booking.resource.name[:25],
+            booking.start_time.strftime('%Y-%m-%d %H:%M'),
+            booking.end_time.strftime('%Y-%m-%d %H:%M'),
+            f"{booking.get_duration()}h",
+            booking.get_status_display(),
+            booking.notes[:30] if booking.notes else ''
+        ])
+    
+    # Create table
+    table = Table(data, repeatRows=1)
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#007bff')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('FONTSIZE', (0, 1), (-1, -1), 8),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+    ]))
+    
+    elements.append(table)
+    
+    # Build PDF
+    doc.build(elements)
+    return response
+
+@login_required
+def reservation_list(request):
+    """View all reservations"""
+    
+    #IMPORTANT: Staff sees ALL reservations, regular users see only their own
+    if request.user.is_staff:
+        reservations = EquipmentReservation.objects.all().order_by('-created_at')
+    else:
+        reservations = EquipmentReservation.objects.filter(user=request.user).order_by('-created_at')
+    
+    # Filter by status
+    status_filter = request.GET.get('status', 'all')
+    if status_filter != 'all':
+        reservations = reservations.filter(status=status_filter)
+    
+    # Calculate statistics for staff vs regular user
+    if request.user.is_staff:
+        # Staff sees all stats
+        total = EquipmentReservation.objects.count()
+        pending = EquipmentReservation.objects.filter(status='PENDING').count()
+        confirmed = EquipmentReservation.objects.filter(status='CONFIRMED').count()
+        cancelled = EquipmentReservation.objects.filter(status='CANCELLED').count()
+        expired = EquipmentReservation.objects.filter(status='EXPIRED').count()
+        completed = EquipmentReservation.objects.filter(status='COMPLETED').count()
+    else:
+        # Regular users see only their stats
+        user_reservations = EquipmentReservation.objects.filter(user=request.user)
+        total = user_reservations.count()
+        pending = user_reservations.filter(status='PENDING').count()
+        confirmed = user_reservations.filter(status='CONFIRMED').count()
+        cancelled = user_reservations.filter(status='CANCELLED').count()
+        expired = user_reservations.filter(status='EXPIRED').count()
+        completed = user_reservations.filter(status='COMPLETED').count()
+    
+    context = {
+        'reservations': reservations,
+        'status_filter': status_filter,
+        'status_choices': EquipmentReservation.STATUS_CHOICES,
+        'total': total,
+        'pending': pending,
+        'confirmed': confirmed,
+        'cancelled': cancelled,
+        'expired': expired,
+        'completed': completed,
+        'is_staff': request.user.is_staff,  # Pass to template
+    }
+    return render(request, 'bookings/reservations/list.html', context)
+
+@login_required
+def create_reservation(request):
+    """Create a new reservation"""
+    if request.method == 'POST':
+        equipment_id = request.POST.get('equipment_id')
+        start_date_str = request.POST.get('start_date')
+        end_date_str = request.POST.get('end_date')
+        purpose = request.POST.get('purpose', '')
+        notes = request.POST.get('notes', '')
+        
+        if not all([equipment_id, start_date_str, end_date_str]):
+            messages.error(request, 'Please fill in all required fields')
+            return redirect('create_reservation')
+        
+        try:
+            start_date = timezone.datetime.fromisoformat(start_date_str)
+            end_date = timezone.datetime.fromisoformat(end_date_str)
+            
+            if timezone.is_naive(start_date):
+                start_date = timezone.make_aware(start_date)
+            if timezone.is_naive(end_date):
+                end_date = timezone.make_aware(end_date)
+            
+            reservation = ReservationService.create_reservation(
+                equipment_id=equipment_id,
+                user=request.user,
+                start_date=start_date,
+                end_date=end_date,
+                purpose=purpose,
+                notes=notes
+            )
+            
+            messages.success(request, f'Reservation created for {reservation.equipment.name}')
+            return redirect('reservation_detail', reservation_id=reservation.id)
+            
+        except ValidationError as e:
+            messages.error(request, str(e))
+        except Exception as e:
+            messages.error(request, f'Error: {str(e)}')
+    
+    # Get available equipment for the current date
+    default_start = timezone.now() + timedelta(days=1)
+    default_end = default_start + timedelta(days=1)
+    
+    available_equipment = ReservationService.get_available_equipment(
+        default_start, default_end
+    )
+    
+    context = {
+        'available_equipment': available_equipment,
+        'default_start': default_start,
+        'default_end': default_end,
+        'all_equipment': Equipment.objects.filter(status__in=['AVAILABLE', 'RENTED']),
+    }
+    return render(request, 'bookings/reservations/create.html', context)
+
+@login_required
+def reservation_detail(request, reservation_id):
+    """View reservation details"""
+    reservation = get_object_or_404(EquipmentReservation, id=reservation_id)
+    
+    #Staff can view ANY reservation, users can only view their own
+    if reservation.user != request.user and not request.user.is_staff:
+        messages.error(request, 'You do not have permission to view this reservation')
+        return redirect('reservation_list')
+    
+    #Confirm button only shows for staff with PENDING status
+    can_confirm = request.user.is_staff and reservation.status == 'PENDING'
+    can_cancel = reservation.can_cancel() and (reservation.user == request.user or request.user.is_staff)
+    
+    context = {
+        'reservation': reservation,
+        'can_cancel': can_cancel,
+        'can_confirm': can_confirm,  #Only True for staff with PENDING status
+        'is_staff': request.user.is_staff,
+    }
+    return render(request, 'bookings/reservations/detail.html', context)
+
+@login_required
+def cancel_reservation_view(request, reservation_id):
+    """Cancel a reservation"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    try:
+        reservation = ReservationService.cancel_reservation(
+            reservation_id=reservation_id,
+            user=request.user
+        )
+        messages.success(request, f'Reservation for {reservation.equipment.name} cancelled successfully')
+        return redirect('reservation_list')
+    except ValidationError as e:
+        messages.error(request, str(e))
+        return redirect('reservation_detail', reservation_id=reservation_id)
+
+@login_required
+@user_passes_test(lambda u: u.is_staff)
+def confirm_reservation_view(request, reservation_id):
+    """Confirm a reservation (staff only)"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    try:
+        reservation = ReservationService.confirm_reservation(
+            reservation_id=reservation_id,
+            user=request.user
+        )
+        messages.success(request, f'Reservation for {reservation.equipment.name} confirmed')
+        return redirect('reservation_detail', reservation_id=reservation_id)
+    except ValidationError as e:
+        messages.error(request, str(e))
+        return redirect('reservation_detail', reservation_id=reservation_id)
+
+@login_required
+def get_available_equipment_ajax(request):
+    """AJAX endpoint to get available equipment for date range"""
+    start_date_str = request.GET.get('start_date')
+    end_date_str = request.GET.get('end_date')
+    
+    if not start_date_str or not end_date_str:
+        return JsonResponse({'error': 'Missing dates'}, status=400)
+    
+    try:
+        start_date = timezone.datetime.fromisoformat(start_date_str)
+        end_date = timezone.datetime.fromisoformat(end_date_str)
+        
+        if timezone.is_naive(start_date):
+            start_date = timezone.make_aware(start_date)
+        if timezone.is_naive(end_date):
+            end_date = timezone.make_aware(end_date)
+        
+        available = ReservationService.get_available_equipment(start_date, end_date)
+        
+        data = [{
+            'id': eq.id,
+            'name': eq.name,
+            'serial_number': eq.serial_number,
+            'status': eq.status,
+            'condition': eq.condition,
+            'category': eq.category.name if eq.category else None,
+        } for eq in available]
+        
+        return JsonResponse({'equipment': data})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+@login_required
+def reservation_calendar(request):
+    """Calendar view for reservations"""
+    year = int(request.GET.get('year', timezone.now().year))
+    month = int(request.GET.get('month', timezone.now().month))
+    
+    calendar_data = ReservationService.get_calendar_data(year, month)
+    
+    # Get all reservations for the month
+    reservations = EquipmentReservation.objects.filter(
+        start_date__year=year,
+        start_date__month=month,
+        status__in=['PENDING', 'CONFIRMED']
+    ).select_related('equipment', 'user')
+    
+    context = {
+        'calendar_data': calendar_data,
+        'reservations': reservations,
+        'year': year,
+        'month': month,
+        'month_name': calendar_data['month_name'],
+        'prev_month': month - 1 if month > 1 else 12,
+        'prev_year': year if month > 1 else year - 1,
+        'next_month': month + 1 if month < 12 else 1,
+        'next_year': year if month < 12 else year + 1,
+    }
+    return render(request, 'bookings/reservations/calendar.html', context)

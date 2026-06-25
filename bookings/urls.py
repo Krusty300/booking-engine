@@ -40,6 +40,8 @@ urlpatterns = [
 
     # ============ EQUIPMENT RENTAL SYSTEM ============
     path('equipment/', views.equipment_list, name='equipment_list'),
+    path('equipment/search/', views.equipment_search, name='equipment_search'),
+    path('equipment/search/suggest/', views.search_suggestions, name='search_suggestions'),
     path('equipment/<int:equipment_id>/', views.equipment_detail, name='equipment_detail'),
     path('my-rentals/', views.my_rentals, name='my_rentals'),
     path('equipment/rent/', views.rent_equipment, name='rent_equipment'),
@@ -56,6 +58,15 @@ urlpatterns = [
     path('equipment/create/', views.create_equipment, name='create_equipment'),
     path('equipment/<int:equipment_id>/edit/', views.edit_equipment, name='edit_equipment'),
     path('equipment/<int:equipment_id>/delete/', views.delete_equipment, name='delete_equipment'),
+
+    # ============ SEARCH & EXPORT ============
+    path('equipment/search/', views.equipment_search, name='equipment_search'),
+    path('equipment/search/suggest/', views.search_suggestions, name='search_suggestions'),
+    path('equipment/search/save/', views.save_search, name='save_search'),
+    path('equipment/search/saved/', views.get_saved_searches, name='get_saved_searches'),
+    path('equipment/search/saved/<int:search_id>/delete/', views.delete_saved_search, name='delete_saved_search'),
+    path('equipment/search/saved/<int:search_id>/favorite/', views.toggle_search_favorite, name='toggle_search_favorite'),
+    path('equipment/search/export/', views.export_search_results, name='export_search_results'),
     
     # ============ CALENDAR VIEW ============
     path('calendar/', views.CalendarView.as_view(), name='calendar_view'),
@@ -73,6 +84,15 @@ urlpatterns = [
     path('reviews-admin/', views.admin_reviews, name='admin_reviews'),
     path('reviews-admin/<int:review_id>/', views.admin_review_detail, name='admin_review_detail'),
     path('reviews-admin/bulk-action/', views.admin_bulk_action_reviews, name='admin_bulk_action_reviews'),
+
+    # ============ EQUIPMENT RESERVATIONS ============
+    path('reservations/', views.reservation_list, name='reservation_list'),
+    path('reservations/create/', views.create_reservation, name='create_reservation'),
+    path('reservations/<int:reservation_id>/', views.reservation_detail, name='reservation_detail'),
+    path('reservations/<int:reservation_id>/cancel/', views.cancel_reservation_view, name='cancel_reservation'),
+    path('reservations/<int:reservation_id>/confirm/', views.confirm_reservation_view, name='confirm_reservation'),
+    path('reservations/calendar/', views.reservation_calendar, name='reservation_calendar'),
+    path('api/available-equipment/', views.get_available_equipment_ajax, name='get_available_equipment'),
     
     # ============ API ENDPOINTS ============
     path('api/available-times/', views.get_available_times, name='get_available_times'),

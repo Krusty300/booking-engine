@@ -220,7 +220,6 @@
                     {% if recent_maintenance %}
                         {% for maintenance in recent_maintenance %}
                             <div class="activity-item">
-                                <span class="activity-icon">🔧</span>
                                 <div class="activity-content">
                                     <span class="activity-title">{{ maintenance.equipment.name }}</span>
                                     <span class="activity-date">{{ maintenance.scheduled_date|date:"M d" }}</span>
