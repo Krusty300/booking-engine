@@ -314,7 +314,7 @@ function showBookingForm(startTime, endTime, availableResources) {
     
     const start = new Date(startTime);
     const end = new Date(endTime);
-    slotInfo.textContent = `📅 ${start.toLocaleDateString()} | ⏰ ${start.toLocaleTimeString()} - ${end.toLocaleTimeString()}`;
+    slotInfo.textContent = ` ${start.toLocaleDateString()} | ${start.toLocaleTimeString()} - ${end.toLocaleTimeString()}`;
     
     resourceSelect.innerHTML = '';
     resources.forEach(res => {

@@ -1,0 +1,184 @@
+{% extends 'bookings/base.html' %}
+
+{% block content %}
+<div class="delete-confirmation-container">
+    <div class="confirmation-card">        
+        <h1>Delete Equipment</h1>
+        <p>Are you sure you want to delete <strong>"{{ equipment.name }}"</strong>?</p>
+        
+        <div class="equipment-summary">
+            <div class="summary-item">
+                <span class="label">Serial Number:</span>
+                <span class="value">{{ equipment.serial_number }}</span>
+            </div>
+            <div class="summary-item">
+                <span class="label">Category:</span>
+                <span class="value">{{ equipment.category.name|default:"Uncategorized" }}</span>
+            </div>
+            <div class="summary-item">
+                <span class="label">Status:</span>
+                <span class="value status-{{ equipment.status|lower }}">{{ equipment.get_status_display }}</span>
+            </div>
+        </div>
+        
+        <div class="warning-message">
+            <strong>This action cannot be undone!</strong>
+            <p>Deleting this equipment will also remove its rental and maintenance history.</p>
+        </div>
+        
+        <form method="post" class="confirmation-form">
+            {% csrf_token %}
+            <div class="form-actions">
+                <button type="submit" class="btn-confirm-delete">Yes, Delete Equipment</button>
+                <a href="{% url 'my_equipment' %}" class="btn-cancel">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.delete-confirmation-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 60vh;
+    padding: 20px;
+}
+
+.confirmation-card {
+    background: white;
+    padding: 40px;
+    border-radius: 0px;
+    border: 1px solid #e9ecef;
+    max-width: 500px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+}
+
+.confirmation-icon {
+    font-size: 4rem;
+    margin-bottom: 16px;
+}
+
+.confirmation-card h1 {
+    margin: 0 0 8px 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.confirmation-card p {
+    color: #6c757d;
+    margin-bottom: 24px;
+}
+
+.equipment-summary {
+    background: #f8f9fa;
+    padding: 16px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+.summary-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.summary-item:last-child {
+    border-bottom: none;
+}
+
+.summary-item .label {
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.summary-item .value {
+    font-weight: 600;
+    color: #212529;
+}
+
+.summary-item .status-available { color: #28a745; }
+.summary-item .status-rented { color: #ffc107; }
+.summary-item .status-maintenance { color: #dc3545; }
+
+.warning-message {
+    background: #fff3cd;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 24px;
+    text-align: left;
+}
+
+.warning-message strong {
+    color: #856404;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.warning-message p {
+    color: #856404;
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.confirmation-form .form-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+.btn-confirm-delete {
+    padding: 10px 24px;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.btn-confirm-delete:hover {
+    background: #c82333;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+}
+
+.btn-cancel {
+    padding: 10px 24px;
+    background: #6c757d;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.btn-cancel:hover {
+    background: #5a6268;
+    color: white;
+}
+
+@media (max-width: 480px) {
+    .confirmation-card {
+        padding: 24px;
+    }
+    
+    .confirmation-form .form-actions {
+        flex-direction: column;
+    }
+    
+    .btn-confirm-delete,
+    .btn-cancel {
+        width: 100%;
+        text-align: center;
+    }
+}
+</style>
+{% endblock %}

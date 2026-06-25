@@ -5,6 +5,7 @@ from django.core.exceptions import ValidationError
 from .models import Resource, Category, UserProfile
 from .models import MeetingRoom, Amenity
 from .models import Review
+from .models import Equipment, EquipmentCategory
 import os
 
 class SignUpForm(UserCreationForm):
@@ -461,3 +462,67 @@ class ReviewFilterForm(forms.Form):
         ],
         required=False
     )
+
+class EquipmentForm(forms.ModelForm):
+    """Form for creating and editing equipment"""
+    
+    class Meta:
+        model = Equipment
+        fields = [
+            'name', 'category', 'description', 'serial_number', 
+            'asset_tag', 'barcode', 'condition', 'location',
+            'purchase_date', 'purchase_price', 'warranty_expiry', 'notes'
+        ]
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Equipment name'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Description of the equipment'}),
+            'serial_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Unique serial number'}),
+            'asset_tag': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Asset tag (optional)'}),
+            'barcode': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Barcode (optional)'}),
+            'location': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Current location'}),
+            'purchase_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'purchase_price': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0.00', 'step': '0.01'}),
+            'warranty_expiry': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Additional notes'}),
+        }
+        labels = {
+            'serial_number': 'Serial Number *',
+            'condition': 'Condition',
+        }
+        help_texts = {
+            'serial_number': 'Must be unique for each equipment item',
+            'asset_tag': 'Optional internal tracking number',
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Make serial_number required
+        self.fields['serial_number'].required = True
+        
+        # Add empty option for category
+        self.fields['category'].queryset = EquipmentCategory.objects.all().order_by('name')
+        self.fields['category'].empty_label = 'Select a category...'
+        
+        # Add CSS classes
+        for field in self.fields.values():
+            if 'class' not in field.widget.attrs:
+                field.widget.attrs['class'] = 'form-control'
+    
+    def clean_serial_number(self):
+        """Validate serial number uniqueness"""
+        serial_number = self.cleaned_data.get('serial_number')
+        if serial_number:
+            # Check if serial number exists (excluding current instance)
+            existing = Equipment.objects.filter(serial_number=serial_number)
+            if self.instance.pk:
+                existing = existing.exclude(pk=self.instance.pk)
+            if existing.exists():
+                raise forms.ValidationError('A equipment with this serial number already exists.')
+        return serial_number
+    
+    def clean_purchase_price(self):
+        """Validate purchase price is positive"""
+        price = self.cleaned_data.get('purchase_price')
+        if price is not None and price < 0:
+            raise forms.ValidationError('Purchase price cannot be negative.')
+        return price

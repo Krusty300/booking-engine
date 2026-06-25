@@ -1,0 +1,877 @@
+{% extends 'bookings/base.html' %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div>
+            <h1>Equipment Dashboard</h1>
+            <p class="subtitle">Overview of your equipment inventory and activity</p>
+        </div>
+        <div class="header-actions">
+            <a href="{% url 'create_equipment' %}" class="btn-primary">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"/>
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                Add Equipment
+            </a>
+        </div>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-content">
+                <span class="stat-number">{{ total_owned }}</span>
+                <span class="stat-label">Total Equipment</span>
+            </div>
+        </div>
+        <div class="stat-card stat-available">
+            <div class="stat-content">
+                <span class="stat-number">{{ available_count }}</span>
+                <span class="stat-label">Available</span>
+            </div>
+        </div>
+        <div class="stat-card stat-rented">
+            <div class="stat-content">
+                <span class="stat-number">{{ rented_count }}</span>
+                <span class="stat-label">Rented</span>
+            </div>
+        </div>
+        <div class="stat-card stat-maintenance">
+            <div class="stat-content">
+                <span class="stat-number">{{ maintenance_count }}</span>
+                <span class="stat-label">Under Maintenance</span>
+            </div>
+        </div>
+        <div class="stat-card stat-rentals">
+            <div class="stat-content">
+                <span class="stat-number">{{ total_rentals }}</span>
+                <span class="stat-label">Total Rentals</span>
+            </div>
+        </div>
+        <div class="stat-card stat-overdue {% if overdue_count > 0 %}has-overdue{% endif %}">
+            <div class="stat-content">
+                <span class="stat-number {% if overdue_count > 0 %}overdue-number{% endif %}">
+                    {{ overdue_count }}
+                </span>
+                <span class="stat-label">Overdue</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions Widget -->
+    <div class="quick-actions-section">
+        <h2>Quick Actions</h2>
+        <div class="quick-actions-grid">
+            <!-- Quick Rent -->
+            <div class="quick-action-card">
+                <div class="action-header">
+                    <h3>Quick Rent</h3>
+                </div>
+                <div class="action-body">
+                    {% if recently_viewed %}
+                        <div class="action-list">
+                            {% for equipment in recently_viewed %}
+                                <div class="action-item">
+                                    <span class="item-name">{{ equipment.name }}</span>
+                                    <span class="item-status status-{{ equipment.status|lower }}">
+                                        {{ equipment.get_status_display }}
+                                    </span>
+                                    {% if equipment.is_available %}
+                                        <button onclick="quickRent({{ equipment.id }})" class="btn-action btn-rent">
+                                            Rent
+                                        </button>
+                                    {% else %}
+                                        <span class="btn-action btn-disabled">Unavailable</span>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="empty-message">No recently viewed equipment</p>
+                    {% endif %}
+                    <a href="{% url 'equipment_list' %}" class="action-footer-link">
+                        Browse All Equipments
+                    </a>
+                </div>
+            </div>
+
+            <!-- Quick Return -->
+            <div class="quick-action-card">
+                <div class="action-header">
+                    <h3>Quick Return</h3>
+                </div>
+                <div class="action-body">
+                    {% if quick_return_rentals %}
+                        <div class="action-list">
+                            {% for rental in quick_return_rentals %}
+                                <div class="action-item">
+                                    <span class="item-name">{{ rental.equipment.name }}</span>
+                                    <span class="item-due {% if rental.is_overdue %}overdue{% endif %}">
+                                        Due: {{ rental.expected_return_date|date:"M d" }}
+                                    </span>
+                                    <button onclick="quickReturn({{ rental.id }})" class="btn-action btn-return">
+                                        Return
+                                    </button>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="empty-message">No active rentals</p>
+                    {% endif %}
+                    <a href="{% url 'my_rentals' %}" class="action-footer-link">
+                        View All Rentals
+                    </a>
+                </div>
+            </div>
+
+            <!-- Quick Maintenance -->
+            <div class="quick-action-card">
+                <div class="action-header">
+                    <h3>Maintenance Schedule</h3>
+                </div>
+                <div class="action-body">
+                    {% if upcoming_maintenance %}
+                        <div class="action-list">
+                            {% for maintenance in upcoming_maintenance %}
+                                <div class="action-item">
+                                    <span class="item-name">{{ maintenance.equipment.name }}</span>
+                                    <span class="item-date">{{ maintenance.scheduled_date|date:"M d" }}</span>
+                                    <span class="item-type type-{{ maintenance.maintenance_type|lower }}">
+                                        {{ maintenance.get_maintenance_type_display }}
+                                    </span>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="empty-message">No upcoming maintenance</p>
+                    {% endif %}
+                    <a href="{% url 'equipment_maintenance' %}" class="action-footer-link">
+                        Schedule Maintenance
+                    </a>
+                </div>
+            </div>
+
+            <!-- Quick Add -->
+            <div class="quick-action-card quick-add">
+                <div class="action-header">
+                    <h3>Add Equipment</h3>
+                </div>
+                <div class="action-body">
+                    <p class="add-description">Add new equipment to your inventory</p>
+                    <div class="add-actions">
+                        <a href="{% url 'create_equipment' %}" class="btn-add-equipment">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"/>
+                                <line x1="5" y1="12" x2="19" y2="12"/>
+                            </svg>
+                            Add New Equipment
+                        </a>
+                        <a href="{% url 'equipment_list' %}" class="btn-browse-equipment">
+                            Browse Available
+                        </a>
+                    </div>
+                    <div class="quick-tips">
+                        <span class="tip">Tip: Use unique serial numbers</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="recent-activity-section">
+        <h2>Recent Activity</h2>
+        <div class="activity-grid">
+            <!-- Recent Rentals -->
+            <div class="activity-card">
+                <div class="activity-header">
+                    <h3>Recent Rentals</h3>
+                    <span class="activity-count">{{ recent_rentals|length }}</span>
+                </div>
+                <div class="activity-body">
+                    {% if recent_rentals %}
+                        {% for rental in recent_rentals %}
+                            <div class="activity-item">
+                                <div class="activity-content">
+                                    <span class="activity-title">{{ rental.equipment.name }}</span>
+                                    <span class="activity-date">{{ rental.checkout_date|timesince }} ago</span>
+                                </div>
+                                <span class="activity-status status-{{ rental.status|lower }}">
+                                    {{ rental.get_status_display }}
+                                </span>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="empty-message">No recent rentals</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Recent Maintenance -->
+            <div class="activity-card">
+                <div class="activity-header">
+                    <h3>Recent Maintenance</h3>
+                    <span class="activity-count">{{ recent_maintenance|length }}</span>
+                </div>
+                <div class="activity-body">
+                    {% if recent_maintenance %}
+                        {% for maintenance in recent_maintenance %}
+                            <div class="activity-item">
+                                <span class="activity-icon">🔧</span>
+                                <div class="activity-content">
+                                    <span class="activity-title">{{ maintenance.equipment.name }}</span>
+                                    <span class="activity-date">{{ maintenance.scheduled_date|date:"M d" }}</span>
+                                </div>
+                                <span class="activity-status status-{{ maintenance.status|lower }}">
+                                    {{ maintenance.get_status_display }}
+                                </span>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="empty-message">No recent maintenance</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript for Quick Actions -->
+<script>
+// Get CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+const csrftoken = getCookie('csrftoken');
+
+// Quick Rent Function
+function quickRent(equipmentId) {
+    const returnDate = prompt(
+        'Expected return date (YYYY-MM-DD HH:MM):',
+        new Date(Date.now() + 7*24*60*60*1000).toISOString().slice(0, 16)
+    );
+    
+    if (!returnDate) return;
+    
+    const conditionNotes = prompt('Condition notes (optional):', '');
+    
+    const formData = new FormData();
+    formData.append('equipment_id', equipmentId);
+    formData.append('expected_return_date', returnDate);
+    formData.append('condition_notes', conditionNotes || '');
+    
+    const btn = event.target;
+    const originalText = btn.textContent;
+    btn.textContent = '⏳';
+    btn.disabled = true;
+    
+    fetch('/equipment/rent/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrftoken,
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert('Error: ' + data.error);
+        } else {
+            alert('Success ' + data.message);
+            location.reload();
+        }
+    })
+    .catch(error => {
+        alert('Error: ' + error.message);
+    })
+    .finally(() => {
+        btn.textContent = originalText;
+        btn.disabled = false;
+    });
+}
+
+// Quick Return Function
+function quickReturn(rentalId) {
+    const conditionNotes = prompt('Condition notes for return (optional):', '');
+    if (conditionNotes === null) return;
+    
+    const confirmReturn = confirm(
+        'Are you sure you want to return this equipment?\n\n' +
+        'Please ensure you have the equipment ready for inspection.'
+    );
+    
+    if (!confirmReturn) return;
+    
+    const formData = new FormData();
+    formData.append('rental_id', rentalId);
+    formData.append('condition_notes', conditionNotes || '');
+    
+    const btn = event.target;
+    const originalText = btn.textContent;
+    btn.textContent = '⏳';
+    btn.disabled = true;
+    
+    fetch('/equipment/return/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrftoken,
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert('Error: ' + data.error);
+        } else {
+            alert('Success ' + data.message);
+            location.reload();
+        }
+    })
+    .catch(error => {
+        alert('Error: ' + error.message);
+    })
+    .finally(() => {
+        btn.textContent = originalText;
+        btn.disabled = false;
+    });
+}
+</script>
+
+<style>
+/* Container */
+.dashboard-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* Page Header */
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.page-header h1 {
+    margin: 0;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #1a1a2e;
+}
+
+.page-header .subtitle {
+    margin: 4px 0 0;
+    color: #6c757d;
+    font-size: 0.85rem;
+}
+
+.btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 18px;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 0px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+}
+
+.btn-primary:hover {
+    background: #0056b3;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+}
+
+/* Stats Grid */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 16px;
+    margin-bottom: 30px;
+}
+
+.stat-card {
+    background: white;
+    padding: 16px;
+    border: 1px solid #e9ecef;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: all 0.2s ease;
+}
+
+.stat-card:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
+}
+
+.stat-icon {
+    font-size: 1.8rem;
+    flex-shrink: 0;
+}
+
+.stat-content {
+    display: flex;
+    flex-direction: column;
+}
+
+.stat-number {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1a1a2e;
+    line-height: 1.2;
+}
+
+.stat-label {
+    font-size: 0.7rem;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stat-available .stat-number { color: #28a745; }
+.stat-rented .stat-number { color: #ffc107; }
+.stat-maintenance .stat-number { color: #dc3545; }
+.stat-rentals .stat-number { color: #17a2b8; }
+
+.stat-overdue.has-overdue {
+    border-color: #dc3545;
+    background: #fff5f5;
+}
+
+.overdue-number {
+    color: #dc3545;
+}
+
+/* Quick Actions Section */
+.quick-actions-section {
+    margin-bottom: 30px;
+}
+
+.quick-actions-section h2 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: #1a1a2e;
+}
+
+.quick-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+}
+
+.quick-action-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.quick-action-card .action-header {
+    padding: 12px 16px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.quick-action-card .action-icon {
+    font-size: 1.2rem;
+}
+
+.quick-action-card .action-header h3 {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #1a1a2e;
+}
+
+.quick-action-card .action-body {
+    padding: 12px 16px;
+    flex: 1;
+}
+
+/* Action List */
+.action-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 180px;
+    overflow-y: auto;
+}
+
+.action-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    background: #f8f9fa;
+    font-size: 0.8rem;
+}
+
+.action-item .item-name {
+    flex: 1;
+    font-weight: 500;
+    color: #1a1a2e;
+}
+
+.action-item .item-status {
+    font-size: 0.65rem;
+    padding: 1px 8px;
+    border-radius: 0;
+}
+
+.action-item .item-due {
+    font-size: 0.7rem;
+    color: #6c757d;
+}
+
+.action-item .item-due.overdue {
+    color: #dc3545;
+    font-weight: 600;
+}
+
+.action-item .item-date {
+    font-size: 0.7rem;
+    color: #6c757d;
+}
+
+.action-item .item-type {
+    font-size: 0.6rem;
+    padding: 1px 8px;
+    background: #e9ecef;
+    border-radius: 0;
+}
+
+.type-routine { background: #d1ecf1; color: #0c5460; }
+.type-repair { background: #f8d7da; color: #721c24; }
+.type-inspection { background: #d4edda; color: #155724; }
+.type-calibration { background: #fff3cd; color: #856404; }
+
+.status-available { color: #28a745; }
+.status-rented { color: #856404; }
+.status-maintenance { color: #721c24; }
+
+.action-footer-link {
+    display: block;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #e9ecef;
+    font-size: 0.75rem;
+    color: #007bff;
+    text-decoration: none;
+    text-align: center;
+}
+
+.action-footer-link:hover {
+    text-decoration: underline;
+}
+
+/* Action Buttons */
+.btn-action {
+    padding: 2px 10px;
+    border: none;
+    font-size: 0.65rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-rent {
+    background: #28a745;
+    color: white;
+}
+
+.btn-rent:hover {
+    background: #218838;
+}
+
+.btn-return {
+    background: #ffc107;
+    color: #856404;
+}
+
+.btn-return:hover {
+    background: #e0a800;
+}
+
+.btn-disabled {
+    background: #e9ecef;
+    color: #6c757d;
+    cursor: not-allowed;
+}
+
+/* Quick Add Card */
+.quick-add .action-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 20px 16px;
+    min-height: 180px;
+}
+
+.add-description {
+    color: #6c757d;
+    font-size: 0.85rem;
+    margin: 0 0 16px 0;
+}
+
+.add-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+}
+
+.btn-add-equipment {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px;
+    background: #28a745;
+    color: white;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+}
+
+.btn-add-equipment:hover {
+    background: #218838;
+    color: white;
+    transform: translateY(-1px);
+}
+
+.btn-browse-equipment {
+    display: inline-block;
+    padding: 8px;
+    background: #f8f9fa;
+    color: #495057;
+    text-decoration: none;
+    font-size: 0.8rem;
+    border: 1px solid #e9ecef;
+    transition: all 0.2s ease;
+}
+
+.btn-browse-equipment:hover {
+    background: #e9ecef;
+}
+
+.quick-tips {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #e9ecef;
+    width: 100%;
+}
+
+.tip {
+    font-size: 0.7rem;
+    color: #6c757d;
+}
+
+/* Recent Activity Section */
+.recent-activity-section {
+    margin-top: 30px;
+}
+
+.recent-activity-section h2 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: #1a1a2e;
+}
+
+.activity-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.activity-card {
+    background: white;
+    border: 1px solid #e9ecef;
+}
+
+.activity-header {
+    padding: 12px 16px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.activity-header h3 {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.activity-count {
+    padding: 0 8px;
+    background: #e9ecef;
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+
+.activity-body {
+    padding: 12px 16px;
+}
+
+.activity-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid #f1f3f5;
+}
+
+.activity-item:last-child {
+    border-bottom: none;
+}
+
+.activity-icon {
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+.activity-content {
+    flex: 1;
+}
+
+.activity-title {
+    display: block;
+    font-weight: 500;
+    font-size: 0.85rem;
+    color: #1a1a2e;
+}
+
+.activity-date {
+    font-size: 0.7rem;
+    color: #6c757d;
+}
+
+.activity-status {
+    font-size: 0.65rem;
+    padding: 1px 8px;
+    border-radius: 0;
+}
+
+.empty-message {
+    color: #6c757d;
+    font-size: 0.85rem;
+    text-align: center;
+    padding: 10px 0;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+    .stats-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 992px) {
+    .quick-actions-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .activity-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+    
+    .stat-card {
+        padding: 12px;
+    }
+    
+    .stat-number {
+        font-size: 1.2rem;
+    }
+    
+    .quick-actions-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .header-actions {
+        width: 100%;
+    }
+    
+    .btn-primary {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .stats-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+    
+    .stat-card {
+        padding: 8px 12px;
+    }
+    
+    .stat-icon {
+        font-size: 1.4rem;
+    }
+    
+    .stat-number {
+        font-size: 1rem;
+    }
+    
+    .stat-label {
+        font-size: 0.6rem;
+    }
+    
+    .action-item {
+        flex-wrap: wrap;
+    }
+    
+    .btn-action {
+        padding: 2px 8px;
+        font-size: 0.6rem;
+    }
+}
+</style>
+{% endblock %}

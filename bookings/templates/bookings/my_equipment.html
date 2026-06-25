@@ -1,0 +1,747 @@
+{% extends 'bookings/base.html' %}
+
+{% block content %}
+<div class="my-equipment-container">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div>
+            <h1>My Equipment</h1>
+            <p class="subtitle">Manage your equipment inventory</p>
+        </div>
+        <div class="header-actions">
+            <a href="{% url 'create_equipment' %}" class="btn-create">
+                Add Equipment
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-number">{{ total }}</div>
+            <div class="stat-label">Total Equipment</div>
+        </div>
+        <div class="stat-card stat-available">
+            <div class="stat-number">{{ available }}</div>
+            <div class="stat-label">Available</div>
+        </div>
+        <div class="stat-card stat-rented">
+            <div class="stat-number">{{ rented }}</div>
+            <div class="stat-label">Rented</div>
+        </div>
+        <div class="stat-card stat-maintenance">
+            <div class="stat-number">{{ maintenance }}</div>
+            <div class="stat-label">Under Maintenance</div>
+        </div>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="filter-section">
+        <div class="filter-header">
+            <span class="filter-label">Filter by status:</span>
+            <div class="filter-buttons">
+                <a href="?status=all" class="filter-btn {% if current_filter == 'all' %}active{% endif %}">
+                    All <span class="filter-count">{{ total }}</span>
+                </a>
+                {% for value, label in status_choices %}
+                    <a href="?status={{ value }}" class="filter-btn {% if current_filter == value %}active{% endif %}">
+                        {{ label }}
+                        <span class="filter-count">{{ equipment_list|length }}</span>
+                    </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% if current_filter != 'all' %}
+            <div class="filter-info">
+                Showing <strong>{{ equipment_list|length }}</strong> {{ current_filter|lower }} item{{ equipment_list|length|pluralize }}
+                <a href="?status=all" class="clear-filter">Clear filter</a>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Equipment Grid -->
+    {% if equipment_list %}
+        <div class="equipment-grid">
+            {% for equipment in equipment_list %}
+                <div class="equipment-card status-{{ equipment.status|lower }}">
+                    <div class="card-header">
+                        <h3>{{ equipment.name }}</h3>
+                        <span class="status-badge status-{{ equipment.status|lower }}">
+                            {{ equipment.get_status_display }}
+                        </span>
+                    </div>
+                    
+                    <div class="card-details">
+                        <p><span class="label">Serial:</span> {{ equipment.serial_number }}</p>
+                        <p><span class="label">Category:</span> {{ equipment.category.name|default:"Uncategorized" }}</p>
+                        <p><span class="label">Condition:</span> {{ equipment.get_condition_display }}</p>
+                        <p><span class="label">Location:</span> {{ equipment.location|default:"Not specified" }}</p>
+                        {% if equipment.purchase_price %}
+                            <p><span class="label">Price:</span> ${{ equipment.purchase_price }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="card-actions">
+                        <a href="{% url 'equipment_detail' equipment.id %}" class="btn-view">View</a>
+                        <a href="{% url 'edit_equipment' equipment.id %}" class="btn-edit">Edit</a>
+                        <a href="{% url 'delete_equipment' equipment.id %}" class="btn-delete">Delete</a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <!-- Enhanced Empty States -->
+        <div class="empty-state">
+            {% if current_filter == 'all' %}
+                <h2>No Equipment Added Yet</h2>
+                <p>You haven't added any equipment to your inventory.</p>
+                <div class="empty-actions">
+                    <a href="{% url 'create_equipment' %}" class="btn-create-large">
+                        Add Your First Equipment
+                    </a>
+                </div>
+                <div class="empty-tips">
+                    <h4>Tips to get started:</h4>
+                    <ul>
+                        <li>Add equipment with unique serial numbers</li>
+                        <li>Organize items by category for easy filtering</li>
+                        <li>Track condition and location for better management</li>
+                    </ul>
+                </div>
+            {% elif current_filter == 'AVAILABLE' %}
+                <h2>No Available Equipment</h2>
+                <p>You don't have any equipment marked as available.</p>
+                <div class="empty-actions">
+                    <a href="?status=all" class="btn-secondary">View All Equipment</a>
+                    <a href="{% url 'create_equipment' %}" class="btn-create-large">Add Equipment</a>
+                </div>
+                <div class="empty-tips">
+                    <h4>To make equipment available:</h4>
+                    <ul>
+                        <li>Add new equipment - it will be available by default</li>
+                        <li>Return rented equipment to make it available again</li>
+                        <li>Complete maintenance to restore availability</li>
+                    </ul>
+                </div>
+            {% elif current_filter == 'RENTED' %}
+                <h2>No Rented Equipment</h2>
+                <p>None of your equipment is currently rented out.</p>
+                <div class="empty-actions">
+                    <a href="?status=all" class="btn-secondary">View All Equipment</a>
+                    <a href="{% url 'equipment_list' %}" class="btn-primary">Browse Equipment to Rent</a>
+                </div>
+                <div class="empty-tips">
+                    <ul>
+                        <li>It will appear here with rental details</li>
+                        <li>Track return dates and overdue items</li>
+                        <li>Equipment becomes available again when returned</li>
+                    </ul>
+                </div>
+            {% elif current_filter == 'MAINTENANCE' %}
+                <h2>No Equipment Under Maintenance</h2>
+                <p>All your equipment is currently in good working order.</p>
+                <div class="empty-actions">
+                    <a href="?status=all" class="btn-secondary">View All Equipment</a>
+                </div>
+                <div class="empty-tips">
+                    <ul>
+                        <li>Schedule routine maintenance to prevent issues</li>
+                        <li>Track repairs and service history</li>
+                        <li>Equipment status updates automatically when maintenance is complete</li>
+                    </ul>
+                </div>
+            {% elif current_filter == 'RETIRED' %}
+                <h2>No Retired Equipment</h2>
+                <p>You haven't retired any equipment from your inventory.</p>
+                <div class="empty-actions">
+                    <a href="?status=all" class="btn-secondary">View All Equipment</a>
+                </div>
+                <div class="empty-tips">
+                    <h4>About retired equipment:</h4>
+                    <ul>
+                        <li>Retire equipment that is no longer in service</li>
+                        <li>Keep retired items for record keeping</li>
+                        <li>Retired equipment cannot be rented</li>
+                    </ul>
+                </div>
+            {% elif current_filter == 'LOST' %}
+                <h2>No Lost Equipment</h2>
+                <p>All your equipment is accounted for.</p>
+                <div class="empty-actions">
+                    <a href="?status=all" class="btn-secondary">View All Equipment</a>
+                </div>
+                <div class="empty-tips">
+                    <h4>Preventing loss:</h4>
+                    <ul>
+                        <li>Track equipment location regularly</li>
+                        <li>Use asset tags and barcodes for identification</li>
+                        <li>Conduct regular inventory audits</li>
+                    </ul>
+                </div>
+            {% else %}
+                <h2>No Equipment Found</h2>
+                <p>No equipment matches your current filter.</p>
+                <div class="empty-actions">
+                    <a href="?status=all" class="btn-secondary">Clear Filter</a>
+                    <a href="{% url 'create_equipment' %}" class="btn-create-large">Add Equipment</a>
+                </div>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+
+<style>
+/* Container */
+.my-equipment-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* Page Header */
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.page-header h1 {
+    margin: 0;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #1a1a2e;
+}
+
+.page-header .subtitle {
+    margin: 4px 0 0;
+    color: #6c757d;
+    font-size: 0.85rem;
+}
+
+.header-actions {
+    flex-shrink: 0;
+}
+
+.btn-create {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 18px;
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 0;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+}
+
+.btn-create:hover {
+    background: #218838;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+    color: white;
+}
+
+.btn-create svg {
+    flex-shrink: 0;
+}
+
+/* Statistics Cards */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.stat-card {
+    background: white;
+    padding: 14px 18px;
+    border-radius: 0;
+    border: 1px solid #e9ecef;
+    text-align: center;
+    transition: all 0.2s ease;
+}
+
+.stat-card:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.stat-card .stat-number {
+    display: block;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #1a1a2e;
+    line-height: 1.2;
+}
+
+.stat-card .stat-label {
+    font-size: 0.75rem;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 2px;
+}
+
+.stat-card.stat-available .stat-number { color: #28a745; }
+.stat-card.stat-rented .stat-number { color: #ffc107; }
+.stat-card.stat-maintenance .stat-number { color: #dc3545; }
+
+/* Filter Section */
+.filter-section {
+    margin-bottom: 24px;
+    background: #f8f9fa;
+    padding: 14px 18px;
+    border: 1px solid #e9ecef;
+}
+
+.filter-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.filter-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.filter-buttons {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.filter-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 12px;
+    background: white;
+    border: 1px solid #dee2e6;
+    text-decoration: none;
+    color: #495057;
+    font-size: 0.75rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.filter-btn:hover {
+    background: #e9ecef;
+}
+
+.filter-btn.active {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+.filter-btn.active .filter-count {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+}
+
+.filter-count {
+    display: inline-block;
+    padding: 0 6px;
+    background: #e9ecef;
+    border-radius: 0;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: #6c757d;
+    min-width: 18px;
+    text-align: center;
+}
+
+.filter-info {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #e9ecef;
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+
+.clear-filter {
+    color: #007bff;
+    text-decoration: none;
+    margin-left: 8px;
+}
+
+.clear-filter:hover {
+    text-decoration: underline;
+}
+
+/* Equipment Grid */
+.equipment-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+.equipment-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 0;
+    padding: 18px;
+    transition: all 0.2s ease;
+}
+
+.equipment-card:hover {
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
+}
+
+.equipment-card.status-available { border-left: 4px solid #28a745; }
+.equipment-card.status-rented { border-left: 4px solid #ffc107; }
+.equipment-card.status-maintenance { border-left: 4px solid #dc3545; }
+.equipment-card.status-retired { border-left: 4px solid #6c757d; }
+.equipment-card.status-lost { border-left: 4px solid #dc3545; }
+
+/* Card Header */
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+    gap: 8px;
+}
+
+.card-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1a1a2e;
+}
+
+.status-badge {
+    padding: 2px 10px;
+    border-radius: 0;
+    font-size: 0.65rem;
+    font-weight: 600;
+    white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.status-available .status-badge { background: #d4edda; color: #155724; }
+.status-rented .status-badge { background: #fff3cd; color: #856404; }
+.status-maintenance .status-badge { background: #f8d7da; color: #721c24; }
+.status-retired .status-badge { background: #e2e3e5; color: #383d41; }
+.status-lost .status-badge { background: #f8d7da; color: #721c24; }
+
+/* Card Details */
+.card-details p {
+    margin: 3px 0;
+    font-size: 0.8rem;
+    color: #495057;
+    line-height: 1.5;
+}
+
+.card-details .label {
+    font-weight: 600;
+    color: #6c757d;
+    font-size: 0.75rem;
+}
+
+/* Card Actions */
+.card-actions {
+    margin-top: 12px;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.card-actions a {
+    padding: 4px 12px;
+    border-radius: 0;
+    text-decoration: none;
+    font-size: 0.75rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.btn-view {
+    background: #17a2b8;
+    color: white;
+}
+
+.btn-view:hover {
+    background: #138496;
+    color: white;
+}
+
+.btn-edit {
+    background: #ffc107;
+    color: #856404;
+}
+
+.btn-edit:hover {
+    background: #e0a800;
+    color: #856404;
+}
+
+.btn-delete {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-delete:hover {
+    background: #c82333;
+    color: white;
+}
+
+/* Enhanced Empty State */
+.empty-state {
+    text-align: center;
+    padding: 50px 30px;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+}
+
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 16px;
+}
+
+.empty-state h2 {
+    margin: 0 0 8px;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #1a1a2e;
+}
+
+.empty-state p {
+    color: #6c757d;
+    font-size: 0.85rem;
+    margin-bottom: 20px;
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.empty-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.empty-actions .btn-secondary {
+    display: inline-block;
+    padding: 8px 20px;
+    background: #6c757d;
+    color: white;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+}
+
+.empty-actions .btn-secondary:hover {
+    background: #5a6268;
+    color: white;
+}
+
+.empty-actions .btn-primary {
+    display: inline-block;
+    padding: 8px 20px;
+    background: #007bff;
+    color: white;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+}
+
+.empty-actions .btn-primary:hover {
+    background: #0056b3;
+    color: white;
+}
+
+.btn-create-large {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 24px;
+    background: #28a745;
+    color: white;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+}
+
+.btn-create-large:hover {
+    background: #218838;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+}
+
+.btn-create-large svg {
+    flex-shrink: 0;
+}
+
+.empty-tips {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid #e9ecef;
+    text-align: left;
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.empty-tips h4 {
+    margin: 0 0 8px 0;
+    font-size: 0.85rem;
+    color: #495057;
+}
+
+.empty-tips ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.empty-tips li {
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin-bottom: 4px;
+    line-height: 1.5;
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    
+    .header-actions {
+        width: 100%;
+    }
+    
+    .btn-create {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .equipment-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .filter-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .filter-buttons {
+        width: 100%;
+    }
+    
+    .filter-btn {
+        flex: 1;
+        justify-content: center;
+        min-width: 60px;
+    }
+    
+    .stats-grid {
+        gap: 10px;
+    }
+    
+    .stat-card {
+        padding: 10px 14px;
+    }
+    
+    .stat-card .stat-number {
+        font-size: 1.3rem;
+    }
+    
+    .empty-actions {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .empty-actions .btn-secondary,
+    .empty-actions .btn-primary,
+    .btn-create-large {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .stats-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+    
+    .stat-card {
+        padding: 8px 12px;
+    }
+    
+    .stat-card .stat-number {
+        font-size: 1.1rem;
+    }
+    
+    .stat-card .stat-label {
+        font-size: 0.65rem;
+    }
+    
+    .card-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .card-actions {
+        flex-direction: column;
+    }
+    
+    .card-actions a {
+        text-align: center;
+        width: 100%;
+    }
+    
+    .page-header h1 {
+        font-size: 1.3rem;
+    }
+    
+    .equipment-card {
+        padding: 14px;
+    }
+    
+    .filter-btn {
+        font-size: 0.7rem;
+        padding: 3px 8px;
+    }
+    
+    .empty-state {
+        padding: 30px 16px;
+    }
+    
+    .empty-icon {
+        font-size: 3rem;
+    }
+    
+    .empty-state h2 {
+        font-size: 1.1rem;
+    }
+}
+</style>
+{% endblock %}

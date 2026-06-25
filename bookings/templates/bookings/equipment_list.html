@@ -1,0 +1,274 @@
+{% extends 'bookings/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="equipment-header">
+    <h1>Equipment Rental</h1>
+    <div class="equipment-stats">
+       <span class="stat available">Available: {{ available_count }}</span>
+       <span class="stat rented">Rented: {{ rented_count }}</span>
+       <span class="stat maintenance">Under Maintenance: {{ maintenance_count }}</span>
+    </div>
+</div>
+
+<div class="filter-section">
+    <form method="get" class="filter-form">
+        <div class="filter-group">
+            <label for="status">Status:</label>
+            <select name="status" id="status">
+                <option value="">All</option>
+                {% for value, label in status_choices %}
+                    <option value="{{ value }}" {% if current_status == value %}selected{% endif %}>
+                        {{ label }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="filter-group">
+            <label for="category">Category:</label>
+            <select name="category" id="category">
+                <option value="">All Categories</option>
+                {% for category in categories %}
+                    <option value="{{ category.id }}" {% if current_category == category.id|stringformat:"s" %}selected{% endif %}>
+                        {{ category.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="filter-group">
+            <label for="search">Search:</label>
+            <input type="text" name="search" id="search" placeholder="Name, serial, or asset tag..." value="{{ search_query|default:'' }}">
+        </div>
+        
+        <button type="submit" class="btn-filter">Apply Filters</button>
+        <a href="{% url 'equipment_list' %}" class="btn-clear">Clear</a>
+    </form>
+</div>
+
+<div class="equipment-grid">
+    {% for equipment in equipment_list %}
+        <div class="equipment-card {% if equipment.status == 'AVAILABLE' %}available{% elif equipment.status == 'RENTED' %}rented{% elif equipment.status == 'MAINTENANCE' %}maintenance{% endif %}">
+            <div class="equipment-status-badge">{{ equipment.get_status_display }}</div>
+            <h3>{{ equipment.name }}</h3>
+            <div class="equipment-details">
+                <p><span class="label">Serial:</span> {{ equipment.serial_number }}</p>
+                <p><span class="label">Category:</span> {{ equipment.category.name|default:"Uncategorized" }}</p>
+                <p><span class="label">Condition:</span> {{ equipment.get_condition_display }}</p>
+                <p><span class="label">Location:</span> {{ equipment.location|default:"Not specified" }}</p>
+            </div>
+            <div class="equipment-actions">
+                <a href="{% url 'equipment_detail' equipment.id %}" class="btn-view">View Details</a>
+                {% if equipment.is_available %}
+                    <button onclick="rentEquipment({{ equipment.id }})" class="btn-rent">Rent Now</button>
+                {% endif %}
+            </div>
+        </div>
+    {% empty %}
+        <div class="no-equipment">
+            <p>No equipment found matching your criteria.</p>
+        </div>
+    {% endfor %}
+</div>
+
+<script>
+function rentEquipment(equipmentId) {
+    const returnDate = prompt('Expected return date (YYYY-MM-DD HH:MM):', 
+        new Date(Date.now() + 7*24*60*60*1000).toISOString().slice(0, 16));
+    
+    if (!returnDate) return;
+    
+    const formData = new FormData();
+    formData.append('equipment_id', equipmentId);
+    formData.append('expected_return_date', returnDate);
+    formData.append('condition_notes', prompt('Condition notes (optional):', ''));
+    
+    fetch('/equipment/rent/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrftoken,
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert('Error: ' + data.error);
+        } else {
+            alert('Success! ' + data.message);
+            location.reload();
+        }
+    })
+    .catch(error => {
+        alert('Error: ' + error.message);
+    });
+}
+</script>
+
+<style>
+.equipment-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.equipment-stats {
+    display: flex;
+    gap: 15px;
+}
+
+.stat {
+    padding: 5px 12px;
+    border-radius: 0px;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.stat.available { background: #d4edda; color: #155724; }
+.stat.rented { background: #fff3cd; color: #856404; }
+.stat.maintenance { background: #f8d7da; color: #721c24; }
+
+.filter-section {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 0px;
+    margin-bottom: 20px;
+}
+
+.filter-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: flex-end;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.filter-group label {
+    font-weight: 600;
+    font-size: 0.8rem;
+    color: #495057;
+}
+
+.filter-group select,
+.filter-group input {
+    padding: 6px 10px;
+    border: 1px solid #ddd;
+    border-radius: 0px;
+    font-size: 0.9rem;
+}
+
+.btn-filter {
+    padding: 8px 20px;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 0px;
+    cursor: pointer;
+}
+
+.btn-clear {
+    padding: 8px 20px;
+    background: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 0px;
+    text-decoration: none;
+}
+
+.equipment-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+.equipment-card {
+    border: 1px solid #ddd;
+    border-radius: 0px;
+    padding: 15px;
+    position: relative;
+    transition: box-shadow 0.3s ease;
+}
+
+.equipment-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.equipment-card.available { border-left: 4px solid #28a745; }
+.equipment-card.rented { border-left: 4px solid #ffc107; }
+.equipment-card.maintenance { border-left: 4px solid #dc3545; }
+
+.equipment-status-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 2px 10px;
+    border-radius: 0px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    background: #e9ecef;
+}
+
+.equipment-card.available .equipment-status-badge { background: #d4edda; color: #155724; }
+.equipment-card.rented .equipment-status-badge { background: #fff3cd; color: #856404; }
+.equipment-card.maintenance .equipment-status-badge { background: #f8d7da; color: #721c24; }
+
+.equipment-card h3 {
+    margin: 0 0 10px 0;
+    font-size: 1.1rem;
+}
+
+.equipment-details p {
+    margin: 4px 0;
+    font-size: 0.85rem;
+    color: #495057;
+}
+
+.equipment-details .label {
+    font-weight: 600;
+    color: #6c757d;
+}
+
+.equipment-actions {
+    margin-top: 12px;
+    display: flex;
+    gap: 8px;
+}
+
+.btn-view {
+    padding: 6px 12px;
+    background: #17a2b8;
+    color: white;
+    text-decoration: none;
+    border-radius: 0px;
+    font-size: 0.85rem;
+}
+
+.btn-rent {
+    padding: 6px 12px;
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 0px;
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+
+.btn-rent:hover {
+    background: #218838;
+}
+
+.no-equipment {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 40px;
+    color: #6c757d;
+}
+</style>
+{% endblock %}

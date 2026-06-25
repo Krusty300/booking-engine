@@ -884,6 +884,11 @@
           <a href="{% url 'my_resources' %}" role="menuitem">My Resources</a>
           <a href="{% url 'my_bookings' %}" role="menuitem">My Bookings</a>
           <a href="{% url 'my_reviews' %}" role="menuitem">Reviews</a>
+          <a href="{% url 'equipment_dashboard' %}">Dashboard</a>
+          <a href="{% url 'equipment_list' %}">Equipment</a>
+          <a href="{% url 'my_rentals' %}">My Rentals</a>
+          <a href="{% url 'my_equipment' %}">My Equipment</a>
+          <a href="{% url 'equipment_maintenance' %}">Maintenance</a>
         </div>
 
         {% if user.is_staff %}

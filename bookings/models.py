@@ -1,7 +1,7 @@
 from django.db import models
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 from django.utils import timezone
 
@@ -611,6 +611,227 @@ class DailyAnalytics(models.Model):
     
     def __str__(self):
         return f"Analytics for {self.date}"
+
+class EquipmentCategory(models.Model):
+    """Category for equipment (e.g., 'Audio', 'Video', 'Computers')"""
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
+    icon = models.CharField(max_length=50, blank=True, help_text="Font awesome icon class")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name_plural = "Equipment Categories"
+
+    def __str__(self):
+        return self.name
+
+class Equipment(models.Model):
+    """Individual equipment item with serial number tracking"""
+    STATUS_CHOICES = [
+        ('AVAILABLE', 'Available'),
+        ('RENTED', 'Rented Out'),
+        ('MAINTENANCE', 'Under Maintenance'),
+        ('RETIRED', 'Retired'),
+        ('LOST', 'Lost'),
+    ]
+
+    CONDITION_CHOICES = [
+        ('EXCELLENT', 'Excellent'),
+        ('GOOD', 'Good'),
+        ('FAIR', 'Fair'),
+        ('POOR', 'Poor'),
+        ('NEEDS_REPAIR', 'Needs Repair'),
+    ]
+
+    # Basic info
+    name = models.CharField(max_length=200)
+    category = models.ForeignKey(EquipmentCategory, on_delete=models.SET_NULL, null=True, related_name='equipment')
+    description = models.TextField(blank=True)
+    
+    # Tracking
+    serial_number = models.CharField(max_length=100, unique=True, db_index=True)
+    asset_tag = models.CharField(max_length=50, unique=True, blank=True, null=True)
+    barcode = models.CharField(max_length=100, blank=True, null=True)
+    
+    # Status
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='AVAILABLE')
+    condition = models.CharField(max_length=20, choices=CONDITION_CHOICES, default='GOOD')
+    
+    # Purchase info
+    purchase_date = models.DateField(null=True, blank=True)
+    purchase_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    warranty_expiry = models.DateField(null=True, blank=True)
+    
+    # Location
+    location = models.CharField(max_length=200, blank=True, help_text="Current location of equipment")
+    
+    # Additional info
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    # ============ NEW: OWNER FIELD ============
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='equipment_owned',
+        help_text="User who owns/created this equipment"
+    )
+
+    class Meta:
+        verbose_name_plural = "Equipment"
+        indexes = [
+            models.Index(fields=['serial_number']),
+            models.Index(fields=['status']),
+            models.Index(fields=['category']),
+            models.Index(fields=['owner']),  # Add index for owner field
+        ]
+
+    def __str__(self):
+        return f"{self.name} ({self.serial_number})"
+
+    def is_available(self):
+        """Check if equipment is available for rental"""
+        return self.status == 'AVAILABLE'
+
+    def can_be_rented(self):
+        """Check if equipment can be rented (not in maintenance or retired)"""
+        return self.status in ['AVAILABLE', 'RENTED']
+    
+    def is_owned_by(self, user):
+        """Check if a user owns this equipment"""
+        if not user.is_authenticated:
+            return False
+        return self.owner == user
+    
+    def can_manage(self, user):
+        """Check if a user can manage this equipment (owner or staff)"""
+        if not user.is_authenticated:
+            return False
+        return user.is_staff or self.is_owned_by(user)
+
+class EquipmentRental(models.Model):
+    """Rental record for equipment check-in/check-out"""
+    STATUS_CHOICES = [
+        ('CHECKED_OUT', 'Checked Out'),
+        ('CHECKED_IN', 'Checked In'),
+        ('OVERDUE', 'Overdue'),
+        ('LOST', 'Lost'),
+        ('DAMAGED', 'Damaged'),
+    ]
+
+    equipment = models.ForeignKey(Equipment, on_delete=models.CASCADE, related_name='rentals')
+    rented_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='equipment_rentals')
+    checked_out_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='checked_out_rentals')
+    checked_in_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='checked_in_rentals')
+
+    # Dates
+    checkout_date = models.DateTimeField(auto_now_add=True)
+    expected_return_date = models.DateTimeField()
+    actual_return_date = models.DateTimeField(null=True, blank=True)
+
+    # Status
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='CHECKED_OUT')
+    
+    # Notes
+    condition_on_checkout = models.TextField(blank=True, help_text="Condition notes when rented")
+    condition_on_return = models.TextField(blank=True, help_text="Condition notes when returned")
+    notes = models.TextField(blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-checkout_date']
+        indexes = [
+            models.Index(fields=['equipment', 'status']),
+            models.Index(fields=['rented_by', 'status']),
+            models.Index(fields=['expected_return_date']),
+        ]
+
+    def __str__(self):
+        return f"{self.equipment.name} - {self.rented_by.username} ({self.checkout_date.strftime('%Y-%m-%d')})"
+
+    def is_overdue(self):
+        """Check if rental is overdue"""
+        if self.status == 'CHECKED_IN':
+            return False
+        return timezone.now() > self.expected_return_date
+
+    def days_rented(self):
+        """Calculate days rented"""
+        if self.actual_return_date:
+            return (self.actual_return_date - self.checkout_date).days
+        return (timezone.now() - self.checkout_date).days
+
+    def save(self, *args, **kwargs):
+        # Update equipment status when rental is created
+        if self.status == 'CHECKED_OUT' and not self.pk:
+            self.equipment.status = 'RENTED'
+            self.equipment.save()
+        
+        # Update equipment status when rental is checked in
+        if self.status == 'CHECKED_IN' and self.pk:
+            self.equipment.status = 'AVAILABLE'
+            self.equipment.save()
+        
+        super().save(*args, **kwargs)
+
+class MaintenanceRecord(models.Model):
+    """Track maintenance and repairs for equipment"""
+    MAINTENANCE_TYPES = [
+        ('ROUTINE', 'Routine Maintenance'),
+        ('REPAIR', 'Repair'),
+        ('INSPECTION', 'Inspection'),
+        ('CALIBRATION', 'Calibration'),
+        ('UPGRADE', 'Upgrade'),
+        ('OTHER', 'Other'),
+    ]
+
+    STATUS_CHOICES = [
+        ('SCHEDULED', 'Scheduled'),
+        ('IN_PROGRESS', 'In Progress'),
+        ('COMPLETED', 'Completed'),
+        ('CANCELLED', 'Cancelled'),
+    ]
+
+    equipment = models.ForeignKey(Equipment, on_delete=models.CASCADE, related_name='maintenance_records')
+    maintenance_type = models.CharField(max_length=20, choices=MAINTENANCE_TYPES)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='SCHEDULED')
+    
+    # Details
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    cost = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    
+    # Dates
+    scheduled_date = models.DateField()
+    completed_date = models.DateField(null=True, blank=True)
+    
+    # Performed by
+    performed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='maintenance_performed')
+    vendor = models.CharField(max_length=200, blank=True, help_text="External vendor if applicable")
+    
+    # Notes
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-scheduled_date']
+
+    def __str__(self):
+        return f"{self.equipment.name} - {self.get_maintenance_type_display()} ({self.scheduled_date})"
+
+    def complete_maintenance(self):
+        """Mark maintenance as completed"""
+        self.status = 'COMPLETED'
+        self.completed_date = timezone.now().date()
+        self.equipment.status = 'AVAILABLE'
+        self.equipment.save()
+        self.save()
 
 
 # ============ SIGNALS ============

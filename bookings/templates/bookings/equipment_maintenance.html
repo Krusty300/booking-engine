@@ -1,0 +1,890 @@
+{% extends 'bookings/base.html' %}
+
+{% block content %}
+<div class="maintenance-container">
+    <div class="page-header">
+    <div>
+        <h1>Equipment Maintenance</h1>
+        <p class="subtitle">Schedule and track maintenance for all equipment</p>
+    </div>
+    <div class="header-stats">
+        <div class="stat-item">
+            <span class="stat-number">{{ total_records }}</span>
+            <span class="stat-label">Total Records</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-number scheduled-count">{{ scheduled_count }}</span>
+            <span class="stat-label">Scheduled</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-number in-progress-count">{{ in_progress_count }}</span>
+            <span class="stat-label">In Progress</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-number completed-count">{{ completed_count }}</span>
+            <span class="stat-label">Completed</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-number cancelled-count">{{ cancelled_count }}</span>
+            <span class="stat-label">Cancelled</span>
+        </div>
+    </div>
+</div>
+
+    <!-- Main Grid -->
+    <div class="maintenance-grid">
+        <!-- Left Column: Schedule Maintenance Form -->
+        <div class="maintenance-form-section">
+            <div class="form-card">
+                <h2>Schedule New Maintenance</h2>
+                <form method="post" class="maintenance-form" id="maintenanceForm">
+                    {% csrf_token %}
+                    
+                    <!-- Equipment Selection -->
+                    <div class="form-group">
+                        <label for="equipment_id">Equipment *</label>
+                        <select name="equipment_id" id="equipment_id" required class="form-control">
+                            <option value="">Select equipment...</option>
+                            {% for eq in equipment_list %}
+                                <option value="{{ eq.id }}" 
+                                        {% if request.GET.equipment_id == eq.id|stringformat:"s" %}selected{% endif %}
+                                        data-status="{{ eq.status }}">
+                                    {{ eq.name }} ({{ eq.serial_number }}) 
+                                    {% if eq.status == 'AVAILABLE' %}
+                                    {% elif eq.status == 'RENTED' %}
+                                    {% elif eq.status == 'MAINTENANCE' %}
+                                    {% elif eq.status == 'RETIRED' %}
+                                    {% elif eq.status == 'LOST' %}
+                                    {% endif %}
+                                    - {{ eq.get_status_display }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-hint">Select the equipment that needs maintenance</div>
+                    </div>
+                    
+                    <!-- Maintenance Type -->
+                    <div class="form-group">
+                        <label for="maintenance_type">Maintenance Type *</label>
+                        <select name="maintenance_type" id="maintenance_type" required class="form-control">
+                            <option value="">Select type...</option>
+                            {% for value, label in maintenance_types %}
+                                <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-hint">Choose the type of maintenance required</div>
+                    </div>
+                    
+                    <!-- Title -->
+                    <div class="form-group">
+                        <label for="title">Title *</label>
+                        <input type="text" name="title" id="title" required class="form-control" 
+                               placeholder="e.g., Battery Replacement, Screen Repair, Annual Inspection">
+                        <div class="form-hint">Brief title describing the maintenance task</div>
+                    </div>
+                    
+                    <!-- Description -->
+                    <div class="form-group">
+                        <label for="description">Description *</label>
+                        <textarea name="description" id="description" rows="3" required class="form-control" 
+                                  placeholder="Detailed description of the maintenance needed..."></textarea>
+                        <div class="form-hint">Provide detailed information about the maintenance required</div>
+                    </div>
+                    
+                    <!-- Date and Cost Row -->
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="scheduled_date">Scheduled Date *</label>
+                            <input type="date" name="scheduled_date" id="scheduled_date" required class="form-control">
+                            <div class="form-hint">When should the maintenance be performed?</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="cost">Cost ($)</label>
+                            <input type="number" name="cost" id="cost" step="0.01" class="form-control" 
+                                   placeholder="0.00" min="0">
+                            <div class="form-hint">Estimated cost of the maintenance (optional)</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Vendor -->
+                    <div class="form-group">
+                        <label for="vendor">Vendor / Technician</label>
+                        <input type="text" name="vendor" id="vendor" class="form-control" 
+                               placeholder="e.g., ABC Tech Services, John Doe">
+                        <div class="form-hint">Name of the vendor or technician performing the maintenance (optional)</div>
+                    </div>
+                    
+                    <!-- Submit Button -->
+                    <button type="submit" class="btn-submit" id="submitBtn">
+                        <span class="btn-content">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                                <line x1="16" y1="2" x2="16" y2="6"/>
+                                <line x1="8" y1="2" x2="8" y2="6"/>
+                                <line x1="3" y1="10" x2="21" y2="10"/>
+                                <line x1="12" y1="14" x2="12" y2="18"/>
+                                <line x1="16" y1="14" x2="16" y2="18"/>
+                                <line x1="8" y1="14" x2="8" y2="18"/>
+                            </svg>
+                            Schedule Maintenance
+                        </span>
+                        <span class="btn-loading" style="display: none;">
+                            <span class="spinner"></span>
+                            Scheduling...
+                        </span>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Right Column: Maintenance History -->
+        <div class="maintenance-history-section">
+            <div class="history-header">
+                <h2>Recent Maintenance Records</h2>
+                <div class="history-actions">
+                    <button onclick="refreshHistory()" class="btn-refresh">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="23 4 23 10 17 10"/>
+                            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                        </svg>
+                        Refresh
+                    </button>
+                </div>
+            </div>
+            
+            {% if maintenance_records %}
+                <div class="table-responsive">
+                    <table class="maintenance-table">
+                        <thead>
+                            <tr>
+                                <th>Equipment</th>
+                                <th>Type</th>
+                                <th>Title</th>
+                                <th>Scheduled</th>
+                                <th>Status</th>
+                                <th>Cost</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for record in maintenance_records %}
+                                <tr class="{% if record.status == 'SCHEDULED' %}row-scheduled{% elif record.status == 'IN_PROGRESS' %}row-in-progress{% elif record.status == 'COMPLETED' %}row-completed{% endif %}">
+                                    <td>
+                                        <div class="equipment-cell">
+                                            <strong>{{ record.equipment.name }}</strong>
+                                            <span class="serial-text">{{ record.equipment.serial_number }}</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="maintenance-type-badge type-{{ record.maintenance_type|lower }}">
+                                            {{ record.get_maintenance_type_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="title-cell">
+                                            <strong>{{ record.title }}</strong>
+                                            <span class="description-text">{{ record.description|truncatewords:8 }}</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="date-cell">
+                                            {{ record.scheduled_date|date:"M d, Y" }}
+                                            <span class="date-time">{{ record.scheduled_date|date:"l" }}</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="status-badge status-{{ record.status|lower }}">
+                                            {{ record.get_status_display }}
+                                        </span>
+                                        {% if record.status == 'COMPLETED' and record.completed_date %}
+                                            <span class="completed-date">✓ {{ record.completed_date|date:"M d" }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if record.cost %}
+                                            <span class="cost-value">${{ record.cost }}</span>
+                                        {% else %}
+                                            <span class="cost-value not-set">—</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            {% if record.status != 'COMPLETED' and record.status != 'CANCELLED' %}
+                                                <button onclick="completeMaintenance({{ record.id }})" 
+                                                        class="btn-complete" 
+                                                        title="Mark as completed">
+                                                    ✓ Complete
+                                                </button>
+                                            {% endif %}
+                                            <button onclick="viewMaintenanceDetails({{ record.id }})" 
+                                                    class="btn-view-details" 
+                                                    title="View details">
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <h3>No Maintenance Records</h3>
+                    <p>No maintenance records have been created yet. Schedule your first maintenance using the form.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Set default date to tomorrow
+    const dateInput = document.getElementById('scheduled_date');
+    if (dateInput) {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        dateInput.value = tomorrow.toISOString().split('T')[0];
+    }
+    
+    // Equipment selection validation
+    const equipmentSelect = document.getElementById('equipment_id');
+    if (equipmentSelect) {
+        equipmentSelect.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            const status = selectedOption.dataset.status;
+            
+            // Warn if equipment is already in maintenance
+            if (status === 'MAINTENANCE') {
+                alert('Warning: This equipment is already under maintenance.\n\n' +
+                      'Scheduling another maintenance task will keep it in maintenance status.');
+            }
+            
+            // Warn if equipment is not available
+            if (status === 'RENTED') {
+                alert('Notice: This equipment is currently rented.\n\n' +
+                      'Scheduling maintenance will make it unavailable for rental.');
+            }
+        });
+    }
+    
+    // Form submission handling
+    const form = document.getElementById('maintenanceForm');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const submitBtn = document.getElementById('submitBtn');
+            const btnContent = submitBtn.querySelector('.btn-content');
+            const btnLoading = submitBtn.querySelector('.btn-loading');
+            
+            // Show loading state
+            btnContent.style.display = 'none';
+            btnLoading.style.display = 'flex';
+            submitBtn.disabled = true;
+        });
+    }
+});
+
+// Complete Maintenance
+function completeMaintenance(maintenanceId) {
+    const confirmComplete = confirm(
+        'Are you sure you want to mark this maintenance as completed?\n\n' +
+        'This will update the equipment status to "Available".'
+    );
+    
+    if (!confirmComplete) return;
+    
+    const notes = prompt('Add completion notes (optional):', 'Maintenance completed successfully.');
+    if (notes === null) return; // User cancelled
+    
+    // Show loading state
+    const btn = event.target;
+    const originalText = btn.textContent;
+    btn.textContent = 'Processing...';
+    btn.disabled = true;
+    
+    const formData = new FormData();
+    formData.append('maintenance_id', maintenanceId);
+    formData.append('notes', notes || '');
+    
+    fetch('/equipment-maintenance/complete/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrftoken,
+        },
+        body: formData
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.error) {
+            alert('Error: ' + data.error);
+        } else {
+            alert('Success! ' + data.message);
+            location.reload();
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error: ' + error.message);
+    })
+    .finally(() => {
+        btn.textContent = originalText;
+        btn.disabled = false;
+    });
+}
+
+
+// View Maintenance Details
+function viewMaintenanceDetails(maintenanceId) {
+    window.location.href = '/equipment-maintenance/' + maintenanceId + '/';
+}
+
+// Refresh History
+function refreshHistory() {
+    const btn = document.querySelector('.btn-refresh');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = 'Refreshing...';
+    btn.disabled = true;
+    
+    location.reload();
+}
+
+// Filter maintenance records by status
+function filterMaintenance(status) {
+    const url = new URL(window.location.href);
+    url.searchParams.set('status', status);
+    window.location.href = url.toString();
+}
+</script>
+
+<style>
+/* Container */
+.maintenance-container {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* Page Header */
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.page-header h1 {
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: 700;
+}
+
+.page-header .subtitle {
+    margin: 4px 0 0;
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.header-stats {
+    display: flex;
+    gap: 20px;
+}
+
+.stat-item {
+    text-align: center;
+}
+
+.stat-number {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #212529;
+}
+
+.stat-number.scheduled-count {
+    color: #ffc107;
+}
+
+.stat-number.in-progress-count {
+    color: #17a2b8;
+}
+
+.stat-number.completed-count {
+    color: #28a745;
+}
+
+.stat-label {
+    font-size: 0.7rem;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Main Grid */
+.maintenance-grid {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    gap: 30px;
+}
+
+/* Form Section */
+.maintenance-form-section {
+    position: sticky;
+    top: 20px;
+    align-self: start;
+}
+
+.form-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 24px;
+}
+
+.form-card h2 {
+    margin: 0 0 20px 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #212529;
+}
+
+.maintenance-form .form-group {
+    margin-bottom: 16px;
+}
+
+.maintenance-form label {
+    display: block;
+    margin-bottom: 4px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: #495057;
+}
+
+.maintenance-form .form-control {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    box-sizing: border-box;
+    font-family: inherit;
+}
+
+.maintenance-form .form-control:focus {
+    border-color: #007bff;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.maintenance-form .form-control.error {
+    border-color: #dc3545;
+}
+
+.maintenance-form .form-hint {
+    font-size: 0.7rem;
+    color: #6c757d;
+    margin-top: 4px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+/* Submit Button */
+.btn-submit {
+    width: 100%;
+    padding: 12px;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    font-family: inherit;
+    position: relative;
+}
+
+.btn-submit:hover:not(:disabled) {
+    background: #0056b3;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+.btn-submit:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.btn-submit:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.btn-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btn-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* History Section */
+.maintenance-history-section {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 24px;
+    overflow: hidden;
+}
+
+.history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.history-header h2 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.history-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-refresh {
+    padding: 6px 12px;
+    background: #f8f9fa;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.btn-refresh:hover {
+    background: #e9ecef;
+}
+
+/* Table */
+.table-responsive {
+    overflow-x: auto;
+    margin: 0 -8px;
+}
+
+.maintenance-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.maintenance-table thead {
+    background: #f8f9fa;
+}
+
+.maintenance-table th {
+    text-align: left;
+    padding: 10px 12px;
+    font-weight: 600;
+    color: #495057;
+    border-bottom: 2px solid #dee2e6;
+    white-space: nowrap;
+}
+
+.maintenance-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #e9ecef;
+    vertical-align: middle;
+}
+
+.maintenance-table tbody tr:hover {
+    background: #f8f9fa;
+}
+
+/* Row States */
+.row-scheduled {
+    border-left: 3px solid #ffc107;
+}
+
+.row-in-progress {
+    border-left: 3px solid #17a2b8;
+}
+
+.row-completed {
+    border-left: 3px solid #28a745;
+}
+
+/* Equipment Cell */
+.equipment-cell {
+    display: flex;
+    flex-direction: column;
+}
+
+.equipment-cell strong {
+    font-size: 0.85rem;
+}
+
+.serial-text {
+    font-size: 0.7rem;
+    color: #6c757d;
+}
+
+/* Maintenance Type Badge */
+.maintenance-type-badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.type-routine { background: #d1ecf1; color: #0c5460; }
+.type-repair { background: #f8d7da; color: #721c24; }
+.type-inspection { background: #d4edda; color: #155724; }
+.type-calibration { background: #fff3cd; color: #856404; }
+.type-upgrade { background: #e2e3e5; color: #383d41; }
+.type-other { background: #e9ecef; color: #495057; }
+
+/* Title Cell */
+.title-cell {
+    display: flex;
+    flex-direction: column;
+}
+
+.title-cell strong {
+    font-size: 0.85rem;
+}
+
+.description-text {
+    font-size: 0.75rem;
+    color: #6c757d;
+}
+
+/* Date Cell */
+.date-cell {
+    display: flex;
+    flex-direction: column;
+}
+
+.date-time {
+    font-size: 0.7rem;
+    color: #6c757d;
+}
+
+/* Status Badge */
+.status-badge {
+    display: inline-block;
+    padding: 3px 12px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+
+.status-scheduled { background: #fff3cd; color: #856404; }
+.status-in_progress { background: #d1ecf1; color: #0c5460; }
+.status-completed { background: #d4edda; color: #155724; }
+.status-cancelled { background: #f8d7da; color: #721c24; }
+
+.completed-date {
+    display: block;
+    font-size: 0.65rem;
+    color: #28a745;
+    margin-top: 2px;
+}
+
+/* Cost */
+.cost-value {
+    font-weight: 600;
+}
+
+.cost-value.not-set {
+    color: #adb5bd;
+}
+
+/* Action Buttons */
+.action-buttons {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.btn-complete {
+    padding: 4px 10px;
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.7rem;
+    font-weight: 600;
+    transition: background 0.2s;
+    font-family: inherit;
+    white-space: nowrap;
+}
+
+.btn-complete:hover {
+    background: #218838;
+}
+
+.btn-view-details {
+    padding: 4px 8px;
+    background: #17a2b8;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: background 0.2s;
+}
+
+.btn-view-details:hover {
+    background: #138496;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 16px;
+    opacity: 0.6;
+}
+
+.empty-state h3 {
+    margin: 0 0 8px;
+    color: #212529;
+}
+
+.empty-state p {
+    margin: 0;
+    color: #6c757d;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+    .maintenance-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .maintenance-form-section {
+        position: static;
+    }
+}
+
+@media (max-width: 992px) {
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+    
+    .header-stats {
+        width: 100%;
+        justify-content: space-around;
+    }
+}
+
+@media (max-width: 768px) {
+    .page-header h1 {
+        font-size: 1.4rem;
+    }
+    
+    .header-stats {
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+    
+    .stat-number {
+        font-size: 1.2rem;
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .form-card {
+        padding: 16px;
+    }
+    
+    .maintenance-history-section {
+        padding: 16px;
+    }
+    
+    .maintenance-table {
+        font-size: 0.75rem;
+    }
+    
+    .maintenance-table th,
+    .maintenance-table td {
+        padding: 6px 8px;
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+    }
+    
+    .btn-complete,
+    .btn-view-details {
+        width: 100%;
+        text-align: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .history-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    .stat-number {
+        font-size: 1rem;
+    }
+    
+    .stat-label {
+        font-size: 0.6rem;
+    }
+}
+</style>
+{% endblock %}

@@ -1,0 +1,828 @@
+{% extends 'bookings/base.html' %}
+
+{% block content %}
+<div class="equipment-detail-container">
+    <!-- Header -->
+    <div class="equipment-detail-header">
+        <div>
+            <h1>{{ equipment.name }}</h1>
+            <div class="equipment-meta">
+                <span class="status-badge status-{{ equipment.status|lower }}">{{ equipment.get_status_display }}</span>
+                <span class="condition-badge condition-{{ equipment.condition|lower }}">{{ equipment.get_condition_display }}</span>
+            </div>
+        </div>
+        <div class="header-actions">
+            <a href="{% url 'equipment_list' %}" class="btn-back">← Back to Equipment</a>
+        </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="equipment-detail-grid">
+        <!-- Left Column: Equipment Information -->
+        <div class="equipment-info">
+            <div class="info-card">
+                <h3>Equipment Information</h3>
+                <table class="info-table">
+                    <tr>
+                        <th>Serial Number</th>
+                        <td><strong>{{ equipment.serial_number }}</strong></td>
+                    </tr>
+                    <tr>
+                        <th>Asset Tag</th>
+                        <td>{{ equipment.asset_tag|default:"<span class='not-assigned'>Not assigned</span>" }}</td>
+                    </tr>
+                    <tr>
+                        <th>Barcode</th>
+                        <td>{{ equipment.barcode|default:"<span class='not-assigned'>Not assigned</span>" }}</td>
+                    </tr>
+                    <tr>
+                        <th>Category</th>
+                        <td>{{ equipment.category.name|default:"<span class='not-assigned'>Uncategorized</span>" }}</td>
+                    </tr>
+                    <tr>
+                        <th>Location</th>
+                        <td>{{ equipment.location|default:"<span class='not-assigned'>Not specified</span>" }}</td>
+                    </tr>
+                    <tr>
+                        <th>Purchase Date</th>
+                        <td>{{ equipment.purchase_date|date:"M d, Y"|default:"<span class='not-assigned'>Not recorded</span>" }}</td>
+                    </tr>
+                    <tr>
+                        <th>Purchase Price</th>
+                        <td>{% if equipment.purchase_price %}${{ equipment.purchase_price }}{% else %}<span class='not-assigned'>Not recorded</span>{% endif %}</td>
+                    </tr>
+                    <tr>
+                        <th>Warranty Expiry</th>
+                        <td>{{ equipment.warranty_expiry|date:"M d, Y"|default:"<span class='not-assigned'>Not recorded</span>" }}</td>
+                    </tr>
+                    <tr>
+                        <th>Created</th>
+                        <td>{{ equipment.created_at|date:"M d, Y H:i" }}</td>
+                    </tr>
+                    <tr>
+                        <th>Last Updated</th>
+                        <td>{{ equipment.updated_at|date:"M d, Y H:i" }}</td>
+                    </tr>
+                </table>
+            </div>
+
+            {% if equipment.notes %}
+                <div class="notes-card">
+                    <h4>Notes</h4>
+                    <p>{{ equipment.notes }}</p>
+                </div>
+            {% endif %}
+
+            <!-- Rental Action -->
+            <div class="action-card">
+                <h4>Rental Status</h4>
+                {% if equipment.is_available %}
+                    <div class="action-available">
+                        <p class="status-message available">This equipment is available for rental</p>
+                        <button onclick="rentEquipment({{ equipment.id }})" class="btn-rent-large">
+                            Rent Now
+                        </button>
+                    </div>
+                {% elif equipment.status == 'RENTED' %}
+                    {% with rental=equipment.rentals.first %}
+                        {% if rental %}
+                            <div class="action-rented">
+                                <p class="status-message rented">Currently rented</p>
+                                <div class="rental-info">
+                                    <p><strong>Rented by:</strong> {{ rental.rented_by.username }}</p>
+                                    <p><strong>Expected return:</strong> {{ rental.expected_return_date|date:"M d, Y H:i" }}</p>
+                                    <p><strong>Days rented:</strong> {{ rental.days_rented }} days</p>
+                                    {% if rental.is_overdue %}
+                                        <p class="overdue-warning">This rental is OVERDUE!</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endif %}
+                    {% endwith %}
+                {% elif equipment.status == 'MAINTENANCE' %}
+                    <div class="action-maintenance">
+                        <p class="status-message maintenance">🔧 Currently under maintenance</p>
+                        <p>This equipment is not available for rental until maintenance is completed.</p>
+                    </div>
+                {% elif equipment.status == 'RETIRED' %}
+                    <div class="action-retired">
+                        <p class="status-message retired">This equipment has been retired</p>
+                    </div>
+                {% elif equipment.status == 'LOST' %}
+                    <div class="action-lost">
+                        <p class="status-message lost">This equipment has been marked as lost</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Right Column: Quick Actions -->
+        <div class="equipment-sidebar">
+            <div class="quick-actions-card">
+                <h3>Quick Actions</h3>
+                <ul>
+                    <li><a href="{% url 'equipment_list' %}" class="action-link">
+                        <span class="action-icon">←</span> Back to Equipment List
+                    </a></li>
+                    {% if user.is_staff %}
+                        <li><a href="/admin/bookings/equipment/{{ equipment.id }}/change/" class="action-link" target="_blank">
+                            Edit in Admin
+                        </a></li>
+                        <li><a href="{% url 'equipment_maintenance' %}?equipment_id={{ equipment.id }}" class="action-link">
+                            Schedule Maintenance
+                        </a></li>
+                    {% endif %}
+                    {% if equipment.status == 'RENTED' %}
+                        <li><button onclick="returnCurrentRental()" class="action-link return-btn">
+                            Return Equipment
+                        </button></li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rental History -->
+    <div class="history-section">
+        <div class="history-header">
+            <h3>Rental History</h3>
+            <span class="history-count">{{ rentals|length }} records</span>
+        </div>
+        {% if rentals %}
+            <div class="table-responsive">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>Rented By</th>
+                            <th>Checkout Date</th>
+                            <th>Expected Return</th>
+                            <th>Actual Return</th>
+                            <th>Status</th>
+                            <th>Duration</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for rental in rentals %}
+                            <tr class="{% if rental.is_overdue %}row-overdue{% endif %}">
+                                <td>
+                                    <strong>{{ rental.rented_by.username }}</strong>
+                                    <span class="email-text">{{ rental.rented_by.email }}</span>
+                                </td>
+                                <td>{{ rental.checkout_date|date:"M d, Y H:i" }}</td>
+                                <td>
+                                    {{ rental.expected_return_date|date:"M d, Y H:i" }}
+                                    {% if rental.is_overdue and rental.status == 'CHECKED_OUT' %}
+                                        <span class="overdue-badge">OVERDUE</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ rental.actual_return_date|date:"M d, Y H:i"|default:"<span class='not-returned'>Not returned</span>" }}</td>
+                                <td>
+                                    <span class="status-badge status-{{ rental.status|lower }}">
+                                        {{ rental.get_status_display }}
+                                    </span>
+                                </td>
+                                <td>{{ rental.days_rented }} days</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <p>No rental history available.</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Maintenance History -->
+    <div class="history-section">
+        <div class="history-header">
+            <h3>Maintenance History</h3>
+            <span class="history-count">{{ maintenance_records|length }} records</span>
+        </div>
+        {% if maintenance_records %}
+            <div class="table-responsive">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Title</th>
+                            <th>Scheduled</th>
+                            <th>Status</th>
+                            <th>Cost</th>
+                            <th>Performed By</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in maintenance_records %}
+                            <tr>
+                                <td>
+                                    <span class="maintenance-type">{{ record.get_maintenance_type_display }}</span>
+                                </td>
+                                <td><strong>{{ record.title }}</strong></td>
+                                <td>{{ record.scheduled_date|date:"M d, Y" }}</td>
+                                <td>
+                                    <span class="status-badge status-{{ record.status|lower }}">
+                                        {{ record.get_status_display }}
+                                    </span>
+                                </td>
+                                <td>{% if record.cost %}${{ record.cost }}{% else %}<span class="not-assigned">—</span>{% endif %}</td>
+                                <td>{{ record.performed_by.username|default:record.vendor|default:"<span class='not-assigned'>Not assigned</span>" }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <p>No maintenance records available.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- JavaScript -->
+<script>
+// Rent Equipment
+function rentEquipment(equipmentId) {
+    const returnDate = prompt(
+        'Expected return date (YYYY-MM-DD HH:MM):', 
+        new Date(Date.now() + 7*24*60*60*1000).toISOString().slice(0, 16)
+    );
+    
+    if (!returnDate) return;
+    
+    const conditionNotes = prompt('Condition notes (optional):', '');
+    
+    const formData = new FormData();
+    formData.append('equipment_id', equipmentId);
+    formData.append('expected_return_date', returnDate);
+    formData.append('condition_notes', conditionNotes);
+    
+    const confirmRent = confirm(
+        `Are you sure you want to rent this equipment?\n\n` +
+        `Equipment: {{ equipment.name }}\n` +
+        `Serial: {{ equipment.serial_number }}\n` +
+        `Return by: ${returnDate}`
+    );
+    
+    if (!confirmRent) return;
+    
+    fetch('/equipment/rent/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrftoken,
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert('Error: ' + data.error);
+        } else {
+            alert('Success! ' + data.message);
+            location.reload();
+        }
+    })
+    .catch(error => {
+        alert('Error: ' + error.message);
+    });
+}
+
+// Return Equipment
+function returnCurrentRental() {
+    // Find the active rental ID from the page
+    const rentalId = '{{ equipment.rentals.first.id }}';
+    if (!rentalId || rentalId === 'None') {
+        alert('No active rental found for this equipment.');
+        return;
+    }
+    
+    const conditionNotes = prompt('Condition notes for return (optional):', '');
+    
+    const confirmReturn = confirm(
+        `Are you sure you want to return this equipment?\n\n` +
+        `Equipment: {{ equipment.name }}\n` +
+        `Serial: {{ equipment.serial_number }}`
+    );
+    
+    if (!confirmReturn) return;
+    
+    const formData = new FormData();
+    formData.append('rental_id', rentalId);
+    formData.append('condition_notes', conditionNotes);
+    
+    fetch('/equipment/return/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrftoken,
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert('Error: ' + data.error);
+        } else {
+            alert('Success! ' + data.message);
+            location.reload();
+        }
+    })
+    .catch(error => {
+        alert('Error: ' + error.message);
+    });
+}
+</script>
+
+<style>
+/* Container */
+.equipment-detail-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* Header */
+.equipment-detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.equipment-detail-header h1 {
+    margin: 0 0 8px 0;
+    font-size: 1.8rem;
+    font-weight: 700;
+}
+
+.equipment-meta {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.header-actions {
+    flex-shrink: 0;
+}
+
+.btn-back {
+    display: inline-block;
+    padding: 8px 16px;
+    background: #f8f9fa;
+    color: #495057;
+    text-decoration: none;
+    border-radius: 6px;
+    border: 1px solid #dee2e6;
+    transition: all 0.2s;
+}
+
+.btn-back:hover {
+    background: #e9ecef;
+    color: #212529;
+}
+
+/* Badges */
+.status-badge {
+    padding: 4px 14px;
+    border-radius: 0px;
+    font-weight: 600;
+    font-size: 0.8rem;
+    display: inline-block;
+}
+
+.status-available { background: #d4edda; color: #155724; }
+.status-rented { background: #fff3cd; color: #856404; }
+.status-maintenance { background: #f8d7da; color: #721c24; }
+.status-retired { background: #e2e3e5; color: #383d41; }
+.status-lost { background: #f8d7da; color: #721c24; }
+.status-checked_out { background: #fff3cd; color: #856404; }
+.status-checked_in { background: #d4edda; color: #155724; }
+.status-overdue { background: #f8d7da; color: #721c24; }
+.status-scheduled { background: #d1ecf1; color: #0c5460; }
+.status-in_progress { background: #fff3cd; color: #856404; }
+.status-completed { background: #d4edda; color: #155724; }
+
+.condition-badge {
+    padding: 4px 14px;
+    border-radius: 0px;
+    font-weight: 600;
+    font-size: 0.75rem;
+    display: inline-block;
+}
+
+.condition-excellent { background: #d4edda; color: #155724; }
+.condition-good { background: #d1ecf1; color: #0c5460; }
+.condition-fair { background: #fff3cd; color: #856404; }
+.condition-poor { background: #f8d7da; color: #721c24; }
+.condition-needs_repair { background: #f8d7da; color: #721c24; }
+
+/* Grid Layout */
+.equipment-detail-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 30px;
+    margin-bottom: 30px;
+}
+
+/* Equipment Info */
+.info-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.info-card h3 {
+    margin: 0 0 16px 0;
+    font-size: 1.1rem;
+    color: #212529;
+}
+
+.info-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.info-table tr {
+    border-bottom: 1px solid #f1f3f5;
+}
+
+.info-table tr:last-child {
+    border-bottom: none;
+}
+
+.info-table th {
+    text-align: left;
+    padding: 10px 16px 10px 0;
+    font-weight: 600;
+    color: #495057;
+    width: 35%;
+    font-size: 0.85rem;
+}
+
+.info-table td {
+    padding: 10px 0;
+    font-size: 0.85rem;
+}
+
+.info-table td strong {
+    font-weight: 600;
+    color: #212529;
+}
+
+.not-assigned {
+    color: #adb5bd;
+    font-style: italic;
+}
+
+/* Notes Card */
+.notes-card {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+}
+
+.notes-card h4 {
+    margin: 0 0 8px 0;
+    font-size: 0.9rem;
+    color: #495057;
+}
+
+.notes-card p {
+    margin: 0;
+    color: #212529;
+    line-height: 1.6;
+}
+
+/* Action Card */
+.action-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.action-card h4 {
+    margin: 0 0 12px 0;
+    font-size: 1rem;
+    color: #212529;
+}
+
+.status-message {
+    font-size: 0.95rem;
+    font-weight: 500;
+    margin: 0 0 12px 0;
+}
+
+.status-message.available { color: #28a745; }
+.status-message.rented { color: #dc3545; }
+.status-message.maintenance { color: #ffc107; }
+.status-message.retired { color: #6c757d; }
+.status-message.lost { color: #dc3545; }
+
+/* Rent Button */
+.btn-rent-large {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 28px;
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 0px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-rent-large:hover {
+    background: #218838;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+}
+
+.btn-rent-large:active {
+    transform: translateY(0);
+}
+
+/* Rental Info */
+.rental-info {
+    background: #f8f9fa;
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin-top: 10px;
+}
+
+.rental-info p {
+    margin: 4px 0;
+    font-size: 0.85rem;
+}
+
+.overdue-warning {
+    color: #dc3545;
+    font-weight: 600;
+    margin-top: 6px !important;
+}
+
+.action-rented .status-message {
+    font-size: 1rem;
+}
+
+/* Sidebar */
+.equipment-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.quick-actions-card {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.quick-actions-card h3 {
+    margin: 0 0 16px 0;
+    font-size: 1rem;
+    color: #212529;
+}
+
+.quick-actions-card ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.quick-actions-card li {
+    margin-bottom: 8px;
+}
+
+.quick-actions-card li:last-child {
+    margin-bottom: 0;
+}
+
+.action-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    color: #007bff;
+    text-decoration: none;
+    border-radius: 4px;
+    transition: all 0.2s;
+    background: white;
+    border: 1px solid #e9ecef;
+    width: 100%;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-family: inherit;
+}
+
+.action-link:hover {
+    background: #e3f2fd;
+    border-color: #007bff;
+    color: #0056b3;
+    text-decoration: none;
+}
+
+.action-icon {
+    flex-shrink: 0;
+}
+
+.return-btn {
+    background: #fff3cd;
+    border-color: #ffc107;
+    color: #856404;
+}
+
+.return-btn:hover {
+    background: #ffecb5;
+    border-color: #e0a800;
+    color: #856404;
+}
+
+/* History Sections */
+.history-section {
+    margin-top: 30px;
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.history-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.history-count {
+    font-size: 0.8rem;
+    color: #6c757d;
+    background: #f8f9fa;
+    padding: 2px 10px;
+    border-radius: 12px;
+}
+
+.table-responsive {
+    overflow-x: auto;
+}
+
+.history-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.history-table thead {
+    background: #f8f9fa;
+}
+
+.history-table th {
+    text-align: left;
+    padding: 10px 12px;
+    font-weight: 600;
+    color: #495057;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.history-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.history-table tbody tr:hover {
+    background: #f8f9fa;
+}
+
+.history-table .row-overdue {
+    background: #fff5f5 !important;
+}
+
+.history-table .row-overdue:hover {
+    background: #ffebeb !important;
+}
+
+.email-text {
+    display: block;
+    font-size: 0.7rem;
+    color: #6c757d;
+}
+
+.overdue-badge {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 8px;
+    background: #dc3545;
+    color: white;
+    font-size: 0.6rem;
+    font-weight: 700;
+    border-radius: 10px;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+.not-returned {
+    color: #6c757d;
+    font-style: italic;
+}
+
+.maintenance-type {
+    font-size: 0.75rem;
+    padding: 2px 8px;
+    background: #e9ecef;
+    border-radius: 4px;
+    color: #495057;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 30px;
+    color: #6c757d;
+    background: #f8f9fa;
+    border-radius: 6px;
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+    .equipment-detail-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+}
+
+@media (max-width: 768px) {
+    .equipment-detail-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+    
+    .header-actions {
+        width: 100%;
+    }
+    
+    .btn-back {
+        width: 100%;
+        text-align: center;
+    }
+    
+    .equipment-meta {
+        flex-wrap: wrap;
+    }
+    
+    .info-table th {
+        width: 40%;
+    }
+    
+    .equipment-detail-header h1 {
+        font-size: 1.4rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .info-table {
+        font-size: 0.8rem;
+    }
+    
+    .info-table th,
+    .info-table td {
+        padding: 6px 0;
+    }
+    
+    .history-table {
+        font-size: 0.75rem;
+    }
+    
+    .history-table th,
+    .history-table td {
+        padding: 6px 8px;
+    }
+    
+    .btn-rent-large {
+        width: 100%;
+        justify-content: center;
+    }
+}
+</style>
+{% endblock %}
