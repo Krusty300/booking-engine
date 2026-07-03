@@ -9,7 +9,7 @@
             <p class="subtitle">Booking #{{ booking.id }} - {{ booking.resource.name }}</p>
         </div>
         <div class="header-actions">
-            <a href="{% url 'my_bookings' %}" class="btn-back">← Back to My Bookings</a>
+            <a href="{% url 'bookings:my_bookings' %}" class="btn-back">← Back to My Bookings</a>
         </div>
     </div>
 
@@ -81,17 +81,17 @@
             <!-- Actions -->
             <div class="action-buttons">
                 {% if can_cancel %}
-                    <a href="{% url 'cancel_booking' booking.id %}" 
+                    <a href="{% url 'bookings:cancel_booking' booking.id %}" 
                        class="btn-cancel" 
                        onclick="return confirm('Are you sure you want to cancel this booking?')">
                         Cancel Booking
                     </a>
                 {% endif %}
                 <div class="export-buttons">
-                    <a href="{% url 'export_single_booking_pdf' booking.id %}" class="btn-export-pdf">
+                    <a href="{% url 'bookings:export_single_booking_pdf' booking.id %}" class="btn-export-pdf">
                         Export as PDF
                     </a>
-                    <a href="{% url 'export_single_booking_html' booking.id %}" class="btn-export-html">
+                    <a href="{% url 'bookings:export_single_booking_html' booking.id %}" class="btn-export-html">
                         Export as HTML
                     </a>
                 </div>
@@ -146,7 +146,7 @@
             </table>
             
             <div class="resource-actions">
-                <a href="{% url 'resource_detail' resource.id %}" class="btn-resource-detail">
+                <a href="{% url 'bookings:resource_detail' resource.id %}" class="btn-resource-detail">
                     View Resource Details
                 </a>
             </div>
@@ -240,7 +240,7 @@
     <!-- Footer -->
     <div class="detail-footer">
         <p>Generated on {{ now|date:"F d, Y at H:i" }}</p>
-        <a href="{% url 'my_bookings' %}" class="btn-back">← Back to My Bookings</a>
+        <a href="{% url 'bookings:my_bookings' %}" class="btn-back">← Back to My Bookings</a>
     </div>
 </div>
 

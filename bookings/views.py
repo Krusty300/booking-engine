@@ -2770,7 +2770,12 @@ def reservation_calendar(request):
 @login_required
 def export_single_booking_pdf(request, booking_id):
     """Export a single booking as PDF with full details"""
-    booking = get_object_or_404(Booking, id=booking_id, customer=request.user)
+    booking = get_object_or_404(Booking, id=booking_id)
+    
+    # Check permission: only customer, staff, or resource owner can export
+    if booking.customer != request.user and not request.user.is_staff and booking.resource.owner != request.user:
+        messages.error(request, 'You do not have permission to export this booking.')
+        return redirect('bookings:my_bookings')
     
     response = HttpResponse(content_type='application/pdf')
     safe_name = booking.resource.name.replace('/', '_').replace(' ', '_')[:50]
@@ -2874,7 +2879,12 @@ def export_single_booking_pdf(request, booking_id):
 @login_required
 def export_single_booking_html(request, booking_id):
     """Export a single booking as HTML"""
-    booking = get_object_or_404(Booking, id=booking_id, customer=request.user)
+    booking = get_object_or_404(Booking, id=booking_id)
+    
+    # Check permission: only customer, staff, or resource owner can export
+    if booking.customer != request.user and not request.user.is_staff and booking.resource.owner != request.user:
+        messages.error(request, 'You do not have permission to export this booking.')
+        return redirect('bookings:my_bookings')
     
     context = {
         'booking': booking,
@@ -2882,6 +2892,7 @@ def export_single_booking_html(request, booking_id):
         'category': booking.resource.category,
         'meeting_room': booking.resource.meeting_room if booking.resource.is_meeting_room() else None,
         'amenities': booking.resource.meeting_room.amenities.all() if booking.resource.is_meeting_room() else None,
+        'now': timezone.now(),
     }
     
     html_content = render_to_string('bookings/booking_detail_export.html', context)
