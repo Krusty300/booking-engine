@@ -10,11 +10,22 @@
         </div>
         <div class="header-actions">
             <button onclick="printPage()" class="btn-print">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="6 9 6 2 18 2 18 9"/>
+                    <path d="M18 9H6v10h12V9z"/>
+                    <rect x="8" y="13" width="8" height="2"/>
+                    <rect x="8" y="16" width="6" height="2"/>
+                </svg>
                 Print
             </button>
             <div class="export-dropdown">
                 <button onclick="toggleExportMenu()" class="btn-export">
-                    Export
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="7 10 12 15 17 10"/>
+                        <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                    Export ▾
                 </button>
                 <div id="exportMenu" class="export-menu" style="display: none;">
                     <a href="#" onclick="exportBookings('csv')">CSV</a>
@@ -25,7 +36,7 @@
         </div>
     </div>
 
-    <!-- Statistics Cards -->
+    <!-- Statistics -->
     <div class="stats-grid">
         <div class="stat-card">
             <div class="stat-number">{{ total }}</div>
@@ -59,52 +70,89 @@
 
     <!-- Bookings List -->
     {% if bookings %}
-        <div class="bookings-table-wrapper">
-            <table class="bookings-table">
-                <thead>
-                    <tr>
-                        <th>Resource</th>
-                        <th>Start Time</th>
-                        <th>End Time</th>
-                        <th>Duration</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for booking in bookings %}
-                        <tr class="{% if booking.status == 'CANCELLED' %}cancelled{% endif %}">
-                            <td>
-                                <strong>{{ booking.resource.name }}</strong>
-                                {% if booking.notes %}
-                                    <span class="booking-note">{{ booking.notes|truncatewords:5 }}</span>
+        <div class="bookings-list">
+            {% for booking_item in booking_data %}
+                <div class="booking-card" id="booking-{{ booking_item.booking.id }}">
+                    <!-- Card Header -->
+                    <div class="booking-card-header">
+                        <div class="booking-title">
+                            <h3>{{ booking_item.resource.name }}</h3>
+                            <span class="status-badge status-{{ booking_item.booking.status|lower }}">
+                                {{ booking_item.booking.get_status_display }}
+                            </span>
+                        </div>
+                        <div class="booking-date">
+                            {{ booking_item.booking.start_time|date:"M d, Y" }}
+                            <span class="booking-time">{{ booking_item.booking.start_time|date:"H:i" }} - {{ booking_item.booking.end_time|date:"H:i" }}</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Card Body - Expanded View -->
+                    <div class="booking-card-body">
+                        <div class="booking-details-grid">
+                            <!-- Left Column: Resource Info -->
+                            <div class="booking-resource-info">
+                                {% if booking_item.has_image %}
+                                    <div class="resource-thumb">
+                                        <img src="{{ booking_item.image_url }}" alt="{{ booking_item.resource.name }}" 
+                                             onerror="this.src='/static/bookings/images/default-resource.png'">
+                                    </div>
                                 {% endif %}
-                            </td>
-                            <td>{{ booking.start_time|date:"M d, Y H:i" }}</td>
-                            <td>{{ booking.end_time|date:"M d, Y H:i" }}</td>
-                            <td>{{ booking.get_duration }}h</td>
-                            <td>
-                                <span class="status-badge status-{{ booking.status|lower }}">
-                                    {{ booking.get_status_display }}
-                                </span>
-                            </td>
-                            <td>
-                                <div class="action-buttons">
-                                    {% if booking.can_cancel %}
-                                        <a href="{% url 'cancel_booking' booking.id %}" 
-                                           class="btn-cancel" 
-                                           onclick="return confirm('Are you sure you want to cancel this booking?')">
-                                            Cancel
-                                        </a>
-                                    {% else %}
-                                        <span class="no-action">—</span>
-                                    {% endif %}
+                                <div class="resource-details">
+                                    <p><span class="label">Category:</span> {{ booking_item.category.name|default:"Uncategorized" }}</p>
+                                    <p><span class="label">Location:</span> {{ booking_item.resource.location|default:"Not specified" }}</p>
+                                    <p><span class="label">Capacity:</span> {{ booking_item.resource.max_capacity }} people</p>
+                                    <p><span class="label">Price:</span> {% if booking_item.resource.price_per_hour %}${{ booking_item.resource.price_per_hour }}/hour{% else %}Free{% endif %}</p>
+                                    <p><span class="label">Owner:</span> {{ booking_item.resource.owner.username|default:"No owner" }}</p>
                                 </div>
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                            </div>
+                            
+                            <!-- Middle Column: Meeting Room Details -->
+                            {% if booking_item.meeting_room %}
+                                <div class="booking-room-details">
+                                    <h4>Meeting Room Details</h4>
+                                    <p><span class="label">Room:</span> {{ booking_item.meeting_room.room_number|default:"N/A" }}</p>
+                                    <p><span class="label">Building:</span> {{ booking_item.meeting_room.building_name|default:"N/A" }}</p>
+                                    <p><span class="label">Floor:</span> {{ booking_item.meeting_room.floor_number }}</p>
+                                    <p><span class="label">Seating:</span> {{ booking_item.meeting_room.seating_capacity }}</p>
+                                    <div class="features-list">
+                                        <span class="label">Features:</span>
+                                        {% for feature in booking_item.meeting_room.get_features_list %}
+                                            <span class="feature-tag">{{ feature }}</span>
+                                        {% empty %}
+                                            <span class="no-features">No features listed</span>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% endif %}
+                            
+                            <!-- Right Column: Booking Actions -->
+                            <div class="booking-actions">
+                                <div class="action-group">
+                                    <button onclick="viewBookingDetail({{ booking_item.booking.id }})" class="btn-detail">
+                                        View Full Details
+                                    </button>
+                                    <div class="export-buttons">
+                                        <button onclick="exportBookingPDF({{ booking_item.booking.id }})" class="btn-export-pdf" title="Export as PDF">
+                                        PDF
+                                        </button>
+                                        <button onclick="exportBookingHTML({{ booking_item.booking.id }})" class="btn-export-html" title="Export as HTML">
+                                        HTML
+                                        </button>
+                                    </div>
+                                </div>
+                                {% if booking_item.booking.can_cancel %}
+                                    <a href="{% url 'bookings:cancel_booking' booking_item.booking.id %}" 
+                                       class="btn-cancel" 
+                                       onclick="return confirm('Are you sure you want to cancel this booking?')">
+                                        Cancel Booking
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
         </div>
 
         <!-- Pagination -->
@@ -121,10 +169,11 @@
         {% endif %}
     {% else %}
         <div class="empty-state">
+            <div class="empty-icon">📋</div>
             <h2>No Bookings Found</h2>
             <p>You don't have any bookings yet.</p>
             <div class="empty-actions">
-                <a href="{% url 'resource_list' %}" class="btn-primary">Browse Resources</a>
+                <a href="{% url 'bookings:resource_list' %}" class="btn-primary">Browse Resources</a>
             </div>
         </div>
     {% endif %}
@@ -148,15 +197,31 @@ function getCookie(name) {
 }
 const csrftoken = getCookie('csrftoken');
 
-// Print Function
+// Print Page
 function printPage() {
     window.print();
 }
 
-// Export Function
+// Export Bookings
 function exportBookings(format) {
     const url = `/my-bookings/export/?format=${format}`;
     window.location.href = url;
+}
+
+// Export Single Booking as PDF
+function exportBookingPDF(bookingId) {
+    window.location.href = `/booking/${bookingId}/export-pdf/`;
+}
+
+// Export Single Booking as HTML
+function exportBookingHTML(bookingId) {
+    window.location.href = `/booking/${bookingId}/export-html/`;
+}
+
+// View Booking Detail (Open modal or navigate)
+function viewBookingDetail(bookingId) {
+    // Navigate to the booking detail page
+    window.location.href = `/booking/${bookingId}/`;
 }
 
 // Toggle Export Menu
@@ -238,42 +303,7 @@ document.addEventListener('click', function(e) {
     border-color: #adb5bd;
 }
 
-.btn-print svg,
-.btn-export svg {
-    flex-shrink: 0;
-}
-
-/* Export Dropdown */
-.export-dropdown {
-    position: relative;
-    display: inline-block;
-}
-
-.export-menu {
-    position: absolute;
-    right: 0;
-    top: 100%;
-    background: white;
-    border: 1px solid #dee2e6;
-    min-width: 150px;
-    z-index: 1000;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
-
-.export-menu a {
-    display: block;
-    padding: 10px 16px;
-    text-decoration: none;
-    color: #1a1a2e;
-    font-size: 0.85rem;
-    transition: background 0.2s;
-}
-
-.export-menu a:hover {
-    background: #f8f9fa;
-}
-
-/* Statistics Cards */
+/* Statistics */
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -343,46 +373,51 @@ document.addEventListener('click', function(e) {
     border-color: #007bff;
 }
 
-/* Bookings Table */
-.bookings-table-wrapper {
-    overflow-x: auto;
+/* Booking Cards */
+.bookings-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
 }
 
-.bookings-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.85rem;
+.booking-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    overflow: hidden;
 }
 
-.bookings-table thead {
+.booking-card-header {
+    padding: 16px 20px;
     background: #f8f9fa;
-}
-
-.bookings-table th {
-    text-align: left;
-    padding: 10px 12px;
-    font-weight: 600;
-    color: #495057;
-    border-bottom: 2px solid #dee2e6;
-}
-
-.bookings-table td {
-    padding: 10px 12px;
     border-bottom: 1px solid #e9ecef;
-    vertical-align: middle;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
 }
 
-.bookings-table tr.cancelled {
-    opacity: 0.6;
+.booking-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 
-.bookings-table tr:hover {
-    background: #f8f9fa;
+.booking-title h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
 }
 
-.booking-note {
+.booking-date {
+    text-align: right;
+    font-size: 0.85rem;
+    color: #495057;
+}
+
+.booking-time {
     display: block;
-    font-size: 0.7rem;
+    font-size: 0.75rem;
     color: #6c757d;
 }
 
@@ -398,18 +433,165 @@ document.addEventListener('click', function(e) {
 .status-cancelled { background: #f8d7da; color: #721c24; }
 .status-completed { background: #d1ecf1; color: #0c5460; }
 
-.action-buttons {
+/* Booking Card Body */
+.booking-card-body {
+    padding: 20px;
+}
+
+.booking-details-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 20px;
+}
+
+/* Resource Info */
+.booking-resource-info {
     display: flex;
+    gap: 16px;
+}
+
+.resource-thumb {
+    width: 100px;
+    height: 80px;
+    flex-shrink: 0;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    overflow: hidden;
+}
+
+.resource-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.resource-details p {
+    margin: 2px 0;
+    font-size: 0.8rem;
+    color: #495057;
+}
+
+.resource-details .label {
+    font-weight: 600;
+    color: #6c757d;
+    font-size: 0.7rem;
+}
+
+/* Room Details */
+.booking-room-details h4 {
+    margin: 0 0 8px 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.booking-room-details p {
+    margin: 2px 0;
+    font-size: 0.8rem;
+    color: #495057;
+}
+
+.booking-room-details .label {
+    font-weight: 600;
+    color: #6c757d;
+    font-size: 0.7rem;
+}
+
+.features-list {
+    margin-top: 4px;
+    display: flex;
+    flex-wrap: wrap;
     gap: 4px;
+    align-items: center;
+}
+
+.feature-tag {
+    display: inline-block;
+    padding: 1px 8px;
+    background: #e9ecef;
+    font-size: 0.65rem;
+    border-radius: 3px;
+}
+
+.no-features {
+    font-size: 0.75rem;
+    color: #6c757d;
+    font-style: italic;
+}
+
+/* Booking Actions */
+.booking-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    justify-content: center;
+}
+
+.action-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.export-buttons {
+    display: flex;
+    gap: 6px;
+}
+
+.btn-detail {
+    padding: 6px 14px;
+    background: #17a2b8;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 500;
+    transition: background 0.2s;
+}
+
+.btn-detail:hover {
+    background: #138496;
+}
+
+.btn-export-pdf,
+.btn-export-html {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-weight: 500;
+    transition: all 0.2s;
+    flex: 1;
+}
+
+.btn-export-pdf {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-export-pdf:hover {
+    background: #c82333;
+}
+
+.btn-export-html {
+    background: #ffc107;
+    color: #856404;
+}
+
+.btn-export-html:hover {
+    background: #e0a800;
 }
 
 .btn-cancel {
-    padding: 4px 12px;
+    padding: 6px 14px;
     background: #dc3545;
     color: white;
     text-decoration: none;
-    font-size: 0.7rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
     font-weight: 500;
+    text-align: center;
     transition: background 0.2s;
 }
 
@@ -418,8 +600,65 @@ document.addEventListener('click', function(e) {
     color: white;
 }
 
-.no-action {
-    color: #adb5bd;
+/* Export Dropdown */
+.export-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.export-menu {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    background: white;
+    border: 1px solid #dee2e6;
+    min-width: 150px;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.export-menu a {
+    display: block;
+    padding: 10px 16px;
+    text-decoration: none;
+    color: #1a1a2e;
+    font-size: 0.85rem;
+    transition: background 0.2s;
+}
+
+.export-menu a:hover {
+    background: #f8f9fa;
+}
+
+/* Pagination */
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+    margin-top: 20px;
+    padding: 16px;
+    background: #f8f9fa;
+}
+
+.page-link {
+    padding: 8px 16px;
+    background: white;
+    border: 1px solid #dee2e6;
+    text-decoration: none;
+    color: #007bff;
+    transition: all 0.2s;
+}
+
+.page-link:hover {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+.page-info {
+    font-weight: 600;
+    color: #495057;
 }
 
 /* Empty State */
@@ -460,74 +699,13 @@ document.addEventListener('click', function(e) {
     color: white;
 }
 
-/* Pagination */
-.pagination {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 16px;
-    margin-top: 20px;
-    padding: 16px;
-    background: #f8f9fa;
-}
-
-.page-link {
-    padding: 8px 16px;
-    background: white;
-    border: 1px solid #dee2e6;
-    text-decoration: none;
-    color: #007bff;
-    transition: all 0.2s;
-}
-
-.page-link:hover {
-    background: #007bff;
-    color: white;
-    border-color: #007bff;
-}
-
-.page-info {
-    font-weight: 600;
-    color: #495057;
-}
-
-/* Print Styles */
-@media print {
-    .filter-section,
-    .pagination,
-    .header-actions,
-    .btn-print,
-    .btn-export,
-    .export-dropdown,
-    .btn-cancel {
-        display: none !important;
-    }
-    
-    .page-header {
-        border-bottom: 2px solid #000;
-    }
-    
-    .stat-card {
-        border: 1px solid #000;
-    }
-    
-    .bookings-table th {
-        background: #f0f0f0 !important;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-    }
-    
-    .status-badge {
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-    }
-    
-    .bookings-table tr {
-        page-break-inside: avoid;
-    }
-}
-
 /* Responsive */
+@media (max-width: 992px) {
+    .booking-details-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
 @media (max-width: 768px) {
     .page-header {
         flex-direction: column;
@@ -541,7 +719,7 @@ document.addEventListener('click', function(e) {
     
     .btn-print,
     .btn-export {
-        width: 50%;
+        flex: 1;
         justify-content: center;
     }
     
@@ -549,13 +727,36 @@ document.addEventListener('click', function(e) {
         grid-template-columns: repeat(2, 1fr);
     }
     
-    .bookings-table {
-        font-size: 0.75rem;
+    .booking-details-grid {
+        grid-template-columns: 1fr;
     }
     
-    .bookings-table th,
-    .bookings-table td {
-        padding: 6px 8px;
+    .booking-card-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .booking-date {
+        text-align: left;
+    }
+    
+    .booking-resource-info {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+    
+    .resource-thumb {
+        width: 100%;
+        height: 150px;
+    }
+    
+    .booking-actions {
+        align-items: stretch;
+    }
+    
+    .export-buttons {
+        flex-direction: column;
     }
     
     .export-menu {
@@ -584,6 +785,58 @@ document.addEventListener('click', function(e) {
     .filter-btn {
         font-size: 0.7rem;
         padding: 4px 10px;
+    }
+    
+    .booking-card {
+        padding: 12px;
+    }
+    
+    .booking-card-header {
+        padding: 12px 16px;
+    }
+    
+    .booking-card-body {
+        padding: 12px;
+    }
+    
+    .btn-detail,
+    .btn-export-pdf,
+    .btn-export-html,
+    .btn-cancel {
+        width: 100%;
+        text-align: center;
+    }
+}
+
+/* Print Styles */
+@media print {
+    .filter-section,
+    .pagination,
+    .header-actions,
+    .btn-print,
+    .btn-export,
+    .export-dropdown,
+    .btn-cancel,
+    .btn-detail,
+    .btn-export-pdf,
+    .btn-export-html {
+        display: none !important;
+    }
+    
+    .booking-card {
+        border: 1px solid #000;
+        page-break-inside: avoid;
+    }
+    
+    .booking-card-header {
+        background: #f0f0f0 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    
+    .status-badge {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
     }
 }
 </style>

@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <title>{% block title %}waystack - django booking engine{% endblock %}</title>
+    <title>{% block title %}booking engine{% endblock %}</title>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Waystack - Django Booking Engine for meeting rooms and resources" />
@@ -879,31 +879,29 @@
 
       <div class="nav-links" id="navLinks" role="menubar">
         <div class="nav-main" role="menu">
-          <a href="{% url 'resource_list' %}" role="menuitem">Homepage</a>
-          <a href="{% url 'calendar_view' %}" role="menuitem">Booking Calendar</a>
-          <a href="{% url 'my_resources' %}" role="menuitem">My Resources</a>
-          <a href="{% url 'my_bookings' %}" role="menuitem">My Bookings</a>
-          <a href="{% url 'my_reviews' %}" role="menuitem">Reviews</a>
-          <a href="{% url 'equipment_dashboard' %}">Dashboard</a>
-          <a href="{% url 'equipment_list' %}">Equipment</a>
-          <a href="{% url 'equipment_search' %}">Equipment Search</a>
-          <a href="{% url 'my_rentals' %}">My Rentals</a>
-          <a href="{% url 'my_equipment' %}">My Equipments</a>
-          <a href="{% url 'equipment_maintenance' %}">Maintenance</a>
-          <a href="{% url 'reservation_list' %}">Reservations</a>
-          <a href="{% url 'reservation_calendar' %}">Reserve Calendar</a>
+          <a href="{% url 'bookings:resource_list' %}" role="menuitem">Homepage</a>
+          <a href="{% url 'bookings:calendar_view' %}" role="menuitem">Booking Calendar</a>
+          <a href="{% url 'bookings:my_resources' %}" role="menuitem">My Resources</a>
+          <a href="{% url 'bookings:my_bookings' %}" role="menuitem">My Bookings</a>
+          <a href="{% url 'bookings:my_reviews' %}" role="menuitem">Reviews</a>
+          <a href="{% url 'bookings:equipment_dashboard' %}">Dashboard</a>
+          <a href="{% url 'bookings:equipment_list' %}">Equipment</a>
+          <a href="{% url 'bookings:equipment_search' %}">Equipment Search</a>
+          <a href="{% url 'bookings:my_rentals' %}">My Rentals</a>
+          <a href="{% url 'bookings:my_equipment' %}">My Equipments</a>
+          <a href="{% url 'bookings:equipment_maintenance' %}">Maintenance</a>
+          <a href="{% url 'bookings:reservation_list' %}">Reservations</a>
+          <a href="{% url 'bookings:reservation_calendar' %}">Reserve Calendar</a>
         </div>
 
         {% if user.is_staff %}
         <div class="staff-links" role="menu">
           <span class="staff-badge">Staff & Admin Roles</span>
-          <a href="{% url 'admin_reviews' %}" role="menuitem">Reviews</a>
-          <a href="{% url 'manage_categories' %}" role="menuitem">Categories</a>
-          <a href="{% url 'admin_manage_resources' %}" role="menuitem"
-            >Manage</a
-          >
+          <a href="{% url 'bookings:admin_reviews' %}" role="menuitem">Reviews</a>
+          <a href="{% url 'bookings:manage_categories' %}" role="menuitem">Categories</a>
+          <a href="{% url 'bookings:admin_manage_resources' %}" role="menuitem">Manage</a>
           <a href="{% url 'admin:index' %}" role="menuitem">Panel</a>
-          <a href="{% url 'admin_dashboard' %}" role="menuitem">Analytics</a>
+          <a href="{% url 'bookings:admin_dashboard' %}" role="menuitem">Analytics</a>
         </div>
         {% endif %}
       </div>
@@ -911,19 +909,17 @@
       <div class="user-info">
         {% if user.is_authenticated %}
         <span>Welcome,</span>
-        <a href="{% url 'profile' %}" class="username" role="menuitem">
+        <a href="{% url 'bookings:profile' %}" class="username" role="menuitem">
           {{ user.username }}
         </a>
         <span class="divider">|</span>
-        <a href="{% url 'logout' %}" class="sign-out" role="menuitem">
+        <a href="{% url 'bookings:logout' %}" class="sign-out" role="menuitem">
           🚪 Sign Out
         </a>
         {% else %}
-        <a href="{% url 'login' %}" role="menuitem">Sign In</a>
+        <a href="{% url 'bookings:login' %}" role="menuitem">Sign In</a>
         <span class="divider">|</span>
-        <a href="{% url 'signup' %}" class="sign-up" role="menuitem"
-          >Sign Up</a
-        >
+        <a href="{% url 'bookings:signup' %}" class="sign-up" role="menuitem">Sign Up</a>
         {% endif %}
       </div>
     </nav>

@@ -2,7 +2,7 @@
 
 {% block content %}
 <div class="delete-confirmation-container">
-    <div class="confirmation-card">        
+    <div class="confirmation-card">
         <h1>Delete Equipment</h1>
         <p>Are you sure you want to delete <strong>"{{ equipment.name }}"</strong>?</p>
         
@@ -19,18 +19,33 @@
                 <span class="label">Status:</span>
                 <span class="value status-{{ equipment.status|lower }}">{{ equipment.get_status_display }}</span>
             </div>
+            <div class="summary-item">
+                <span class="label">Location:</span>
+                <span class="value">{{ equipment.location|default:"Not specified" }}</span>
+            </div>
+            {% if equipment.owner %}
+                <div class="summary-item">
+                    <span class="label">Owner:</span>
+                    <span class="value">
+                        {{ equipment.owner.username }}
+                        {% if equipment.owner == request.user %}
+                            <span class="you-badge">(You)</span>
+                        {% endif %}
+                    </span>
+                </div>
+            {% endif %}
         </div>
         
         <div class="warning-message">
             <strong>This action cannot be undone!</strong>
-            <p>Deleting this equipment will also remove its rental and maintenance history.</p>
+            <p>Deleting this equipment will permanently remove it from inventory. Rental and maintenance records will be preserved.</p>
         </div>
         
         <form method="post" class="confirmation-form">
             {% csrf_token %}
             <div class="form-actions">
                 <button type="submit" class="btn-confirm-delete">Yes, Delete Equipment</button>
-                <a href="{% url 'my_equipment' %}" class="btn-cancel">Cancel</a>
+                <a href="{% url 'bookings:my_equipment' %}" class="btn-cancel">Cancel</a>
             </div>
         </form>
     </div>
@@ -48,7 +63,7 @@
 .confirmation-card {
     background: white;
     padding: 40px;
-    border-radius: 0px;
+    border-radius: 8px;
     border: 1px solid #e9ecef;
     max-width: 500px;
     width: 100%;
@@ -65,11 +80,16 @@
     margin: 0 0 8px 0;
     font-size: 1.5rem;
     font-weight: 700;
+    color: #1a1a2e;
 }
 
 .confirmation-card p {
     color: #6c757d;
     margin-bottom: 24px;
+}
+
+.confirmation-card p strong {
+    color: #dc3545;
 }
 
 .equipment-summary {
@@ -94,16 +114,30 @@
 .summary-item .label {
     color: #6c757d;
     font-weight: 500;
+    font-size: 0.85rem;
 }
 
 .summary-item .value {
     font-weight: 600;
     color: #212529;
+    font-size: 0.85rem;
 }
 
 .summary-item .status-available { color: #28a745; }
 .summary-item .status-rented { color: #ffc107; }
 .summary-item .status-maintenance { color: #dc3545; }
+.summary-item .status-retired { color: #6c757d; }
+.summary-item .status-lost { color: #dc3545; }
+
+.you-badge {
+    background: #ffffff;
+    color: rgb(0, 0, 0);
+    padding: 1px 8px;
+    border-radius: 12px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    margin-left: 4px;
+}
 
 .warning-message {
     background: #fff3cd;
@@ -141,6 +175,9 @@
     font-size: 0.95rem;
     font-weight: 600;
     transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .btn-confirm-delete:hover {
@@ -158,6 +195,9 @@
     font-size: 0.95rem;
     font-weight: 600;
     transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .btn-cancel:hover {
@@ -165,6 +205,7 @@
     color: white;
 }
 
+/* Responsive */
 @media (max-width: 480px) {
     .confirmation-card {
         padding: 24px;
@@ -177,7 +218,17 @@
     .btn-confirm-delete,
     .btn-cancel {
         width: 100%;
-        text-align: center;
+        justify-content: center;
+    }
+    
+    .summary-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 2px;
+    }
+    
+    .confirmation-card h1 {
+        font-size: 1.3rem;
     }
 }
 </style>

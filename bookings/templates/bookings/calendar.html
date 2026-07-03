@@ -5,7 +5,7 @@
 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 20px; gap: 10px;">
     <h1 style="font-size: 1.6rem; font-weight: 800; margin: 0; flex: 1; min-width: 150px;">Booking Calendar</h1>
     <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-        <a href="{% url 'resource_list' %}" style="background: #6c757d; color: white; padding: 8px 16px; text-decoration: none; font-size: 0.85rem; font-weight: 600; transition: all 0.2s ease; display: inline-block;"
+        <a href="{% url 'bookings:resource_list' %}" style="background: #6c757d; color: white; padding: 8px 16px; text-decoration: none; font-size: 0.85rem; font-weight: 600; transition: all 0.2s ease; display: inline-block;"
            onmouseover="this.style.background='#5a6268'"
            onmouseout="this.style.background='#6c757d'">
             ← Back
@@ -17,12 +17,12 @@
 <div style="margin: 15px 0 20px 0; padding: 15px; background: #f8f9fa; overflow-x: auto;">
     <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
         <span style="font-size: 0.85rem; font-weight: 600; white-space: nowrap;">Filter:</span>
-        <a href="{% url 'calendar_view' %}" 
+        <a href="{% url 'bookings:calendar_view' %}" 
            style="padding: 4px 12px; background: {% if not selected_resource %}#007bff; color: white;{% else %}#e9ecef; color: #333;{% endif %} text-decoration: none; font-size: 0.75rem; font-weight: 600; transition: all 0.2s ease; white-space: nowrap;">
             All
         </a>
         {% for resource in resources %}
-            <a href="{% url 'calendar_view' %}?resource={{ resource.id }}&year={{ year }}&month={{ month }}" 
+            <a href="{% url 'bookings:calendar_view' %}?resource={{ resource.id }}&year={{ year }}&month={{ month }}" 
                style="padding: 4px 12px; background: {% if selected_resource.id == resource.id %}{{ resource.category.color|default:'#007bff' }}; color: white;{% else %}#e9ecef; color: #333;{% endif %} text-decoration: none; font-size: 0.7rem; font-weight: 600; transition: all 0.2s ease; white-space: nowrap;"
                onmouseover="this.style.opacity='0.8'"
                onmouseout="this.style.opacity='1'">
@@ -40,14 +40,14 @@
         
         <!-- Month Navigation -->
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-            <a href="{% url 'calendar_view' %}?resource={{ selected_resource.id|default:'' }}&year={{ prev_year }}&month={{ prev_month }}" 
+            <a href="{% url 'bookings:calendar_view' %}?resource={{ selected_resource.id|default:'' }}&year={{ prev_year }}&month={{ prev_month }}" 
                style="font-size: 1.2rem; text-decoration: none; color: #1a1a2e; padding: 8px 12px; transition: all 0.2s ease;"
                onmouseover="this.style.background='#f1f3f5'"
                onmouseout="this.style.background='none'">
                 ◀
             </a>
             <h2 style="font-size: 1.1rem; font-weight: 700; margin: 0;">{{ month_name }} {{ year }}</h2>
-            <a href="{% url 'calendar_view' %}?resource={{ selected_resource.id|default:'' }}&year={{ next_year }}&month={{ next_month }}" 
+            <a href="{% url 'bookings:calendar_view' %}?resource={{ selected_resource.id|default:'' }}&year={{ next_year }}&month={{ next_month }}" 
                style="font-size: 1.2rem; text-decoration: none; color: #1a1a2e; padding: 8px 12px; transition: all 0.2s ease;"
                onmouseover="this.style.background='#f1f3f5'"
                onmouseout="this.style.background='none'">
@@ -71,7 +71,7 @@
             <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin-bottom: 2px;">
                 {% for day in week %}
                     {% if day %}
-                        <a href="{% url 'calendar_view' %}?{% if selected_resource %}resource={{ selected_resource.id }}&{% endif %}date={{ day.date|date:'Y-m-d' }}&year={{ year }}&month={{ month }}"
+                        <a href="{% url 'bookings:calendar_view' %}?{% if selected_resource %}resource={{ selected_resource.id }}&{% endif %}date={{ day.date|date:'Y-m-d' }}&year={{ year }}&month={{ month }}"
                            style="min-height: 70px; padding: 4px 6px; 
                                   background: 
                                       {% if day.is_today %}#007bff;
@@ -362,25 +362,17 @@ function confirmBooking() {
     const messageDiv = document.getElementById('bookingMessage');
     
     if (!resourceId) {
-        messageDiv.innerHTML = '<p style="color: #dc3545;">Please select a resource.</p>';
+        messageDiv.innerHTML = '<p style="color: #dc3545;"> Please select a resource.</p>';
         return;
     }
     
     if (!selectedSlot) {
-        messageDiv.innerHTML = '<p style="color: #dc3545;">No time slot selected.</p>';
+        messageDiv.innerHTML = '<p style="color: #dc3545;"> No time slot selected.</p>';
         return;
     }
     
     // Show loading state
-    messageDiv.innerHTML = '<p style="color: #007bff;">⏳ Processing your booking...</p>';
-    
-    // Log request for debugging
-    console.log('Booking request:', {
-        resource_id: parseInt(resourceId),
-        start_time: selectedSlot.start,
-        end_time: selectedSlot.end,
-        notes: notes
-    });
+    messageDiv.innerHTML = '<p style="color: #007bff;"> Processing your booking...</p>';
     
     // Send booking request
     fetch('/calendar/', {
@@ -403,9 +395,9 @@ function confirmBooking() {
     .then(data => {
         console.log('Response data:', data);
         if (data.error) {
-            messageDiv.innerHTML = `<p style="color: #dc3545;">${data.error}</p>`;
+            messageDiv.innerHTML = `<p style="color: #dc3545;">❌ ${data.error}</p>`;
         } else {
-            messageDiv.innerHTML = `<p style="color: #28a745;">${data.message}</p>`;
+            messageDiv.innerHTML = `<p style="color: #28a745;">✅ ${data.message}</p>`;
             setTimeout(() => {
                 closeBookingModal();
                 location.reload();
@@ -414,7 +406,7 @@ function confirmBooking() {
     })
     .catch(error => {
         console.error('Error:', error);
-        messageDiv.innerHTML = `<p style="color: #dc3545;">Error: ${error.message}</p>`;
+        messageDiv.innerHTML = `<p style="color: #dc3545;">❌ Error: ${error.message}</p>`;
     });
 }
 
@@ -431,9 +423,6 @@ document.addEventListener('keydown', function(e) {
         closeBookingModal();
     }
 });
-
-// Log CSRF token for debugging
-console.log('CSRF Token:', csrfToken ? ' Present' : ' Missing');
 </script>
 
 <style>

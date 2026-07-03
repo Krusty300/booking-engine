@@ -41,7 +41,7 @@
                 </svg>
             </div>
             <div class="alert-content">
-                <strong>Attention Required</strong>
+                <strong>⚠️ Attention Required</strong>
                 <p>You have <strong>{{ overdue_count }}</strong> overdue rental{{ overdue_count|pluralize }}. 
                 Please return the equipment as soon as possible to avoid penalties.</p>
             </div>
@@ -82,7 +82,7 @@
             </div>
             
             <div class="filter-actions">
-                <a href="{% url 'my_rentals' %}" class="btn-clear">Clear Filters</a>
+                <a href="{% url 'bookings:my_rentals' %}" class="btn-clear">Clear Filters</a>
             </div>
         </form>
     </div>
@@ -105,7 +105,7 @@
                     <div class="rental-info">
                         <div class="rental-header">
                             <h3 class="equipment-name">
-                                <a href="{% url 'equipment_detail' rental.equipment.id %}">
+                                <a href="{% url 'bookings:equipment_detail' rental.equipment.id %}">
                                     {{ rental.equipment.name }}
                                 </a>
                             </h3>
@@ -159,7 +159,7 @@
                     
                     <!-- Actions -->
                     <div class="rental-actions">
-                        <a href="{% url 'equipment_detail' rental.equipment.id %}" class="btn-view">
+                        <a href="{% url 'bookings:equipment_detail' rental.equipment.id %}" class="btn-view">
                             View Equipment
                         </a>
                         {% if rental.status == 'CHECKED_OUT' %}
@@ -167,7 +167,7 @@
                                 Return Equipment
                             </button>
                         {% elif rental.status == 'CHECKED_IN' %}
-                            <span class="returned-label">Returned</span>
+                            <span class="returned-label">✅ Returned</span>
                         {% endif %}
                     </div>
                 </div>
@@ -176,10 +176,11 @@
     {% else %}
         <!-- Empty State -->
         <div class="empty-state">
+            <div class="empty-icon">📦</div>
             <h2>No Rentals Found</h2>
             <p>You haven't rented any equipment yet.</p>
             <div class="empty-actions">
-                <a href="{% url 'equipment_list' %}" class="btn-browse">
+                <a href="{% url 'bookings:equipment_list' %}" class="btn-browse">
                     Browse Available Equipment
                 </a>
             </div>
@@ -187,8 +188,24 @@
     {% endif %}
 </div>
 
-<!-- JavaScript -->
 <script>
+// Get CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+const csrftoken = getCookie('csrftoken');
+
 function returnEquipment(rentalId) {
     const conditionNotes = prompt(
         'Enter condition notes for return (optional):\n\n' +
@@ -212,7 +229,7 @@ function returnEquipment(rentalId) {
     // Show loading state
     const btn = event.target;
     const originalText = btn.textContent;
-    btn.textContent = 'Processing...';
+    btn.textContent = '⏳ Processing...';
     btn.disabled = true;
     
     fetch('/equipment/return/', {
@@ -225,16 +242,16 @@ function returnEquipment(rentalId) {
     .then(response => response.json())
     .then(data => {
         if (data.error) {
-            alert('Error: ' + data.error);
+            alert('❌ Error: ' + data.error);
             btn.textContent = originalText;
             btn.disabled = false;
         } else {
-            alert('Success! ' + data.message);
+            alert('✅ Success! ' + data.message);
             location.reload();
         }
     })
     .catch(error => {
-        alert('Error: ' + error.message);
+        alert('❌ Error: ' + error.message);
         btn.textContent = originalText;
         btn.disabled = false;
     });
@@ -317,7 +334,6 @@ document.addEventListener('DOMContentLoaded', function() {
     align-items: flex-start;
     gap: 12px;
     padding: 16px 20px;
-    border-radius: 0px;
     margin-bottom: 20px;
 }
 
@@ -351,7 +367,6 @@ document.addEventListener('DOMContentLoaded', function() {
 .filter-section {
     background: #f8f9fa;
     border: 1px solid #e9ecef;
-    border-radius: 0px;
     padding: 16px 20px;
     margin-bottom: 24px;
 }
@@ -383,7 +398,6 @@ document.addEventListener('DOMContentLoaded', function() {
 .filter-group input {
     padding: 8px 12px;
     border: 1px solid #ddd;
-    border-radius: 0px;
     font-size: 0.85rem;
     background: white;
     transition: border-color 0.2s;
@@ -407,7 +421,6 @@ document.addEventListener('DOMContentLoaded', function() {
     background: #6c757d;
     color: white;
     border: none;
-    border-radius: 0px;
     cursor: pointer;
     font-size: 0.8rem;
     text-decoration: none;
@@ -433,7 +446,6 @@ document.addEventListener('DOMContentLoaded', function() {
     padding: 20px;
     background: white;
     border: 1px solid #e9ecef;
-    border-radius: 0px;
     transition: all 0.3s ease;
 }
 
@@ -459,7 +471,6 @@ document.addEventListener('DOMContentLoaded', function() {
     width: 64px;
     height: 64px;
     background: #f8f9fa;
-    border-radius: 0px;
     border: 1px solid #e9ecef;
     flex-shrink: 0;
 }
@@ -501,7 +512,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
 .status-badge {
     padding: 4px 14px;
-    border-radius: 0px;
     font-weight: 600;
     font-size: 0.75rem;
     white-space: nowrap;
@@ -555,7 +565,6 @@ document.addEventListener('DOMContentLoaded', function() {
     color: white;
     font-size: 0.6rem;
     font-weight: 700;
-    border-radius: 0px;
     animation: pulse 2s infinite;
 }
 
@@ -577,7 +586,6 @@ document.addEventListener('DOMContentLoaded', function() {
 .rental-actions .btn-return {
     padding: 8px 16px;
     border: none;
-    border-radius: 0px;
     cursor: pointer;
     font-size: 0.8rem;
     font-weight: 500;
@@ -626,7 +634,6 @@ document.addEventListener('DOMContentLoaded', function() {
     text-align: center;
     padding: 60px 20px;
     background: #f8f9fa;
-    border-radius: 0px;
     border: 2px dashed #dee2e6;
 }
 
@@ -653,7 +660,6 @@ document.addEventListener('DOMContentLoaded', function() {
     background: #007bff;
     color: white;
     text-decoration: none;
-    border-radius: 0px;
     transition: background 0.2s;
 }
 

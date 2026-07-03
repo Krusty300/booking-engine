@@ -56,7 +56,7 @@
         </div>
         
         <button type="submit" class="btn-filter">Apply Filters</button>
-        <a href="{% url 'equipment_list' %}" class="btn-clear">Clear</a>
+        <a href="{% url 'bookings:equipment_list' %}" class="btn-clear">Clear</a>
     </form>
 </div>
 
@@ -84,7 +84,7 @@
                 </p>
             </div>
             <div class="equipment-actions">
-                <a href="{% url 'equipment_detail' equipment.id %}" class="btn-view">View Details</a>
+                <a href="{% url 'bookings:equipment_detail' equipment.id %}" class="btn-view">View Details</a>
                 {% if equipment.is_available %}
                     <button onclick="rentEquipment({{ equipment.id }})" class="btn-rent">Rent Now</button>
                 {% endif %}
@@ -294,6 +294,20 @@ function rentEquipment(equipmentId) {
     text-align: center;
     padding: 40px;
     color: #6c757d;
+}
+
+.owner-badge {
+    background: #007bff;
+    color: white;
+    padding: 1px 6px;
+    border-radius: 0px;
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+
+.no-owner {
+    color: #6c757d;
+    font-style: italic;
 }
 </style>
 {% endblock %}

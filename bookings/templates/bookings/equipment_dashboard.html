@@ -9,8 +9,8 @@
             <p class="subtitle">Overview of your equipment inventory and activity</p>
         </div>
         <div class="header-actions">
-            <a href="{% url 'create_equipment' %}" class="btn-primary">
-                Add Equipment
+            <a href="{% url 'bookings:create_equipment' %}" class="btn-primary">
+                + Add Equipment
             </a>
         </div>
     </div>
@@ -88,8 +88,8 @@
                     {% else %}
                         <p class="empty-message">No recently viewed equipment</p>
                     {% endif %}
-                    <a href="{% url 'equipment_list' %}" class="action-footer-link">
-                        Browse All Equipments
+                    <a href="{% url 'bookings:equipment_list' %}" class="action-footer-link">
+                        Browse All Equipments →
                     </a>
                 </div>
             </div>
@@ -117,8 +117,8 @@
                     {% else %}
                         <p class="empty-message">No active rentals</p>
                     {% endif %}
-                    <a href="{% url 'my_rentals' %}" class="action-footer-link">
-                        View All Rentals
+                    <a href="{% url 'bookings:my_rentals' %}" class="action-footer-link">
+                        View All Rentals →
                     </a>
                 </div>
             </div>
@@ -144,8 +144,8 @@
                     {% else %}
                         <p class="empty-message">No upcoming maintenance</p>
                     {% endif %}
-                    <a href="{% url 'equipment_maintenance' %}" class="action-footer-link">
-                        Schedule Maintenance
+                    <a href="{% url 'bookings:equipment_maintenance' %}" class="action-footer-link">
+                        Schedule Maintenance →
                     </a>
                 </div>
             </div>
@@ -158,15 +158,15 @@
                 <div class="action-body">
                     <p class="add-description">Add new equipment to your inventory</p>
                     <div class="add-actions">
-                        <a href="{% url 'create_equipment' %}" class="btn-add-equipment">
-                            Add New Equipment
+                        <a href="{% url 'bookings:create_equipment' %}" class="btn-add-equipment">
+                            + Add New Equipment
                         </a>
-                        <a href="{% url 'equipment_list' %}" class="btn-browse-equipment">
+                        <a href="{% url 'bookings:equipment_list' %}" class="btn-browse-equipment">
                             Browse Available
                         </a>
                     </div>
                     <div class="quick-tips">
-                        <span class="tip">Tip: Use unique serial numbers</span>
+                        <span class="tip">💡 Tip: Use unique serial numbers</span>
                     </div>
                 </div>
             </div>
@@ -280,14 +280,14 @@ function quickRent(equipmentId) {
     .then(response => response.json())
     .then(data => {
         if (data.error) {
-            alert('Error: ' + data.error);
+            alert('❌ Error: ' + data.error);
         } else {
-            alert('Success ' + data.message);
+            alert('✅ Success: ' + data.message);
             location.reload();
         }
     })
     .catch(error => {
-        alert('Error: ' + error.message);
+        alert('❌ Error: ' + error.message);
     })
     .finally(() => {
         btn.textContent = originalText;
@@ -326,14 +326,14 @@ function quickReturn(rentalId) {
     .then(response => response.json())
     .then(data => {
         if (data.error) {
-            alert('Error: ' + data.error);
+            alert('❌ Error: ' + data.error);
         } else {
-            alert('Success ' + data.message);
+            alert('✅ Success: ' + data.message);
             location.reload();
         }
     })
     .catch(error => {
-        alert('Error: ' + error.message);
+        alert('❌ Error: ' + error.message);
     })
     .finally(() => {
         btn.textContent = originalText;
@@ -380,7 +380,6 @@ function quickReturn(rentalId) {
     background: #007bff;
     color: white;
     border: none;
-    border-radius: 10px;
     text-decoration: none;
     font-weight: 600;
     font-size: 0.85rem;
@@ -410,17 +409,11 @@ function quickReturn(rentalId) {
     align-items: center;
     gap: 12px;
     transition: all 0.2s ease;
-    border-radius: 10px;
 }
 
 .stat-card:hover {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     transform: translateY(-2px);
-}
-
-.stat-icon {
-    font-size: 1.8rem;
-    flex-shrink: 0;
 }
 
 .stat-content {
@@ -491,10 +484,6 @@ function quickReturn(rentalId) {
     gap: 8px;
 }
 
-.quick-action-card .action-icon {
-    font-size: 1.2rem;
-}
-
 .quick-action-card .action-header h3 {
     margin: 0;
     font-size: 0.9rem;
@@ -534,7 +523,6 @@ function quickReturn(rentalId) {
 .action-item .item-status {
     font-size: 0.65rem;
     padding: 1px 8px;
-    border-radius: 0px;
 }
 
 .action-item .item-due {
@@ -556,7 +544,6 @@ function quickReturn(rentalId) {
     font-size: 0.6rem;
     padding: 1px 8px;
     background: #e9ecef;
-    border-radius: 0px;
 }
 
 .type-routine { background: #d1ecf1; color: #0c5460; }
@@ -749,11 +736,6 @@ function quickReturn(rentalId) {
     border-bottom: none;
 }
 
-.activity-icon {
-    font-size: 1.2rem;
-    flex-shrink: 0;
-}
-
 .activity-content {
     flex: 1;
 }
@@ -773,7 +755,6 @@ function quickReturn(rentalId) {
 .activity-status {
     font-size: 0.65rem;
     padding: 1px 8px;
-    border-radius: 10px;
 }
 
 .empty-message {
@@ -842,10 +823,6 @@ function quickReturn(rentalId) {
     
     .stat-card {
         padding: 8px 12px;
-    }
-    
-    .stat-icon {
-        font-size: 1.4rem;
     }
     
     .stat-number {

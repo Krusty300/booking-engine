@@ -1,15 +1,63 @@
+import os
+import re
 from django import forms
 from django.contrib.auth.models import User
-from django.contrib.auth.forms import UserCreationForm, UserChangeForm
+from django.contrib.auth.forms import UserCreationForm
 from django.core.exceptions import ValidationError
-from .models import Resource, Category, UserProfile
-from .models import MeetingRoom, Amenity
-from .models import Review
-from .models import Equipment, EquipmentCategory
-import os
+from django.utils import timezone
+from .models import (
+    Resource, Category, UserProfile, MeetingRoom, Review, 
+    Equipment, EquipmentCategory, Booking
+)
+
+# ============ VALIDATION MIXINS ============
+
+class ImageValidationMixin:
+    """Mixin for validating image uploads"""
+    
+    def validate_image_file(self, file, max_size_mb=5):
+        """Validate image file size and type"""
+        if not file:
+            return file
+        
+        max_size = max_size_mb * 1024 * 1024
+        if file.size > max_size:
+            raise ValidationError(f'Image file size cannot exceed {max_size_mb}MB.')
+        
+        valid_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
+        ext = os.path.splitext(file.name)[1].lower()
+        if ext not in valid_extensions:
+            raise ValidationError(
+                f"Unsupported file extension. Please use: {', '.join(valid_extensions)}"
+            )
+        
+        return file
+
+
+class PhoneValidationMixin:
+    """Mixin for validating phone numbers"""
+    
+    def validate_phone_number(self, phone):
+        """Validate phone number format"""
+        if phone:
+            clean_phone = re.sub(r'[\s\-\(\)]', '', phone)
+            if not clean_phone.isdigit():
+                raise ValidationError('Please enter a valid phone number (digits only).')
+            if len(clean_phone) < 10:
+                raise ValidationError('Phone number must be at least 10 digits.')
+        return phone
+
+
+# ============ AUTHENTICATION FORMS ============
 
 class SignUpForm(UserCreationForm):
-    email = forms.EmailField(max_length=254, required=True, help_text='Required. Enter a valid email address.')
+    """User registration form with email validation"""
+    
+    email = forms.EmailField(
+        max_length=254, 
+        required=True, 
+        help_text='Required. Enter a valid email address.'
+    )
     
     class Meta:
         model = User
@@ -28,7 +76,10 @@ class SignUpForm(UserCreationForm):
             user.save()
         return user
 
-class ResourceForm(forms.ModelForm):
+
+# ============ RESOURCE FORMS ============
+
+class ResourceForm(forms.ModelForm, ImageValidationMixin):
     """Enhanced form for creating and editing resources"""
     
     # Additional fields for better UX
@@ -63,9 +114,18 @@ class ResourceForm(forms.ModelForm):
         fields = [
             'name', 'description', 'category', 'location', 
             'max_capacity', 'price_per_hour', 
-            'image', 'image_url',           # Main resource images
-            'room_photo', 'floor_plan',     # Meeting room specific images
+            'image', 'image_url',
         ]
+        labels = {
+            'name': 'Resource Name *',
+            'description': 'Description *',
+            'category': 'Category',
+            'location': 'Location',
+            'max_capacity': 'Maximum Capacity',
+            'price_per_hour': 'Price per Hour',
+            'image': 'Main Image',
+            'image_url': 'Image URL (Alternative)',
+        }
         widgets = {
             'name': forms.TextInput(attrs={
                 'placeholder': 'e.g., Executive Conference Room',
@@ -79,9 +139,7 @@ class ResourceForm(forms.ModelForm):
                 'data-counter': 'description-counter',
                 'maxlength': '1000'
             }),
-            'category': forms.Select(attrs={
-                'class': 'form-control'
-            }),
+            'category': forms.Select(attrs={'class': 'form-control'}),
             'location': forms.TextInput(attrs={
                 'placeholder': 'e.g., Nairobi, Kenya',
                 'class': 'form-control',
@@ -107,23 +165,17 @@ class ResourceForm(forms.ModelForm):
                 'placeholder': 'https://example.com/image.jpg',
                 'class': 'form-control'
             }),
-            'room_photo': forms.FileInput(attrs={
-                'accept': 'image/*',
-                'class': 'form-control'
-            }),
-            'floor_plan': forms.FileInput(attrs={
-                'accept': 'image/*',
-                'class': 'form-control'
-            }),
         }
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         
         # Make fields optional
-        optional_fields = ['category', 'location', 'max_capacity', 'price_per_hour', 
-                          'image', 'image_url', 'room_photo', 'floor_plan',
-                          'contact_email', 'contact_phone', 'website', 'tags']
+        optional_fields = [
+            'category', 'location', 'max_capacity', 'price_per_hour', 
+            'image', 'image_url', 'contact_email', 'contact_phone', 
+            'website', 'tags'
+        ]
         for field_name in optional_fields:
             if field_name in self.fields:
                 self.fields[field_name].required = False
@@ -132,11 +184,6 @@ class ResourceForm(forms.ModelForm):
         if 'category' in self.fields:
             self.fields['category'].empty_label = 'Select a category (optional)'
         
-        # Set default contact email to user's email if editing
-        if self.instance and self.instance.pk:
-            # For edit mode, we could populate from a separate Contact model
-            pass
-        
         # Add help text to fields
         self.fields['name'].help_text = 'A clear, descriptive name for your resource'
         self.fields['description'].help_text = 'Maximum 1000 characters. Be specific about what you offer.'
@@ -144,8 +191,6 @@ class ResourceForm(forms.ModelForm):
         self.fields['price_per_hour'].help_text = 'Set to 0.00 for free resources'
         self.fields['image'].help_text = 'Upload a main image for your resource (max 5MB)'
         self.fields['image_url'].help_text = 'Optional: Link to an external image URL'
-        self.fields['room_photo'].help_text = 'Upload a photo of the meeting room (max 5MB)'
-        self.fields['floor_plan'].help_text = 'Upload a floor plan of the meeting room (max 5MB)'
         
         # Add CSS classes for styling
         for field_name, field in self.fields.items():
@@ -163,7 +208,9 @@ class ResourceForm(forms.ModelForm):
             if self.instance and self.instance.pk:
                 existing = existing.exclude(pk=self.instance.pk)
             if existing.exists():
-                raise ValidationError('A resource with this name already exists. Please choose a different name.')
+                raise ValidationError(
+                    'A resource with this name already exists. Please choose a different name.'
+                )
         return name
     
     def clean_description(self):
@@ -193,7 +240,6 @@ class ResourceForm(forms.ModelForm):
         """Validate phone number format"""
         phone = self.cleaned_data.get('contact_phone')
         if phone:
-            # Remove spaces and special characters for validation
             import re
             clean_phone = re.sub(r'[\s\-\(\)]', '', phone)
             if not clean_phone.isdigit():
@@ -203,47 +249,8 @@ class ResourceForm(forms.ModelForm):
     def clean_image(self):
         """Validate main image file"""
         image = self.cleaned_data.get('image')
-        if image:
-            # Check file size (max 5MB)
-            if image.size > 5 * 1024 * 1024:
-                raise ValidationError('Image file size cannot exceed 5MB.')
-            
-            # Check file extension
-            valid_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
-            ext = os.path.splitext(image.name)[1].lower()
-            if ext not in valid_extensions:
-                raise ValidationError(f"Unsupported file extension. Please use: {', '.join(valid_extensions)}")
-        return image
-    
-    def clean_room_photo(self):
-        """Validate room photo file"""
-        room_photo = self.cleaned_data.get('room_photo')
-        if room_photo:
-            # Check file size (max 5MB)
-            if room_photo.size > 5 * 1024 * 1024:
-                raise ValidationError('Room photo file size cannot exceed 5MB.')
-            
-            # Check file extension
-            valid_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
-            ext = os.path.splitext(room_photo.name)[1].lower()
-            if ext not in valid_extensions:
-                raise ValidationError(f"Unsupported file extension. Please use: {', '.join(valid_extensions)}")
-        return room_photo
-    
-    def clean_floor_plan(self):
-        """Validate floor plan file"""
-        floor_plan = self.cleaned_data.get('floor_plan')
-        if floor_plan:
-            # Check file size (max 5MB)
-            if floor_plan.size > 5 * 1024 * 1024:
-                raise ValidationError('Floor plan file size cannot exceed 5MB.')
-            
-            # Check file extension
-            valid_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
-            ext = os.path.splitext(floor_plan.name)[1].lower()
-            if ext not in valid_extensions:
-                raise ValidationError(f"Unsupported file extension. Please use: {', '.join(valid_extensions)}")
-        return floor_plan
+        return self.validate_image_file(image)
+
 
 class ResourceStatusForm(forms.ModelForm):
     """Form for admins to update resource status"""
@@ -252,19 +259,44 @@ class ResourceStatusForm(forms.ModelForm):
         model = Resource
         fields = ['status']
 
+
+# ============ CATEGORY FORMS ============
+
 class CategoryForm(forms.ModelForm):
     """Form for creating and editing categories"""
     
     class Meta:
         model = Category
-        fields = ['name', 'description', 'icon', 'color', 'max_booking_duration', 'min_booking_duration', 'requires_approval', 'booking_fee']
+        fields = [
+            'name', 'description', 'icon', 'color', 
+            'max_booking_duration', 'min_booking_duration', 
+            'requires_approval', 'booking_fee'
+        ]
         widgets = {
-            'description': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Describe this category...'}),
-            'icon': forms.TextInput(attrs={'placeholder': 'fa-building, fa-laptop, fa-users, etc.'}),
-            'color': forms.TextInput(attrs={'type': 'color', 'style': 'padding: 4px; height: 45px;'}),
-            'max_booking_duration': forms.NumberInput(attrs={'min': 1, 'placeholder': 'e.g., 4'}),
-            'min_booking_duration': forms.NumberInput(attrs={'min': 1, 'placeholder': 'e.g., 1'}),
-            'booking_fee': forms.NumberInput(attrs={'min': 0, 'step': 0.01, 'placeholder': '0.00'}),
+            'description': forms.Textarea(attrs={
+                'rows': 3, 
+                'placeholder': 'Describe this category...'
+            }),
+            'icon': forms.TextInput(attrs={
+                'placeholder': 'fa-building, fa-laptop, fa-users, etc.'
+            }),
+            'color': forms.TextInput(attrs={
+                'type': 'color', 
+                'style': 'padding: 4px; height: 45px;'
+            }),
+            'max_booking_duration': forms.NumberInput(attrs={
+                'min': 1, 
+                'placeholder': 'e.g., 4'
+            }),
+            'min_booking_duration': forms.NumberInput(attrs={
+                'min': 1, 
+                'placeholder': 'e.g., 1'
+            }),
+            'booking_fee': forms.NumberInput(attrs={
+                'min': 0, 
+                'step': 0.01, 
+                'placeholder': '0.00'
+            }),
         }
     
     def __init__(self, *args, **kwargs):
@@ -272,14 +304,21 @@ class CategoryForm(forms.ModelForm):
         for field_name, field in self.fields.items():
             field.required = field_name in ['name']
 
-class UserProfileForm(forms.ModelForm):
+
+# ============ USER PROFILE FORMS ============
+
+class UserProfileForm(forms.ModelForm, ImageValidationMixin, PhoneValidationMixin):
     """Form for editing user profile"""
     
     class Meta:
         model = UserProfile
-        fields = ['bio', 'phone_number', 'location', 'profile_picture', 
-                  'website', 'twitter', 'linkedin', 'github',
-                  'email_notifications', 'booking_reminders']
+        fields = [
+            'bio', 'phone_number', 'location', 'profile_picture', 
+            'website', 'twitter', 'linkedin', 'github',
+            'email_notifications', 'booking_reminders', 
+            'rental_reminders', 'reservation_notifications', 
+            'maintenance_alerts'
+        ]
         widgets = {
             'bio': forms.Textarea(attrs={
                 'rows': 4,
@@ -323,27 +362,13 @@ class UserProfileForm(forms.ModelForm):
     def clean_phone_number(self):
         """Validate phone number format"""
         phone = self.cleaned_data.get('phone_number')
-        if phone:
-            import re
-            clean_phone = re.sub(r'[\s\-\(\)]', '', phone)
-            if not clean_phone.isdigit():
-                raise ValidationError('Please enter a valid phone number.')
-            if len(clean_phone) < 10:
-                raise ValidationError('Phone number must be at least 10 digits.')
-        return phone
+        return self.validate_phone_number(phone)
     
     def clean_profile_picture(self):
         """Validate profile picture"""
         picture = self.cleaned_data.get('profile_picture')
-        if picture:
-            if picture.size > 2 * 1024 * 1024:
-                raise ValidationError('Profile picture cannot exceed 2MB.')
-            
-            valid_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
-            ext = os.path.splitext(picture.name)[1].lower()
-            if ext not in valid_extensions:
-                raise ValidationError(f"Unsupported file extension. Please use: {', '.join(valid_extensions)}")
-        return picture
+        return self.validate_image_file(picture, max_size_mb=2)
+
 
 class UserSettingsForm(forms.ModelForm):
     """Form for updating user account settings"""
@@ -369,7 +394,10 @@ class UserSettingsForm(forms.ModelForm):
             raise ValidationError('This email is already in use by another account.')
         return email
 
-class MeetingRoomForm(forms.ModelForm):
+
+# ============ MEETING ROOM FORMS ============
+
+class MeetingRoomForm(forms.ModelForm, ImageValidationMixin):
     """Form for meeting room specific features"""
     
     class Meta:
@@ -410,6 +438,36 @@ class MeetingRoomForm(forms.ModelForm):
                 field.help_text = "Upload a photo of the room (JPG, PNG, GIF). Max 5MB."
             if field_name == 'floor_plan':
                 field.help_text = "Upload a floor plan (JPG, PNG, GIF). Max 5MB."
+    
+    def clean(self):
+        """Cross-field validation with default capacity"""
+        cleaned_data = super().clean()
+        
+        # Check if this is a POST request with data
+        if self.data:
+            seating = cleaned_data.get('seating_capacity', 0)
+            standing = cleaned_data.get('standing_capacity', 0)
+            classroom = cleaned_data.get('classroom_capacity', 0)
+            theater = cleaned_data.get('theater_capacity', 0)
+            
+            # If no capacities are set, set a default seating capacity
+            if not any([seating, standing, classroom, theater]):
+                cleaned_data['seating_capacity'] = 1
+        
+        return cleaned_data
+    
+    def clean_floor_plan(self):
+        """Validate floor plan file"""
+        floor_plan = self.cleaned_data.get('floor_plan')
+        return self.validate_image_file(floor_plan)
+    
+    def clean_room_photo(self):
+        """Validate room photo file"""
+        room_photo = self.cleaned_data.get('room_photo')
+        return self.validate_image_file(room_photo)
+
+
+# ============ REVIEW FORMS ============
 
 class ReviewForm(forms.ModelForm):
     """Form for submitting a review"""
@@ -438,13 +496,24 @@ class ReviewForm(forms.ModelForm):
         }
     
     def __init__(self, *args, **kwargs):
+        self.resource = kwargs.pop('resource', None)
+        self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
+        
         self.fields['rating'].required = True
         self.fields['title'].required = False
         self.fields['comment'].required = True
         
         # Style the radio buttons
         self.fields['rating'].widget.attrs.update({'class': 'rating-input'})
+        
+        # Check if user has already reviewed this resource
+        if self.user and self.resource:
+            if Review.objects.filter(user=self.user, resource=self.resource).exists():
+                self.fields['comment'].widget.attrs['disabled'] = True
+                self.fields['rating'].widget.attrs['disabled'] = True
+                self.fields['comment'].help_text = "You have already reviewed this resource."
+
 
 class ReviewFilterForm(forms.Form):
     """Form for filtering reviews"""
@@ -463,7 +532,10 @@ class ReviewFilterForm(forms.Form):
         required=False
     )
 
-class EquipmentForm(forms.ModelForm):
+
+# ============ EQUIPMENT FORMS ============
+
+class EquipmentForm(forms.ModelForm, ImageValidationMixin):
     """Form for creating and editing equipment"""
     
     owner = forms.ModelChoiceField(
@@ -477,43 +549,90 @@ class EquipmentForm(forms.ModelForm):
         model = Equipment
         fields = [
             'name', 'category', 'description', 'serial_number', 
-            'asset_tag', 'barcode', 'condition', 'location',
+            'asset_tag', 'barcode', 'condition', 'status', 'location',
             'purchase_date', 'purchase_price', 'warranty_expiry',
             'notes', 'owner'
         ]
-        widgets = {
-            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Equipment name'}),
-            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Description of the equipment'}),
-            'serial_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Unique serial number'}),
-            'asset_tag': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Asset tag (optional)'}),
-            'barcode': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Barcode (optional)'}),
-            'location': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Current location'}),
-            'purchase_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'purchase_price': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0.00', 'step': '0.01'}),
-            'warranty_expiry': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Additional notes'}),
-        }
         labels = {
             'serial_number': 'Serial Number *',
             'condition': 'Condition',
             'owner': 'Equipment Owner',
+            'status': 'Status',
         }
         help_texts = {
             'serial_number': 'Must be unique for each equipment item',
             'asset_tag': 'Optional internal tracking number',
+            'barcode': 'Optional barcode for scanning',
+            'condition': 'Current physical condition of the equipment',
+            'location': 'Physical location of the equipment',
+            'purchase_price': 'Original purchase price',
+            'warranty_expiry': 'When does the warranty expire?',
+            'status': 'Current status of the equipment',
+        }
+        widgets = {
+            'name': forms.TextInput(attrs={
+                'class': 'form-control', 
+                'placeholder': 'Equipment name'
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'form-control', 
+                'rows': 3, 
+                'placeholder': 'Description of the equipment'
+            }),
+            'serial_number': forms.TextInput(attrs={
+                'class': 'form-control', 
+                'placeholder': 'Unique serial number'
+            }),
+            'asset_tag': forms.TextInput(attrs={
+                'class': 'form-control', 
+                'placeholder': 'Asset tag (optional)'
+            }),
+            'barcode': forms.TextInput(attrs={
+                'class': 'form-control', 
+                'placeholder': 'Barcode (optional)'
+            }),
+            'location': forms.TextInput(attrs={
+                'class': 'form-control', 
+                'placeholder': 'Current location'
+            }),
+            'purchase_date': forms.DateInput(attrs={
+                'class': 'form-control', 
+                'type': 'date'
+            }),
+            'purchase_price': forms.NumberInput(attrs={
+                'class': 'form-control', 
+                'placeholder': '0.00', 
+                'step': '0.01'
+            }),
+            'warranty_expiry': forms.DateInput(attrs={
+                'class': 'form-control', 
+                'type': 'date'
+            }),
+            'notes': forms.Textarea(attrs={
+                'class': 'form-control', 
+                'rows': 2, 
+                'placeholder': 'Additional notes'
+            }),
+            'status': forms.Select(attrs={'class': 'form-control'}),
         }
     
     def __init__(self, *args, **kwargs):
-        # Get the user from kwargs before calling super()
+        # Get the user from kwargs
         self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
         
         # Make serial_number required
         self.fields['serial_number'].required = True
         
-        # Add empty option for category
+        # Configure category field
         self.fields['category'].queryset = EquipmentCategory.objects.all().order_by('name')
         self.fields['category'].empty_label = 'Select a category...'
+        
+        # Configure status field - only show if user is staff
+        if self.user and not self.user.is_staff:
+            self.fields['status'].widget = forms.HiddenInput()
+            if not self.instance or not self.instance.pk:
+                self.fields['status'].initial = 'AVAILABLE'
         
         # Set owner field based on user permissions
         if self.user:
@@ -521,11 +640,9 @@ class EquipmentForm(forms.ModelForm):
                 # Regular users can only see their own equipment
                 self.fields['owner'].queryset = User.objects.filter(id=self.user.id)
                 
-                # If editing existing equipment, preserve the current owner
                 if self.instance and self.instance.pk:
                     # Keep the existing owner
                     self.fields['owner'].initial = self.instance.owner
-                    # Hide the field (regular users can't change owner)
                     self.fields['owner'].widget = forms.HiddenInput()
                 else:
                     # New equipment - set owner to current user
@@ -561,12 +678,108 @@ class EquipmentForm(forms.ModelForm):
             if self.instance.pk:
                 existing = existing.exclude(pk=self.instance.pk)
             if existing.exists():
-                raise forms.ValidationError('Equipment with this serial number already exists.')
+                raise ValidationError('Equipment with this serial number already exists.')
         return serial_number
+    
+    def clean_asset_tag(self):
+        """Validate asset tag uniqueness"""
+        asset_tag = self.cleaned_data.get('asset_tag')
+        if asset_tag:
+            existing = Equipment.objects.filter(asset_tag=asset_tag)
+            if self.instance.pk:
+                existing = existing.exclude(pk=self.instance.pk)
+            if existing.exists():
+                raise ValidationError('Equipment with this asset tag already exists.')
+        return asset_tag
     
     def clean_purchase_price(self):
         """Validate purchase price is positive"""
         price = self.cleaned_data.get('purchase_price')
         if price is not None and price < 0:
-            raise forms.ValidationError('Purchase price cannot be negative.')
+            raise ValidationError('Purchase price cannot be negative.')
         return price
+    
+    def clean_purchase_date(self):
+        """Validate purchase date is not in the future"""
+        date = self.cleaned_data.get('purchase_date')
+        if date and date > timezone.now().date():
+            raise ValidationError('Purchase date cannot be in the future.')
+        return date
+    
+    def clean_warranty_expiry(self):
+        """Validate warranty expiry is after purchase date"""
+        expiry = self.cleaned_data.get('warranty_expiry')
+        purchase_date = self.cleaned_data.get('purchase_date')
+        if expiry and purchase_date and expiry <= purchase_date:
+            raise ValidationError('Warranty expiry must be after purchase date.')
+        return expiry
+
+
+# ============ BOOKING FORMS ============
+
+class BookingForm(forms.ModelForm):
+    """Form for creating a booking"""
+    
+    class Meta:
+        model = Booking
+        fields = ['resource', 'start_time', 'end_time', 'notes']
+        widgets = {
+            'resource': forms.Select(attrs={'class': 'form-control'}),
+            'start_time': forms.DateTimeInput(attrs={
+                'class': 'form-control',
+                'type': 'datetime-local'
+            }),
+            'end_time': forms.DateTimeInput(attrs={
+                'class': 'form-control',
+                'type': 'datetime-local'
+            }),
+            'notes': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Any special requests or notes...'
+            }),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        
+        # Filter resources based on user permissions
+        if self.user:
+            if not self.user.is_staff:
+                self.fields['resource'].queryset = Resource.objects.filter(
+                    status='APPROVED'
+                ).order_by('name')
+        
+        # Make notes optional
+        self.fields['notes'].required = False
+    
+    def clean(self):
+        """Validate booking times"""
+        cleaned_data = super().clean()
+        start_time = cleaned_data.get('start_time')
+        end_time = cleaned_data.get('end_time')
+        resource = cleaned_data.get('resource')
+        
+        if start_time and end_time:
+            if end_time <= start_time:
+                raise ValidationError('End time must be after start time.')
+            
+            if start_time < timezone.now():
+                raise ValidationError('Cannot book in the past.')
+            
+            # Check for overlapping bookings
+            if resource:
+                overlapping = Booking.objects.filter(
+                    resource=resource,
+                    start_time__lt=end_time,
+                    end_time__gt=start_time,
+                    status__in=['PENDING', 'CONFIRMED']
+                )
+                if self.instance and self.instance.pk:
+                    overlapping = overlapping.exclude(pk=self.instance.pk)
+                
+                if overlapping.exists():
+                    raise ValidationError('This time slot is already booked.')
+        
+        return cleaned_data

@@ -10,7 +10,7 @@
             <p class="subtitle">Reserve equipment for future dates</p>
         </div>
         <div class="header-actions">
-            <a href="{% url 'reservation_list' %}" class="btn-back">Back to Reservations</a>
+            <a href="{% url 'bookings:reservation_list' %}" class="btn-back">Back to Reservations</a>
         </div>
     </div>
 
@@ -28,6 +28,9 @@
                             <option value="{{ equipment.id }}" data-status="{{ equipment.status }}">
                                 {{ equipment.name }} ({{ equipment.serial_number }}) 
                                 - {{ equipment.get_status_display }}
+                                {% if equipment.owner %}
+                                    (Owner: {{ equipment.owner.username }})
+                                {% endif %}
                             </option>
                         {% empty %}
                             <option value="">No equipment available for reservation</option>
@@ -88,7 +91,7 @@
                     </svg>
                     Create Reservation
                 </button>
-                <a href="{% url 'reservation_list' %}" class="btn-cancel">Cancel</a>
+                <a href="{% url 'bookings:reservation_list' %}" class="btn-cancel">Cancel</a>
             </div>
         </form>
     </div>
@@ -103,24 +106,40 @@
                     <strong>{{ equipment.name }}</strong>
                     <span class="preview-serial">{{ equipment.serial_number }}</span>
                     <span class="preview-condition">{{ equipment.get_condition_display }}</span>
-                    <!-- OWNER INFO -->
                     <span class="preview-owner">
-                    {% if equipment.owner %}
-                        {{ equipment.owner.username }}
-                    {% else %}
-                        No owner
-                    {% endif %}
+                        {% if equipment.owner %}
+                            {{ equipment.owner.username }}
+                        {% else %}
+                            No owner
+                        {% endif %}
                     </span>
                 </div>
             {% empty %}
                 <p class="no-equipment">No equipment available</p>
             {% endfor %}
         </div>
-        <a href="{% url 'equipment_list' %}" class="btn-browse-equipment">Browse All Equipment →</a>
+        <a href="{% url 'bookings:equipment_list' %}" class="btn-browse-equipment">Browse All Equipment</a>
     </div>
 </div>
 
 <script>
+// Get CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+const csrftoken = getCookie('csrftoken');
+
 // Check availability as user selects dates
 function checkAvailability() {
     const equipmentId = document.getElementById('equipment_id').value;
@@ -133,6 +152,7 @@ function checkAvailability() {
     
     if (!equipmentId || !startDate || !endDate) {
         checkDiv.style.display = 'none';
+        document.getElementById('submitBtn').disabled = false;
         return;
     }
     
@@ -147,7 +167,8 @@ function checkAvailability() {
             resultDiv.style.display = 'block';
             
             if (data.error) {
-                resultDiv.innerHTML = `<div class="alert alert-error"> ${data.error}</div>`;
+                resultDiv.innerHTML = `<div class="alert alert-error">⚠️ ${data.error}</div>`;
+                document.getElementById('submitBtn').disabled = true;
                 return;
             }
             
@@ -156,14 +177,14 @@ function checkAvailability() {
             if (isAvailable) {
                 resultDiv.innerHTML = `
                     <div class="alert alert-success">
-                         This equipment is available for the selected dates!
+                        This equipment is available for the selected dates!
                     </div>
                 `;
                 document.getElementById('submitBtn').disabled = false;
             } else {
                 resultDiv.innerHTML = `
                     <div class="alert alert-warning">
-                         This equipment is not available for the selected dates. 
+                        This equipment is not available for the selected dates. 
                         Please choose different dates or select another equipment.
                     </div>
                 `;
@@ -173,7 +194,8 @@ function checkAvailability() {
         .catch(error => {
             loadingDiv.style.display = 'none';
             resultDiv.style.display = 'block';
-            resultDiv.innerHTML = `<div class="alert alert-error"> Error checking availability: ${error.message}</div>`;
+            resultDiv.innerHTML = `<div class="alert alert-error">⚠️ Error checking availability: ${error.message}</div>`;
+            document.getElementById('submitBtn').disabled = true;
         });
 }
 
@@ -196,12 +218,41 @@ document.addEventListener('DOMContentLoaded', function() {
         endDate.value = dayAfter.toISOString().slice(0, 16);
     }
 });
+
+// Form validation
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('reservationForm');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    form.addEventListener('submit', function(e) {
+        const equipmentId = document.getElementById('equipment_id').value;
+        const startDate = document.getElementById('start_date').value;
+        const endDate = document.getElementById('end_date').value;
+        
+        if (!equipmentId || !startDate || !endDate) {
+            e.preventDefault();
+            alert('Please fill in all required fields.');
+            return;
+        }
+        
+        if (new Date(startDate) >= new Date(endDate)) {
+            e.preventDefault();
+            alert('End date must be after start date.');
+            return;
+        }
+        
+        // Disable button to prevent double submission
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner"></span> Creating Reservation...';
+    });
+});
 </script>
 
 <style>
 .create-reservation-container {
     max-width: 800px;
     margin: 0 auto;
+    padding: 0 15px;
 }
 
 .page-header {
@@ -211,6 +262,8 @@ document.addEventListener('DOMContentLoaded', function() {
     margin-bottom: 24px;
     padding-bottom: 16px;
     border-bottom: 2px solid #e9ecef;
+    flex-wrap: wrap;
+    gap: 10px;
 }
 
 .page-header h1 {
@@ -232,6 +285,7 @@ document.addEventListener('DOMContentLoaded', function() {
     color: #495057;
     text-decoration: none;
     border: 1px solid #dee2e6;
+    border-radius: 4px;
     font-size: 0.85rem;
     font-weight: 500;
     transition: all 0.2s;
@@ -244,6 +298,7 @@ document.addEventListener('DOMContentLoaded', function() {
 .reservation-form-section {
     background: white;
     border: 1px solid #e9ecef;
+    border-radius: 4px;
     padding: 24px;
     margin-bottom: 24px;
 }
@@ -273,6 +328,7 @@ document.addEventListener('DOMContentLoaded', function() {
     border-radius: 4px;
     font-size: 0.9rem;
     transition: border-color 0.2s;
+    font-family: inherit;
 }
 
 .reservation-form .form-control:focus {
@@ -291,12 +347,15 @@ document.addEventListener('DOMContentLoaded', function() {
     padding: 16px;
     background: #f8f9fa;
     border: 1px solid #e9ecef;
+    border-radius: 4px;
 }
 
 .availability-loading {
     display: flex;
     align-items: center;
     gap: 10px;
+    font-size: 0.9rem;
+    color: #495057;
 }
 
 .spinner {
@@ -340,6 +399,7 @@ document.addEventListener('DOMContentLoaded', function() {
     display: flex;
     gap: 12px;
     margin-top: 20px;
+    flex-wrap: wrap;
 }
 
 .btn-submit {
@@ -387,6 +447,7 @@ document.addEventListener('DOMContentLoaded', function() {
 .equipment-preview-section {
     background: white;
     border: 1px solid #e9ecef;
+    border-radius: 4px;
     padding: 20px;
 }
 
@@ -406,6 +467,7 @@ document.addEventListener('DOMContentLoaded', function() {
 .equipment-preview-item {
     padding: 10px 12px;
     border: 1px solid #e9ecef;
+    border-radius: 4px;
     position: relative;
     background: #f8f9fa;
 }
@@ -417,6 +479,7 @@ document.addEventListener('DOMContentLoaded', function() {
     font-size: 0.6rem;
     font-weight: 600;
     padding: 1px 6px;
+    border-radius: 3px;
 }
 
 .equipment-preview-item.status-available .preview-status {
@@ -434,6 +497,11 @@ document.addEventListener('DOMContentLoaded', function() {
     color: #721c24;
 }
 
+.equipment-preview-item.status-reserved .preview-status {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
 .equipment-preview-item strong {
     display: block;
     font-size: 0.85rem;
@@ -447,6 +515,13 @@ document.addEventListener('DOMContentLoaded', function() {
 .equipment-preview-item .preview-condition {
     font-size: 0.65rem;
     color: #adb5bd;
+}
+
+.equipment-preview-item .preview-owner {
+    font-size: 0.65rem;
+    color: #6c757d;
+    display: block;
+    margin-top: 2px;
 }
 
 .btn-browse-equipment {
@@ -467,6 +542,7 @@ document.addEventListener('DOMContentLoaded', function() {
     padding: 16px;
 }
 
+/* Responsive */
 @media (max-width: 768px) {
     .reservation-form .form-row {
         grid-template-columns: 1fr;
@@ -476,6 +552,15 @@ document.addEventListener('DOMContentLoaded', function() {
         flex-direction: column;
         align-items: flex-start;
         gap: 12px;
+    }
+    
+    .header-actions {
+        width: 100%;
+    }
+    
+    .btn-back {
+        width: 100%;
+        text-align: center;
     }
     
     .equipment-preview-grid {
@@ -500,6 +585,14 @@ document.addEventListener('DOMContentLoaded', function() {
     
     .reservation-form-section {
         padding: 16px;
+    }
+    
+    .page-header h1 {
+        font-size: 1.3rem;
+    }
+    
+    .create-reservation-container {
+        padding: 0 10px;
     }
 }
 </style>

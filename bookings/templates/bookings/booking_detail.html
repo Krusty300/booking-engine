@@ -1,0 +1,628 @@
+{% extends 'bookings/base.html' %}
+
+{% block content %}
+<div class="booking-detail-container">
+    <!-- Header -->
+    <div class="detail-header">
+        <div>
+            <h1>Booking Details</h1>
+            <p class="subtitle">Booking #{{ booking.id }} - {{ booking.resource.name }}</p>
+        </div>
+        <div class="header-actions">
+            <a href="{% url 'my_bookings' %}" class="btn-back">← Back to My Bookings</a>
+        </div>
+    </div>
+
+    <!-- Status Banner -->
+    <div class="status-banner status-{{ booking.status|lower }}">
+        <span class="status-icon">
+            {% if booking.status == 'PENDING' %}⏳
+            {% elif booking.status == 'CONFIRMED' %}✅
+            {% elif booking.status == 'CANCELLED' %}❌
+            {% elif booking.status == 'COMPLETED' %}📌
+            {% endif %}
+        </span>
+        <span class="status-text">
+            Status: <strong>{{ booking.get_status_display }}</strong>
+        </span>
+        {% if booking.is_upcoming %}
+            <span class="status-badge upcoming">Upcoming</span>
+        {% elif booking.is_past %}
+            <span class="status-badge past">Past</span>
+        {% endif %}
+    </div>
+
+    <!-- Main Content -->
+    <div class="detail-grid">
+        <!-- Left Column: Booking Information -->
+        <div class="detail-card">
+            <h2>Booking Information</h2>
+            <table class="detail-table">
+                <tr>
+                    <th>Booking ID</th>
+                    <td>#{{ booking.id }}</td>
+                </tr>
+                <tr>
+                    <th>Start Time</th>
+                    <td>{{ booking.start_time|date:"l, F d, Y at H:i" }}</td>
+                </tr>
+                <tr>
+                    <th>End Time</th>
+                    <td>{{ booking.end_time|date:"l, F d, Y at H:i" }}</td>
+                </tr>
+                <tr>
+                    <th>Duration</th>
+                    <td>{{ booking.get_duration }} hours</td>
+                </tr>
+                <tr>
+                    <th>Status</th>
+                    <td>
+                        <span class="status-badge status-{{ booking.status|lower }}">
+                            {{ booking.get_status_display }}
+                        </span>
+                    </td>
+                </tr>
+                <tr>
+                    <th>Created</th>
+                    <td>{{ booking.created_at|date:"F d, Y at H:i" }}</td>
+                </tr>
+                <tr>
+                    <th>Last Updated</th>
+                    <td>{{ booking.updated_at|date:"F d, Y at H:i" }}</td>
+                </tr>
+                {% if booking.notes %}
+                <tr>
+                    <th>Notes</th>
+                    <td>{{ booking.notes }}</td>
+                </tr>
+                {% endif %}
+            </table>
+            
+            <!-- Actions -->
+            <div class="action-buttons">
+                {% if can_cancel %}
+                    <a href="{% url 'cancel_booking' booking.id %}" 
+                       class="btn-cancel" 
+                       onclick="return confirm('Are you sure you want to cancel this booking?')">
+                        Cancel Booking
+                    </a>
+                {% endif %}
+                <div class="export-buttons">
+                    <a href="{% url 'export_single_booking_pdf' booking.id %}" class="btn-export-pdf">
+                        Export as PDF
+                    </a>
+                    <a href="{% url 'export_single_booking_html' booking.id %}" class="btn-export-html">
+                        Export as HTML
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Resource Information -->
+        <div class="detail-card">
+            <h2>Resource Information</h2>
+            
+            <!-- Resource Image -->
+            {% if has_image %}
+                <div class="resource-image">
+                    <img src="{{ image_url }}" alt="{{ resource.name }}" 
+                         onerror="this.src='/static/bookings/images/default-resource.png'">
+                </div>
+            {% endif %}
+            
+            <table class="detail-table">
+                <tr>
+                    <th>Resource Name</th>
+                    <td><strong>{{ resource.name }}</strong></td>
+                </tr>
+                <tr>
+                    <th>Category</th>
+                    <td>{{ category.name|default:"Uncategorized" }}</td>
+                </tr>
+                <tr>
+                    <th>Description</th>
+                    <td>{{ resource.description|default:"No description" }}</td>
+                </tr>
+                <tr>
+                    <th>Location</th>
+                    <td>{{ resource.location|default:"Not specified" }}</td>
+                </tr>
+                <tr>
+                    <th>Max Capacity</th>
+                    <td>{{ resource.max_capacity }} people</td>
+                </tr>
+                <tr>
+                    <th>Price per Hour</th>
+                    <td>{% if resource.price_per_hour %}${{ resource.price_per_hour }}{% else %}Free{% endif %}</td>
+                </tr>
+                <tr>
+                    <th>Owner</th>
+                    <td>{{ resource.owner.username|default:"No owner" }}</td>
+                </tr>
+                <tr>
+                    <th>Created</th>
+                    <td>{{ resource.created_at|date:"F d, Y" }}</td>
+                </tr>
+            </table>
+            
+            <div class="resource-actions">
+                <a href="{% url 'resource_detail' resource.id %}" class="btn-resource-detail">
+                    View Resource Details
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Meeting Room Details (if applicable) -->
+    {% if meeting_room %}
+    <div class="meeting-room-section">
+        <h2>Meeting Room Details</h2>
+        <div class="meeting-room-grid">
+            <div class="room-info">
+                <table class="detail-table">
+                    <tr>
+                        <th>Room Number</th>
+                        <td>{{ meeting_room.room_number|default:"Not specified" }}</td>
+                    </tr>
+                    <tr>
+                        <th>Building</th>
+                        <td>{{ meeting_room.building_name|default:"Not specified" }}</td>
+                    </tr>
+                    <tr>
+                        <th>Floor</th>
+                        <td>{{ meeting_room.floor_number }}</td>
+                    </tr>
+                    <tr>
+                        <th>Room Size</th>
+                        <td>{% if meeting_room.room_size_sqft %}{{ meeting_room.room_size_sqft }} sq ft{% else %}Not specified{% endif %}</td>
+                    </tr>
+                </table>
+            </div>
+            <div class="room-capacity">
+                <h4>Capacities</h4>
+                <table class="detail-table">
+                    <tr>
+                        <th>Seating</th>
+                        <td>{{ meeting_room.seating_capacity }}</td>
+                    </tr>
+                    <tr>
+                        <th>Standing</th>
+                        <td>{{ meeting_room.standing_capacity }}</td>
+                    </tr>
+                    <tr>
+                        <th>Classroom</th>
+                        <td>{{ meeting_room.classroom_capacity }}</td>
+                    </tr>
+                    <tr>
+                        <th>Theater</th>
+                        <td>{{ meeting_room.theater_capacity }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Features -->
+        {% if meeting_room.get_features_list %}
+        <div class="features-section">
+            <h4>Features</h4>
+            <div class="features-list">
+                {% for feature in meeting_room.get_features_list %}
+                    <span class="feature-tag">{{ feature }}</span>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Amenities -->
+        {% if amenities %}
+        <div class="amenities-section">
+            <h4>Amenities</h4>
+            <div class="amenities-list">
+                {% for amenity in amenities %}
+                    <span class="amenity-tag">{{ amenity.name }}</span>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Setup/Teardown -->
+        <div class="setup-info">
+            {% if meeting_room.default_setup_time %}
+                <span>Setup Time: <strong>{{ meeting_room.default_setup_time }} minutes</strong></span>
+            {% endif %}
+            {% if meeting_room.default_teardown_time %}
+                <span>Teardown Time: <strong>{{ meeting_room.default_teardown_time }} minutes</strong></span>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Footer -->
+    <div class="detail-footer">
+        <p>Generated on {{ now|date:"F d, Y at H:i" }}</p>
+        <a href="{% url 'my_bookings' %}" class="btn-back">← Back to My Bookings</a>
+    </div>
+</div>
+
+<style>
+/* Container */
+.booking-detail-container {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+/* Header */
+.detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.detail-header h1 {
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: 700;
+}
+
+.detail-header .subtitle {
+    margin: 4px 0 0;
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.btn-back {
+    display: inline-block;
+    padding: 8px 16px;
+    background: #f8f9fa;
+    color: #495057;
+    text-decoration: none;
+    border: 1px solid #dee2e6;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.btn-back:hover {
+    background: #e9ecef;
+}
+
+/* Status Banner */
+.status-banner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 20px;
+    margin-bottom: 24px;
+    border-left: 4px solid;
+}
+
+.status-banner.status-pending {
+    background: #fff3cd;
+    border-left-color: #ffc107;
+}
+
+.status-banner.status-confirmed {
+    background: #d4edda;
+    border-left-color: #28a745;
+}
+
+.status-banner.status-cancelled {
+    background: #f8d7da;
+    border-left-color: #dc3545;
+}
+
+.status-banner.status-completed {
+    background: #d1ecf1;
+    border-left-color: #17a2b8;
+}
+
+.status-icon {
+    font-size: 1.5rem;
+}
+
+.status-text {
+    font-size: 0.95rem;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 3px 12px;
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+
+.status-badge.upcoming {
+    background: #28a745;
+    color: white;
+}
+
+.status-badge.past {
+    background: #6c757d;
+    color: white;
+}
+
+/* Detail Grid */
+.detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 24px;
+}
+
+.detail-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    padding: 20px;
+}
+
+.detail-card h2 {
+    margin: 0 0 16px 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+/* Detail Table */
+.detail-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.detail-table tr {
+    border-bottom: 1px solid #f1f3f5;
+}
+
+.detail-table tr:last-child {
+    border-bottom: none;
+}
+
+.detail-table th {
+    text-align: left;
+    padding: 8px 12px 8px 0;
+    font-weight: 600;
+    color: #495057;
+    width: 35%;
+}
+
+.detail-table td {
+    padding: 8px 0;
+    color: #1a1a2e;
+}
+
+/* Status Badge in Table */
+.status-badge.status-pending { background: #fff3cd; color: #856404; }
+.status-badge.status-confirmed { background: #d4edda; color: #155724; }
+.status-badge.status-cancelled { background: #f8d7da; color: #721c24; }
+.status-badge.status-completed { background: #d1ecf1; color: #0c5460; }
+
+/* Resource Image */
+.resource-image {
+    margin-bottom: 16px;
+    text-align: center;
+}
+
+.resource-image img {
+    max-width: 100%;
+    max-height: 200px;
+    object-fit: cover;
+    border: 1px solid #e9ecef;
+}
+
+/* Action Buttons */
+.action-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.btn-cancel {
+    padding: 10px 16px;
+    background: #dc3545;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-align: center;
+    transition: background 0.2s;
+}
+
+.btn-cancel:hover {
+    background: #c82333;
+    color: white;
+}
+
+.export-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-export-pdf,
+.btn-export-html {
+    flex: 1;
+    padding: 8px 16px;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-align: center;
+    transition: all 0.2s;
+}
+
+.btn-export-pdf {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-export-pdf:hover {
+    background: #c82333;
+    color: white;
+}
+
+.btn-export-html {
+    background: #ffc107;
+    color: #856404;
+}
+
+.btn-export-html:hover {
+    background: #e0a800;
+    color: #856404;
+}
+
+.btn-resource-detail {
+    display: inline-block;
+    padding: 8px 16px;
+    background: #17a2b8;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    margin-top: 12px;
+    transition: background 0.2s;
+}
+
+.btn-resource-detail:hover {
+    background: #138496;
+    color: white;
+}
+
+/* Meeting Room Section */
+.meeting-room-section {
+    background: white;
+    border: 1px solid #e9ecef;
+    padding: 20px;
+    margin-bottom: 24px;
+}
+
+.meeting-room-section h2 {
+    margin: 0 0 16px 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.meeting-room-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 16px;
+}
+
+.room-info h4,
+.room-capacity h4,
+.features-section h4,
+.amenities-section h4 {
+    margin: 0 0 8px 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.features-list,
+.amenities-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 4px;
+}
+
+.feature-tag {
+    display: inline-block;
+    padding: 3px 12px;
+    background: #e3f2fd;
+    color: #0c5460;
+    font-size: 0.75rem;
+    border-radius: 4px;
+}
+
+.amenity-tag {
+    display: inline-block;
+    padding: 3px 12px;
+    background: #f3e5f5;
+    color: #4a148c;
+    font-size: 0.75rem;
+    border-radius: 4px;
+}
+
+.setup-info {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #e9ecef;
+    display: flex;
+    gap: 20px;
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+/* Footer */
+.detail-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 16px;
+    border-top: 1px solid #e9ecef;
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .detail-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .detail-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    
+    .header-actions {
+        width: 100%;
+    }
+    
+    .btn-back {
+        width: 100%;
+        text-align: center;
+    }
+    
+    .meeting-room-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .export-buttons {
+        flex-direction: column;
+    }
+    
+    .detail-footer {
+        flex-direction: column;
+        gap: 10px;
+        text-align: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .detail-card {
+        padding: 16px;
+    }
+    
+    .detail-table {
+        font-size: 0.8rem;
+    }
+    
+    .detail-table th {
+        width: 40%;
+    }
+    
+    .action-buttons .btn-cancel,
+    .action-buttons .btn-export-pdf,
+    .action-buttons .btn-export-html {
+        width: 100%;
+        text-align: center;
+    }
+}
+</style>
+{% endblock %}

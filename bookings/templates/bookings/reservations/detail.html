@@ -9,22 +9,23 @@
             <p class="subtitle">View and manage reservation information</p>
         </div>
         <div class="header-actions">
-            <a href="{% url 'reservation_list' %}" class="btn-back">← Back to Reservations</a>
+            <a href="{% url 'bookings:reservation_list' %}" class="btn-back">Back to Reservations</a>
         </div>
     </div>
 
     <!-- Status Banner -->
     <div class="status-banner status-{{ reservation.status|lower }}">
-        <span class="status-icon">
-            {% if reservation.status == 'PENDING' %}
-            {% elif reservation.status == 'CONFIRMED' %}
-            {% elif reservation.status == 'CANCELLED' %}
-            {% elif reservation.status == 'EXPIRED' %}
-            {% elif reservation.status == 'COMPLETED' %}
-            {% endif %}
-        </span>
         <span class="status-text">
             Status: <strong>{{ reservation.get_status_display }}</strong>
+            {% if reservation.status == 'PENDING' %}
+                <span class="status-hint">- Awaiting confirmation</span>
+            {% elif reservation.status == 'CONFIRMED' %}
+                <span class="status-hint">- Confirmed and secured</span>
+            {% elif reservation.status == 'EXPIRED' %}
+                <span class="status-hint">- This reservation has expired</span>
+            {% elif reservation.status == 'COMPLETED' %}
+                <span class="status-hint">- Completed</span>
+            {% endif %}
         </span>
         {% if reservation.status == 'PENDING' and reservation.expires_at %}
             <span class="status-expiry">
@@ -67,12 +68,11 @@
         </div>
         <div class="owner-actions">
             {% if reservation.equipment.owner %}
-                <!-- Link to equipment list filtered by owner (working) -->
-                <a href="{% url 'equipment_list' %}?owner={{ reservation.equipment.owner.id }}" class="btn-view-owner-equipment">
-                View Owner's Equipment
+                <a href="{% url 'bookings:equipment_list' %}?owner={{ reservation.equipment.owner.id }}" class="btn-view-owner-equipment">
+                    View Owner's Equipment
                 </a>
             {% endif %}
-            <a href="{% url 'equipment_detail' reservation.equipment.id %}" class="btn-view-equipment">
+            <a href="{% url 'bookings:equipment_detail' reservation.equipment.id %}" class="btn-view-equipment">
                 View Equipment
             </a>
         </div>
@@ -157,45 +157,53 @@
         <div class="detail-card">
             <h2>Actions</h2>
             <div class="action-buttons">
-    <!-- Confirm button - Staff OR Equipment Owner -->
-    {% if can_confirm %}
-        <form method="post" action="{% url 'confirm_reservation' reservation.id %}" style="width: 100%;">
-            {% csrf_token %}
-            <button type="submit" class="btn-confirm-reservation" 
-                    onclick="return confirm('Confirm this reservation?')">
-                Confirm Reservation
-            </button>
-        </form>
-    {% endif %}
-    
-    <!-- Cancel button - User OR Equipment Owner OR Staff -->
-    {% if can_cancel %}
-        <form method="post" action="{% url 'cancel_reservation' reservation.id %}" style="width: 100%;">
-            {% csrf_token %}
-            <button type="submit" class="btn-cancel-reservation" 
-                    onclick="return confirm('Cancel this reservation?')">
-                Cancel Reservation
-            </button>
-        </form>
-    {% endif %}
-    
-    <a href="{% url 'equipment_detail' reservation.equipment.id %}" class="btn-view-equipment">
-        View Equipment
-    </a>
-    
-    <a href="{% url 'reservation_calendar' %}" class="btn-view-calendar">
-        View Calendar
-    </a>
-</div>
+                <!-- Confirm button - Staff OR Equipment Owner -->
+                {% if can_confirm %}
+                    <form method="post" action="{% url 'bookings:confirm_reservation' reservation.id %}" style="width: 100%;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn-confirm-reservation" 
+                                onclick="return confirm('Confirm this reservation?')">
+                            Confirm Reservation
+                        </button>
+                    </form>
+                {% endif %}
+                
+                <!-- Cancel button - User OR Equipment Owner OR Staff -->
+                {% if can_cancel %}
+                    <form method="post" action="{% url 'bookings:cancel_reservation' reservation.id %}" style="width: 100%;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn-cancel-reservation" 
+                                onclick="return confirm('Cancel this reservation?')">
+                            Cancel Reservation
+                        </button>
+                    </form>
+                {% endif %}
+                
+                <a href="{% url 'bookings:equipment_detail' reservation.equipment.id %}" class="btn-view-equipment">
+                    View Equipment
+                </a>
+                
+                <a href="{% url 'bookings:reservation_calendar' %}" class="btn-view-calendar">
+                    View Calendar
+                </a>
+            </div>
         </div>
     </div>
 </div>
 
 <style>
+/* ===== Container ===== */
+.reservation-detail-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 15px;
+}
+
 /* ===== Equipment Owner Card ===== */
 .equipment-owner-card {
     background: white;
     border: 1px solid #e9ecef;
+    border-radius: 4px;
     padding: 20px;
     margin-bottom: 24px;
     display: flex;
@@ -247,6 +255,7 @@
     object-fit: cover;
 }
 
+.owner-avatar-placeholder,
 .avatar-placeholder {
     color: white;
     font-size: 1.2rem;
@@ -275,7 +284,7 @@
     background: #28a745;
     color: white;
     padding: 2px 12px;
-    border-radius: 0px;
+    border-radius: 4px;
     font-size: 0.7rem;
     font-weight: 600;
     margin-left: 6px;
@@ -335,6 +344,7 @@
 .detail-card {
     background: white;
     border: 1px solid #e9ecef;
+    border-radius: 4px;
     padding: 20px;
 }
 
@@ -381,7 +391,7 @@
     background: #28a745;
     color: white;
     padding: 1px 8px;
-    border-radius: 0px;
+    border-radius: 3px;
     font-size: 0.6rem;
     font-weight: 600;
     margin-left: 4px;
@@ -443,6 +453,7 @@
 
 .btn-cancel-reservation:hover {
     background: #c82333;
+    color: white;
 }
 
 .btn-confirm-reservation {
@@ -452,6 +463,7 @@
 
 .btn-confirm-reservation:hover {
     background: #218838;
+    color: white;
 }
 
 .btn-view-equipment {
@@ -482,6 +494,8 @@
     padding: 14px 20px;
     margin-bottom: 24px;
     border-left: 4px solid;
+    border-radius: 4px;
+    flex-wrap: wrap;
 }
 
 .status-banner.status-pending {
@@ -500,7 +514,7 @@
 }
 
 .status-banner.status-expired {
-    background: #e2e3e5;
+    background: #e9ecef;
     border-left-color: #6c757d;
 }
 
@@ -517,6 +531,11 @@
     font-size: 0.95rem;
 }
 
+.status-hint {
+    color: #6c757d;
+    font-weight: 400;
+}
+
 .status-expiry {
     margin-left: auto;
     font-size: 0.8rem;
@@ -531,6 +550,8 @@
     margin-bottom: 24px;
     padding-bottom: 16px;
     border-bottom: 2px solid #e9ecef;
+    flex-wrap: wrap;
+    gap: 10px;
 }
 
 .page-header h1 {
@@ -552,6 +573,7 @@
     color: #495057;
     text-decoration: none;
     border: 1px solid #dee2e6;
+    border-radius: 4px;
     font-size: 0.85rem;
     font-weight: 500;
     transition: all 0.2s;
@@ -565,6 +587,7 @@
 .status-badge {
     display: inline-block;
     padding: 3px 12px;
+    border-radius: 4px;
     font-size: 0.7rem;
     font-weight: 600;
 }
@@ -572,13 +595,14 @@
 .status-pending .status-badge { background: #fff3cd; color: #856404; }
 .status-confirmed .status-badge { background: #d4edda; color: #155724; }
 .status-cancelled .status-badge { background: #f8d7da; color: #721c24; }
-.status-expired .status-badge { background: #e2e3e5; color: #383d41; }
+.status-expired .status-badge { background: #e9ecef; color: #6c757d; }
 .status-completed .status-badge { background: #d1ecf1; color: #0c5460; }
 
 /* ===== Responsive ===== */
 @media (max-width: 992px) {
     .detail-grid {
         grid-template-columns: 1fr;
+        gap: 16px;
     }
 }
 
@@ -587,6 +611,15 @@
         flex-direction: column;
         align-items: flex-start;
         gap: 12px;
+    }
+    
+    .header-actions {
+        width: 100%;
+    }
+    
+    .btn-back {
+        width: 100%;
+        text-align: center;
     }
     
     .equipment-owner-card {
@@ -602,20 +635,27 @@
     
     .owner-actions {
         width: 100%;
+        flex-direction: column;
     }
     
     .owner-actions a {
-        flex: 1;
+        width: 100%;
         text-align: center;
     }
     
     .status-banner {
-        flex-wrap: wrap;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
     }
     
     .status-expiry {
         margin-left: 0;
         width: 100%;
+    }
+    
+    .detail-card {
+        padding: 16px;
     }
 }
 
@@ -629,12 +669,13 @@
         height: 40px;
     }
     
+    .owner-avatar-placeholder,
     .avatar-placeholder {
         font-size: 1rem;
     }
     
     .detail-card {
-        padding: 16px;
+        padding: 14px;
     }
     
     .detail-table {
@@ -643,6 +684,14 @@
     
     .detail-table th {
         width: 40%;
+    }
+    
+    .page-header h1 {
+        font-size: 1.3rem;
+    }
+    
+    .reservation-detail-container {
+        padding: 0 10px;
     }
 }
 </style>

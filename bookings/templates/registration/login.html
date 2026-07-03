@@ -37,7 +37,7 @@
     {% endif %}
 
     <!-- Login Form -->
-    <form method="post" action="{% url 'login' %}" style="background: var(--bg-secondary); padding: 25px; box-shadow: 0 2px 10px var(--shadow-color);">
+    <form method="post" action="{% url 'bookings:login' %}" style="background: var(--bg-secondary); padding: 25px; box-shadow: 0 2px 10px var(--shadow-color);">
         {% csrf_token %}
         
         <!-- Username Field -->
@@ -61,7 +61,7 @@
                 <label for="id_password" style="font-weight: 600; font-size: 0.8rem; color: var(--text-primary);">
                     Password
                 </label>
-                <a href="{% url 'password_reset' %}" style="color: var(--link-color); text-decoration: none; font-size: 0.75rem; font-weight: 500; transition: opacity 0.2s ease;"
+                <a href="{% url 'bookings:password_reset' %}" style="color: var(--link-color); text-decoration: none; font-size: 0.75rem; font-weight: 500; transition: opacity 0.2s ease;"
                    onmouseover="this.style.opacity='0.8'"
                    onmouseout="this.style.opacity='1'">
                     Forgot password?
@@ -113,7 +113,7 @@
     <div style="text-align: center; margin-top: 25px; padding-top: 18px; border-top: 1px solid var(--border-color);">
         <p style="color: var(--text-secondary); font-size: 0.85rem; margin: 0;">
             Don't have an account? 
-            <a href="{% url 'signup' %}" style="color: var(--link-color); text-decoration: none; font-weight: 600; font-size: 0.85rem; transition: opacity 0.2s ease;"
+            <a href="{% url 'bookings:signup' %}" style="color: var(--link-color); text-decoration: none; font-weight: 600; font-size: 0.85rem; transition: opacity 0.2s ease;"
                onmouseover="this.style.opacity='0.8'"
                onmouseout="this.style.opacity='1'">
                 Create one now
@@ -161,6 +161,14 @@
                 `;
                 document.getElementById('togglePasswordBtn').title = 'Show password';
             }
+        }
+    });
+
+    // Auto-focus username field on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        const usernameField = document.getElementById('id_username');
+        if (usernameField) {
+            usernameField.focus();
         }
     });
 </script>

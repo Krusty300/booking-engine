@@ -4,11 +4,12 @@
     <meta charset="UTF-8">
     <style>
         body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background: #28a745; color: white; padding: 20px; text-align: center; }
-        .content { padding: 20px; background: #f8f9fa; }
-        .review-details { background: white; padding: 15px; margin: 15px 0; border-left: 4px solid #28a745; }
+        .header { background: #28a745; color: white; padding: 20px; text-align: center; border-radius: 4px; }
+        .content { padding: 20px; background: #f8f9fa; border-radius: 4px; }
+        .review-details { background: white; padding: 15px; margin: 15px 0; border-left: 4px solid #28a745; border-radius: 4px; }
         .footer { text-align: center; padding: 20px; font-size: 12px; color: #6c757d; }
-        .button { display: inline-block; padding: 10px 20px; background: #007bff; color: white; text-decoration: none; }
+        .button { display: inline-block; padding: 10px 20px; background: #007bff; color: white; text-decoration: none; border-radius: 4px; }
+        .button:hover { background: #0056b3; }
     </style>
 </head>
 <body>
@@ -29,7 +30,11 @@
             <p><strong>Comment:</strong> {{ review.comment }}</p>
         </div>
         
-        <p><a href="{{ site_url }}{% url 'resource_detail' resource.id %}" class="button">View Your Review</a></p>
+        <p>
+            <a href="{{ site_url }}{% url 'bookings:resource_detail' resource.id %}" class="button">
+                View Your Review
+            </a>
+        </p>
         
         <p style="margin-top: 20px; font-size: 14px; color: #6c757d;">
             Thank you for contributing to our community!

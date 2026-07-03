@@ -4,13 +4,19 @@ from django.core.exceptions import ValidationError
 from datetime import datetime, timedelta
 from decimal import Decimal
 from django.utils import timezone
+from django.urls import reverse
+
+# ============ VALIDATORS ============
 
 def validate_image_size(value):
     """Validate that the image file is not too large"""
+    max_size = getattr(settings, 'MAX_UPLOAD_SIZE', 5 * 1024 * 1024)  # Default 5MB
     filesize = value.size
-    if filesize > settings.MAX_UPLOAD_SIZE:
-        raise ValidationError(f"Maximum file size is 5MB. Your file is {filesize / 1048576:.1f}MB.")
+    if filesize > max_size:
+        raise ValidationError(f"Maximum file size is {max_size / 1048576:.1f}MB. Your file is {filesize / 1048576:.1f}MB.")
     return value
+
+# ============ CATEGORY MODELS ============
 
 class Category(models.Model):
     """Resource category for organizing and filtering resources"""
@@ -31,6 +37,9 @@ class Category(models.Model):
     class Meta:
         verbose_name_plural = "Categories"
         ordering = ['name']
+        indexes = [
+            models.Index(fields=['slug']),
+        ]
     
     def __str__(self):
         return self.name
@@ -40,6 +49,7 @@ class Category(models.Model):
             from django.utils.text import slugify
             self.slug = slugify(self.name)
         super().save(*args, **kwargs)
+
 
 class Amenity(models.Model):
     """Amenities available for meeting rooms"""
@@ -55,119 +65,6 @@ class Amenity(models.Model):
     
     def __str__(self):
         return self.name
-
-class MeetingRoom(models.Model):
-    """Extended meeting room features"""
-    resource = models.OneToOneField(
-        'Resource', 
-        on_delete=models.CASCADE, 
-        related_name='meeting_room'
-    )
-    
-    # Room identification
-    room_number = models.CharField(max_length=20, blank=True, null=True)
-    floor_number = models.IntegerField(default=1)
-    building_name = models.CharField(max_length=100, blank=True, null=True)
-    
-    # Capacity tracking
-    seating_capacity = models.IntegerField(default=0, help_text="Seating capacity")
-    standing_capacity = models.IntegerField(default=0, help_text="Standing capacity")
-    classroom_capacity = models.IntegerField(default=0, help_text="Classroom setup capacity")
-    theater_capacity = models.IntegerField(default=0, help_text="Theater setup capacity")
-    
-    # Room features (booleans)
-    has_projector = models.BooleanField(default=False)
-    has_whiteboard = models.BooleanField(default=False)
-    has_video_conferencing = models.BooleanField(default=False)
-    has_phone = models.BooleanField(default=False)
-    has_smart_tv = models.BooleanField(default=False)
-    has_audio_system = models.BooleanField(default=False)
-    has_wifi = models.BooleanField(default=True)
-    has_air_conditioning = models.BooleanField(default=True)
-    is_accessible = models.BooleanField(default=True, help_text="Wheelchair accessible")
-    
-    # Amenities (Many-to-Many)
-    amenities = models.ManyToManyField(Amenity, blank=True, related_name='meeting_rooms')
-    
-    # Room specifications
-    room_size_sqft = models.IntegerField(null=True, blank=True, help_text="Room size in square feet")
-    natural_light = models.BooleanField(default=False)
-    has_window = models.BooleanField(default=True)
-    
-    # Setup time
-    default_setup_time = models.IntegerField(default=15, help_text="Default setup time in minutes")
-    default_teardown_time = models.IntegerField(default=15, help_text="Default teardown time in minutes")
-    
-    # ✅ FIXED: Added validate_image_size validator to image fields
-    # Documents
-    floor_plan = models.ImageField(
-        upload_to='floor_plans/', 
-        blank=True, 
-        null=True,
-        validators=[validate_image_size]  # ✅ Added validator
-    )
-    room_photo = models.ImageField(
-        upload_to='room_photos/', 
-        blank=True, 
-        null=True,
-        validators=[validate_image_size]  # ✅ Added validator
-    )
-    
-    # Additional info
-    notes = models.TextField(blank=True, help_text="Any additional notes about the room")
-    
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    
-    def __str__(self):
-        return f"{self.resource.name} (Room {self.room_number or 'N/A'})"
-    
-    def get_capacity_display(self):
-        """Get a formatted string of all capacities"""
-        capacities = []
-        if self.seating_capacity:
-            capacities.append(f"Seating: {self.seating_capacity}")
-        if self.standing_capacity:
-            capacities.append(f"Standing: {self.standing_capacity}")
-        if self.classroom_capacity:
-            capacities.append(f"Classroom: {self.classroom_capacity}")
-        if self.theater_capacity:
-            capacities.append(f"Theater: {self.theater_capacity}")
-        return " | ".join(capacities) if capacities else "No capacity data"
-    
-    def get_amenities_list(self):
-        """Get list of amenity names"""
-        return [amenity.name for amenity in self.amenities.all()]
-    
-    def get_features_list(self):
-        """Get list of available features"""
-        features = []
-        if self.has_projector:
-            features.append('Projector')
-        if self.has_whiteboard:
-            features.append('Whiteboard')
-        if self.has_video_conferencing:
-            features.append('Video Conferencing')
-        if self.has_phone:
-            features.append('Phone')
-        if self.has_smart_tv:
-            features.append('Smart TV')
-        if self.has_audio_system:
-            features.append('Audio System')
-        if self.has_wifi:
-            features.append('WiFi')
-        if self.has_air_conditioning:
-            features.append('Air Conditioning')
-        return features
-    
-    def get_max_capacity(self):
-        """Get the maximum capacity across all types"""
-        return max(
-            self.seating_capacity or 0,
-            self.standing_capacity or 0,
-            self.classroom_capacity or 0,
-            self.theater_capacity or 0
-        )
 
 
 class Resource(models.Model):
@@ -207,7 +104,6 @@ class Resource(models.Model):
         help_text="Select a category for this resource"
     )
     
-    # ADD THIS IMAGE FIELD
     image = models.ImageField(
         upload_to='resources/', 
         blank=True, 
@@ -216,30 +112,23 @@ class Resource(models.Model):
         help_text="Upload an image of your resource (max 5MB)"
     )
     
-    # Keep image_url for backward compatibility
     image_url = models.URLField(blank=True, null=True, help_text="Optional: Link to an image URL")
-    
-    # Meeting room specific images (these can be separate or use the main image)
-    room_photo = models.ImageField(
-        upload_to='room_photos/', 
-        blank=True, 
-        null=True,
-        validators=[validate_image_size],  # ✅ Added validator
-        help_text="Upload a photo of the room"
-    )
-    floor_plan = models.ImageField(
-        upload_to='floor_plans/', 
-        blank=True, 
-        null=True,
-        validators=[validate_image_size],  # ✅ Added validator
-        help_text="Upload a floor plan of the room"
-    )
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
+    class Meta:
+        indexes = [
+            models.Index(fields=['status']),
+            models.Index(fields=['category']),
+            models.Index(fields=['owner', 'status']),
+        ]
+    
     def __str__(self):
         return self.name
+    
+    def get_absolute_url(self):
+        return reverse('resource_detail', kwargs={'resource_id': self.id})
     
     def get_image_url(self):
         if self.image:
@@ -310,6 +199,119 @@ class Resource(models.Model):
         return self.reviews.filter(status='APPROVED')[:limit]
 
 
+class MeetingRoom(models.Model):
+    """Extended meeting room features"""
+    resource = models.OneToOneField(
+        Resource, 
+        on_delete=models.CASCADE, 
+        related_name='meeting_room'
+    )
+    
+    # Room identification
+    room_number = models.CharField(max_length=20, blank=True, null=True)
+    floor_number = models.IntegerField(default=1)
+    building_name = models.CharField(max_length=100, blank=True, null=True)
+    
+    # Capacity tracking
+    seating_capacity = models.IntegerField(default=0, help_text="Seating capacity")
+    standing_capacity = models.IntegerField(default=0, help_text="Standing capacity")
+    classroom_capacity = models.IntegerField(default=0, help_text="Classroom setup capacity")
+    theater_capacity = models.IntegerField(default=0, help_text="Theater setup capacity")
+    
+    # Room features (booleans)
+    has_projector = models.BooleanField(default=False)
+    has_whiteboard = models.BooleanField(default=False)
+    has_video_conferencing = models.BooleanField(default=False)
+    has_phone = models.BooleanField(default=False)
+    has_smart_tv = models.BooleanField(default=False)
+    has_audio_system = models.BooleanField(default=False)
+    has_wifi = models.BooleanField(default=True)
+    has_air_conditioning = models.BooleanField(default=True)
+    is_accessible = models.BooleanField(default=True, help_text="Wheelchair accessible")
+    
+    # Amenities (Many-to-Many)
+    amenities = models.ManyToManyField(Amenity, blank=True, related_name='meeting_rooms')
+    
+    # Room specifications
+    room_size_sqft = models.IntegerField(null=True, blank=True, help_text="Room size in square feet")
+    natural_light = models.BooleanField(default=False)
+    has_window = models.BooleanField(default=True)
+    
+    # Setup time
+    default_setup_time = models.IntegerField(default=15, help_text="Default setup time in minutes")
+    default_teardown_time = models.IntegerField(default=15, help_text="Default teardown time in minutes")
+    
+    # Documents
+    floor_plan = models.ImageField(
+        upload_to='floor_plans/', 
+        blank=True, 
+        null=True,
+        validators=[validate_image_size]
+    )
+    room_photo = models.ImageField(
+        upload_to='room_photos/', 
+        blank=True, 
+        null=True,
+        validators=[validate_image_size]
+    )
+    
+    # Additional info
+    notes = models.TextField(blank=True, help_text="Any additional notes about the room")
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"{self.resource.name} (Room {self.room_number or 'N/A'})"
+    
+    def get_capacity_display(self):
+        """Get a formatted string of all capacities"""
+        capacities = []
+        if self.seating_capacity:
+            capacities.append(f"Seating: {self.seating_capacity}")
+        if self.standing_capacity:
+            capacities.append(f"Standing: {self.standing_capacity}")
+        if self.classroom_capacity:
+            capacities.append(f"Classroom: {self.classroom_capacity}")
+        if self.theater_capacity:
+            capacities.append(f"Theater: {self.theater_capacity}")
+        return " | ".join(capacities) if capacities else "No capacity data"
+    
+    def get_amenities_list(self):
+        """Get list of amenity names"""
+        return [amenity.name for amenity in self.amenities.all()]
+    
+    def get_features_list(self):
+        """Get list of available features"""
+        features = []
+        if self.has_projector:
+            features.append('Projector')
+        if self.has_whiteboard:
+            features.append('Whiteboard')
+        if self.has_video_conferencing:
+            features.append('Video Conferencing')
+        if self.has_phone:
+            features.append('Phone')
+        if self.has_smart_tv:
+            features.append('Smart TV')
+        if self.has_audio_system:
+            features.append('Audio System')
+        if self.has_wifi:
+            features.append('WiFi')
+        if self.has_air_conditioning:
+            features.append('Air Conditioning')
+        return features
+    
+    def get_max_capacity(self):
+        """Get the maximum capacity across all types"""
+        return max(
+            self.seating_capacity or 0,
+            self.standing_capacity or 0,
+            self.classroom_capacity or 0,
+            self.theater_capacity or 0
+        )
+
+
 class Booking(models.Model):
     """A booking for a specific resource at a specific time"""
     STATUS_CHOICES = [
@@ -338,6 +340,7 @@ class Booking(models.Model):
         indexes = [
             models.Index(fields=['resource', 'start_time']),
             models.Index(fields=['status']),
+            models.Index(fields=['customer', 'start_time']),
         ]
     
     def __str__(self):
@@ -392,6 +395,7 @@ class Booking(models.Model):
         """Check if booking is past"""
         return self.start_time <= timezone.now() and self.status != 'CANCELLED'
 
+
 class Review(models.Model):
     """Review and rating for resources"""
     
@@ -428,19 +432,16 @@ class Review(models.Model):
         help_text="The booking this review is for"
     )
     
-    # Rating and review
     rating = models.IntegerField(choices=RATING_CHOICES)
     title = models.CharField(max_length=200, blank=True, null=True)
     comment = models.TextField(max_length=1000, blank=True, null=True)
     
-    # Review metadata
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
     is_verified = models.BooleanField(
         default=False, 
         help_text="Verified purchase - user actually booked this resource"
     )
     
-    # Moderation fields (NEW)
     moderated_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, 
         on_delete=models.SET_NULL, 
@@ -456,7 +457,6 @@ class Review(models.Model):
     )
     moderated_at = models.DateTimeField(null=True, blank=True)
     
-    # Helpful votes
     helpful_count = models.IntegerField(default=0)
     helpful_users = models.ManyToManyField(
         settings.AUTH_USER_MODEL, 
@@ -464,7 +464,6 @@ class Review(models.Model):
         blank=True
     )
     
-    # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -529,6 +528,7 @@ class UserProfile(models.Model):
         upload_to='profile_pictures/', 
         blank=True, 
         null=True,
+        validators=[validate_image_size],
         help_text="Upload a profile picture"
     )
     
@@ -539,6 +539,11 @@ class UserProfile(models.Model):
     
     email_notifications = models.BooleanField(default=True, help_text="Receive email notifications")
     booking_reminders = models.BooleanField(default=True, help_text="Receive booking reminders")
+    rental_reminders = models.BooleanField(default=True, help_text="Receive rental reminders")
+    reservation_notifications = models.BooleanField(default=True, help_text="Receive reservation notifications")
+    maintenance_alerts = models.BooleanField(default=True, help_text="Receive maintenance alerts")
+    
+    last_activity = models.DateTimeField(null=True, blank=True, help_text="Last activity timestamp")
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -606,6 +611,7 @@ class AnalyticsEvent(models.Model):
     def __str__(self):
         return f"{self.get_event_type_display()} by {self.user or 'Anonymous'} at {self.created_at}"
 
+
 class DailyAnalytics(models.Model):
     """Daily aggregated analytics"""
     date = models.DateField(unique=True)
@@ -625,18 +631,27 @@ class DailyAnalytics(models.Model):
     def __str__(self):
         return f"Analytics for {self.date}"
 
+
+# ============ EQUIPMENT MODELS ============
+
 class EquipmentCategory(models.Model):
     """Category for equipment (e.g., 'Audio', 'Video', 'Computers')"""
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True)
     icon = models.CharField(max_length=50, blank=True, help_text="Font awesome icon class")
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name_plural = "Equipment Categories"
-
+        ordering = ['name']
+    
     def __str__(self):
         return self.name
+    
+    def equipment_count(self):
+        return self.equipment.count()
+
 
 class Equipment(models.Model):
     """Individual equipment item with serial number tracking"""
@@ -701,10 +716,15 @@ class Equipment(models.Model):
             models.Index(fields=['status']),
             models.Index(fields=['category']),
             models.Index(fields=['owner']),
+            models.Index(fields=['owner', 'status']),
+            models.Index(fields=['category', 'status']),
         ]
 
     def __str__(self):
         return f"{self.name} ({self.serial_number})"
+    
+    def get_absolute_url(self):
+        return reverse('equipment_detail', kwargs={'equipment_id': self.id})
 
     def is_available(self):
         """Check if equipment is available for rental"""
@@ -725,6 +745,7 @@ class Equipment(models.Model):
         if not user.is_authenticated:
             return False
         return user.is_staff or self.is_owned_by(user)
+
 
 class EquipmentRental(models.Model):
     """Rental record for equipment check-in/check-out"""
@@ -862,7 +883,6 @@ class EquipmentReservation(models.Model):
     def save(self, *args, **kwargs):
         self.full_clean()
         if not self.expires_at and self.status == 'PENDING':
-            # Set expiration to 24 hours from creation
             self.expires_at = timezone.now() + timedelta(days=1)
         super().save(*args, **kwargs)
     
@@ -890,40 +910,23 @@ class EquipmentReservation(models.Model):
         self.confirmed_at = timezone.now()
         self.save()
         
-        # Update equipment status to RESERVED
         self.equipment.status = 'RESERVED'
         self.equipment.save()
-        
-        # Send notification to user
-        try:
-            from .services.notification_service import NotificationService
-            NotificationService.send_reservation_confirmed(self)
-        except Exception as e:
-            print(f"Error sending confirmation email: {e}")
     
     def cancel(self):
         """Cancel the reservation"""
         self.status = 'CANCELLED'
         self.save()
         
-        # Revert equipment status if it was reserved
         if self.equipment.status == 'RESERVED':
             self.equipment.status = 'AVAILABLE'
             self.equipment.save()
-        
-        # Send notification to user
-        try:
-            from .services.notification_service import NotificationService
-            NotificationService.send_reservation_cancelled(self)
-        except Exception as e:
-            print(f"Error sending cancellation email: {e}")
     
     def expire(self):
         """Expire the reservation"""
         self.status = 'EXPIRED'
         self.save()
         
-        # Revert equipment status if it was reserved
         if self.equipment.status == 'RESERVED':
             self.equipment.status = 'AVAILABLE'
             self.equipment.save()
@@ -933,7 +936,6 @@ class EquipmentReservation(models.Model):
         self.status = 'COMPLETED'
         self.save()
         
-        # Revert equipment status if it was reserved
         if self.equipment.status == 'RESERVED':
             self.equipment.status = 'AVAILABLE'
             self.equipment.save()
@@ -971,6 +973,7 @@ class EquipmentReservation(models.Model):
             'COMPLETED': '📌',
         }
         return f"{icons.get(self.status, '')} {self.get_status_display()}"
+
 
 class MaintenanceRecord(models.Model):
     """Track maintenance and repairs for equipment"""
@@ -1025,6 +1028,7 @@ class MaintenanceRecord(models.Model):
         self.equipment.status = 'AVAILABLE'
         self.equipment.save()
         self.save()
+
 
 class SavedSearch(models.Model):
     """Save user searches for later use"""
@@ -1084,7 +1088,7 @@ def create_user_profile(sender, instance, created, **kwargs):
 
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
 def save_user_profile(sender, instance, **kwargs):
-    try:
+    if hasattr(instance, 'profile'):
         instance.profile.save()
-    except UserProfile.DoesNotExist:
+    else:
         UserProfile.objects.create(user=instance)

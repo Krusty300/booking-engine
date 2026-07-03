@@ -9,11 +9,11 @@
     </p>
 
     {% if review.status == 'APPROVED' %}
-        <div style="padding: 12px 16px; margin-bottom: 20px; background: #d4edda; border-left: 4px solid #28a745; color: #155724;">
+        <div style="padding: 12px 16px; margin-bottom: 20px; background: #d4edda; border-left: 4px solid #28a745; border-radius: 4px; color: #155724;">
             This review has been approved and cannot be edited. If you need to make changes, please contact support.
         </div>
     {% elif review.status == 'REJECTED' %}
-        <div style="padding: 12px 16px; margin-bottom: 20px; background: #fff3cd; border-left: 4px solid #ffc107; color: #856404;">
+        <div style="padding: 12px 16px; margin-bottom: 20px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px; color: #856404;">
             This review was rejected. Please revise and resubmit.
             {% if review.moderation_reason %}
                 <br><strong>Reason:</strong> {{ review.moderation_reason }}
@@ -21,18 +21,23 @@
         </div>
     {% endif %}
 
-    <form method="post" style="background: var(--bg-card); padding: 25px; box-shadow: 0 2px 10px var(--shadow-color);">
+    <form method="post" style="background: var(--bg-card); padding: 25px; border-radius: 4px; box-shadow: 0 2px 10px var(--shadow-color);">
         {% csrf_token %}
 
         {% if form.errors %}
-            <div style="padding: 12px 16px; margin-bottom: 20px; background: #f8d7da; border-left: 4px solid #dc3545; color: #721c24;">
-                <strong>Please correct the following errors:</strong>
+            <div style="padding: 12px 16px; margin-bottom: 20px; background: #f8d7da; border-left: 4px solid #dc3545; border-radius: 4px; color: #721c24;">
+                <strong>❌ Please correct the following errors:</strong>
                 <ul style="margin: 5px 0 0 20px;">
                     {% for field in form %}
                         {% for error in field.errors %}
                             <li>{{ field.label }}: {{ error }}</li>
                         {% endfor %}
                     {% endfor %}
+                    {% if form.non_field_errors %}
+                        {% for error in form.non_field_errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    {% endif %}
                 </ul>
             </div>
         {% endif %}
@@ -44,15 +49,18 @@
             </label>
             <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                 {% for value, label in form.rating.field.choices %}
-                    <label style="cursor: pointer; padding: 8px 12px; background: var(--bg-hover); border: 2px solid transparent; transition: all 0.2s ease;"
+                    <label style="cursor: pointer; padding: 8px 12px; background: var(--bg-hover); border: 2px solid transparent; border-radius: 4px; transition: all 0.2s ease;"
                            onmouseover="this.style.borderColor='#007bff'"
                            onmouseout="this.style.borderColor='transparent'">
-                        <input type="radio" name="rating" value="{{ value }}" style="margin-right: 5px;" 
+                        <input type="radio" name="rating" value="{{ value }}" style="margin-right: 5px; cursor: pointer;" 
                                {% if form.rating.value == value %}checked{% endif %}>
                         {{ label }}
                     </label>
                 {% endfor %}
             </div>
+            {% if form.rating.errors %}
+                <div style="color: #dc3545; font-size: 0.8rem; margin-top: 4px;">{{ form.rating.errors }}</div>
+            {% endif %}
         </div>
 
         <!-- Title -->
@@ -61,6 +69,10 @@
                 Review Title
             </label>
             {{ form.title }}
+            {% if form.title.errors %}
+                <div style="color: #dc3545; font-size: 0.8rem; margin-top: 4px;">{{ form.title.errors }}</div>
+            {% endif %}
+            <small style="color: var(--text-secondary); font-size: 0.7rem;">Summarize your experience</small>
         </div>
 
         <!-- Comment -->
@@ -69,13 +81,17 @@
                 Your Review <span style="color: #dc3545;">*</span>
             </label>
             {{ form.comment }}
+            {% if form.comment.errors %}
+                <div style="color: #dc3545; font-size: 0.8rem; margin-top: 4px;">{{ form.comment.errors }}</div>
+            {% endif %}
             <div style="text-align: right; font-size: 0.7rem; color: var(--text-secondary); margin-top: 3px;">
                 <span id="review-count">0</span> / 1000 characters
             </div>
+            <small style="color: var(--text-secondary); font-size: 0.7rem;">Share your detailed experience with this resource</small>
         </div>
 
         <!-- Guidelines -->
-        <div style="margin-bottom: 20px; padding: 12px; background: var(--bg-hover); border-left: 3px solid #007bff;">
+        <div style="margin-bottom: 20px; padding: 12px; background: var(--bg-hover); border-left: 3px solid #007bff; border-radius: 4px;">
             <strong style="font-size: 0.85rem;">Review Guidelines:</strong>
             <ul style="font-size: 0.8rem; color: var(--text-secondary); margin: 5px 0 0 18px;">
                 <li>Be honest and constructive</li>
@@ -86,22 +102,22 @@
         </div>
 
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-            <button type="submit" style="padding: 10px 30px; background: #28a745; color: white; border: none; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease;"
+            <button type="submit" style="padding: 10px 30px; background: #28a745; color: white; border: none; border-radius: 4px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease;"
                     onmouseover="this.style.background='#218838'"
                     onmouseout="this.style.background='#28a745'">
                 Update Review
             </button>
-            <a href="{% url 'resource_detail' resource.id %}" style="padding: 10px 30px; background: #6c757d; color: white; text-decoration: none; font-size: 0.95rem; font-weight: 600; transition: all 0.2s ease;"
+            <a href="{% url 'bookings:resource_detail' resource.id %}" style="padding: 10px 30px; background: #6c757d; color: white; text-decoration: none; border-radius: 4px; font-size: 0.95rem; font-weight: 600; transition: all 0.2s ease;"
                onmouseover="this.style.background='#5a6268'"
                onmouseout="this.style.background='#6c757d'">
                 Cancel
             </a>
             {% if review.status == 'PENDING' %}
-                <a href="{% url 'delete_review' review.id %}" style="padding: 10px 30px; background: #dc3545; color: white; text-decoration: none; font-size: 0.95rem; font-weight: 600; transition: all 0.2s ease;"
-                   onclick="return confirm('Are you sure you want to delete this review?')"
-                   onmouseover="this.style.background='#c82333'"
-                   onmouseout="this.style.background='#dc3545'">
-                    Delete Review
+                <a href="{% url 'bookings:delete_review' review.id %}" 
+                    style="padding: 10px 30px; background: #c43636; color: rgb(255, 255, 255); text-decoration: none; border-radius: 4px; font-size: 0.95rem; font-weight: 600; transition: all 0.2s ease;"
+                    onmouseover="this.style.background='#c43636'"
+                    onmouseout="this.style.background='#c43636'">
+                    Delete
                 </a>
             {% endif %}
         </div>
@@ -116,11 +132,111 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (commentInput && countDisplay) {
         commentInput.addEventListener('input', function() {
-            countDisplay.textContent = this.value.length;
+            const count = this.value.length;
+            countDisplay.textContent = count;
+            
+            if (count > 900) {
+                countDisplay.style.color = '#dc3545';
+            } else if (count > 700) {
+                countDisplay.style.color = '#ffc107';
+            } else {
+                countDisplay.style.color = 'var(--text-secondary)';
+            }
         });
         countDisplay.textContent = commentInput.value.length;
     }
+
+    // Style form fields
+    document.querySelectorAll('input, textarea, select').forEach(function(el) {
+        if (el.type !== 'radio' && el.type !== 'checkbox' && el.type !== 'hidden') {
+            el.style.width = '100%';
+            el.style.padding = '10px 14px';
+            el.style.border = '2px solid #e9ecef';
+            el.style.borderRadius = '4px';
+            el.style.fontSize = '0.9rem';
+            el.style.fontFamily = 'Mona Sans, sans-serif';
+            el.style.boxSizing = 'border-box';
+            el.style.transition = 'all 0.2s ease';
+            el.style.background = 'white';
+            el.style.color = '#1a1a2e';
+            el.onfocus = function() {
+                this.style.borderColor = '#007bff';
+                this.style.boxShadow = '0 0 0 3px rgba(0,123,255,0.1)';
+            };
+            el.onblur = function() {
+                this.style.borderColor = '#e9ecef';
+                this.style.boxShadow = 'none';
+            };
+        }
+    });
+
+    // Style textareas specifically
+    document.querySelectorAll('textarea').forEach(function(el) {
+        el.style.resize = 'vertical';
+        el.style.minHeight = '80px';
+    });
+
+    // Rating selection visual feedback
+    document.querySelectorAll('input[type="radio"][name="rating"]').forEach(function(radio) {
+        radio.addEventListener('change', function() {
+            document.querySelectorAll('input[type="radio"][name="rating"]').forEach(function(r) {
+                r.closest('label').style.borderColor = 'transparent';
+                r.closest('label').style.background = 'var(--bg-hover)';
+            });
+            this.closest('label').style.borderColor = '#007bff';
+            this.closest('label').style.background = '#e3f2fd';
+        });
+    });
+
+    // Check if any rating is already selected
+    const checkedRadio = document.querySelector('input[type="radio"][name="rating"]:checked');
+    if (checkedRadio) {
+        checkedRadio.closest('label').style.borderColor = '#007bff';
+        checkedRadio.closest('label').style.background = '#e3f2fd';
+    }
 });
 </script>
+
+<style>
+@media (max-width: 480px) {
+    div[style*="max-width: 700px"] {
+        padding: 0 10px !important;
+    }
+    
+    form {
+        padding: 15px !important;
+    }
+    
+    h1 {
+        font-size: 1.3rem !important;
+    }
+    
+    .rating-options {
+        flex-wrap: wrap !important;
+        gap: 6px !important;
+    }
+    
+    .rating-options label {
+        padding: 6px 10px !important;
+        font-size: 0.8rem !important;
+    }
+    
+    .form-actions {
+        flex-direction: column !important;
+    }
+    
+    .form-actions button,
+    .form-actions a {
+        width: 100% !important;
+        text-align: center !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .rating-options {
+        justify-content: center !important;
+    }
+}
+</style>
 
 {% endblock %}

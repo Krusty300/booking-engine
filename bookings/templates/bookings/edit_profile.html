@@ -5,11 +5,11 @@
 
     <h1 style="font-size: 1.6rem; font-weight: 800; margin-bottom: 20px;">Edit Profile</h1>
     
-    <form method="post" enctype="multipart/form-data" style="background: white; padding: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.08);">
+    <form method="post" enctype="multipart/form-data" style="background: white; padding: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); border-radius: 4px;">
         {% csrf_token %}
         
         {% if user_form.errors or profile_form.errors %}
-            <div style="padding: 12px 16px; margin-bottom: 20px; background: #f8d7da; border-left: 4px solid #dc3545; color: #721c24;">
+            <div style="padding: 12px 16px; margin-bottom: 20px; background: #f8d7da; border-left: 4px solid #dc3545; color: #721c24; border-radius: 4px;">
                 <strong>Please correct the following errors:</strong>
                 <ul style="margin: 5px 0 0 20px;">
                     {% for field in user_form %}
@@ -72,7 +72,7 @@
             {% if profile and profile.profile_picture %}
                 <div style="margin-top: 10px;">
                     <img src="{{ profile.profile_picture.url }}" alt="Current profile picture" 
-                         style="width: 80px; height: 80px; object-fit: cover; border: 2px solid #e9ecef;">
+                         style="width: 80px; height: 80px; object-fit: cover; border: 2px solid #e9ecef; border-radius: 4px;">
                     <p style="font-size: 0.7rem; color: #6c757d; margin-top: 3px;">Current picture</p>
                 </div>
             {% endif %}
@@ -114,17 +114,29 @@
                 {{ profile_form.booking_reminders }}
                 <label for="id_booking_reminders" style="font-size: 0.85rem;">Booking Reminders</label>
             </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                {{ profile_form.rental_reminders }}
+                <label for="id_rental_reminders" style="font-size: 0.85rem;">Rental Reminders</label>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                {{ profile_form.reservation_notifications }}
+                <label for="id_reservation_notifications" style="font-size: 0.85rem;">Reservation Notifications</label>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                {{ profile_form.maintenance_alerts }}
+                <label for="id_maintenance_alerts" style="font-size: 0.85rem;">Maintenance Alerts</label>
+            </div>
         </div>
         
         <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 25px;">
             <button type="submit" 
-                    style="padding: 12px 30px; background: #28a745; color: white; border: none; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease;"
+                    style="padding: 12px 30px; background: #28a745; color: white; border: none; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; border-radius: 4px;"
                     onmouseover="this.style.background='#218838'"
                     onmouseout="this.style.background='#28a745'">
                 Save Changes
             </button>
-            <a href="{% url 'profile' %}" 
-               style="padding: 12px 30px; background: #6c757d; color: white; text-decoration: none; font-size: 0.95rem; font-weight: 600; transition: all 0.2s ease;"
+            <a href="{% url 'bookings:profile' %}" 
+               style="padding: 12px 30px; background: #6c757d; color: white; text-decoration: none; font-size: 0.95rem; font-weight: 600; transition: all 0.2s ease; border-radius: 4px;"
                onmouseover="this.style.background='#5a6268'"
                onmouseout="this.style.background='#6c757d'">
                 Cancel
@@ -140,10 +152,13 @@
             el.style.width = '100%';
             el.style.padding = '10px 14px';
             el.style.border = '2px solid #e9ecef';
+            el.style.borderRadius = '4px';
             el.style.fontSize = '0.9rem';
             el.style.fontFamily = 'Mona Sans, sans-serif';
             el.style.boxSizing = 'border-box';
             el.style.transition = 'all 0.2s ease';
+            el.style.background = 'white';
+            el.style.color = '#1a1a2e';
             el.onfocus = function() { 
                 this.style.borderColor = '#007bff'; 
                 this.style.boxShadow = '0 0 0 3px rgba(0,123,255,0.1)'; 
@@ -160,6 +175,16 @@
         el.style.width = '18px';
         el.style.height = '18px';
         el.style.cursor = 'pointer';
+        el.style.accentColor = '#007bff';
+    });
+    
+    // File input styling
+    document.querySelectorAll('input[type="file"]').forEach(el => {
+        el.style.padding = '8px 12px';
+        el.style.border = '2px solid #e9ecef';
+        el.style.borderRadius = '4px';
+        el.style.width = '100%';
+        el.style.boxSizing = 'border-box';
     });
 </script>
 
@@ -167,6 +192,20 @@
     @media (max-width: 600px) {
         div[style*="grid-template-columns: 1fr 1fr"] {
             grid-template-columns: 1fr !important;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        form {
+            padding: 15px !important;
+        }
+        
+        h1 {
+            font-size: 1.3rem !important;
+        }
+        
+        .preferences-grid {
+            flex-direction: column !important;
         }
     }
 </style>

@@ -11,7 +11,7 @@
 
     <!-- Search Form -->
     <div class="search-form-section">
-        <form method="get" action="{% url 'equipment_search' %}" class="search-form" id="searchForm">
+        <form method="get" action="{% url 'bookings:equipment_search' %}" class="search-form" id="searchForm">
             <!-- Main Search Bar -->
             <div class="search-bar">
                 <div class="search-input-wrapper">
@@ -132,7 +132,7 @@
 
                 <div class="filter-actions">
                     <button type="submit" class="btn-apply-filters">Apply Filters</button>
-                    <a href="{% url 'equipment_search' %}" class="btn-clear-filters">Clear All</a>
+                    <a href="{% url 'bookings:equipment_search' %}" class="btn-clear-filters">Clear All</a>
                 </div>
             </div>
         </form>
@@ -147,16 +147,16 @@
             {% endif %}
         </span>
         <div class="results-actions">
-    <button onclick="saveSearch()" class="btn-save-search">Save Search</button>
-    <div class="export-dropdown">
-        <button onclick="toggleExportMenu()" class="btn-export-results">Export Results ▾</button>
-        <div id="exportMenu" class="export-menu" style="display: none;">
-            <a href="#" onclick="exportResults('csv')">CSV</a>
-            <a href="#" onclick="exportResults('excel')">Excel</a>
-            <a href="#" onclick="exportResults('pdf')">PDF</a>
+            <button onclick="saveSearch()" class="btn-save-search">Save Search</button>
+            <div class="export-dropdown">
+                <button onclick="toggleExportMenu()" class="btn-export-results">Export Results ▾</button>
+                <div id="exportMenu" class="export-menu" style="display: none;">
+                    <a href="#" onclick="exportResults('csv')">CSV</a>
+                    <a href="#" onclick="exportResults('excel')">Excel</a>
+                    <a href="#" onclick="exportResults('pdf')">PDF</a>
+                </div>
+            </div>
         </div>
-    </div>
-</div>
     </div>
 
     <!-- Search Results -->
@@ -192,7 +192,7 @@
                     </div>
                     
                     <div class="card-actions">
-                        <a href="{% url 'equipment_detail' equipment.id %}" class="btn-view">View Details</a>
+                        <a href="{% url 'bookings:equipment_detail' equipment.id %}" class="btn-view">View Details</a>
                         {% if equipment.is_available %}
                             <button onclick="quickRent({{ equipment.id }})" class="btn-rent">Rent Now</button>
                         {% endif %}
@@ -202,21 +202,21 @@
         </div>
 
         <!-- Saved Searches Section -->
-                    <div class="saved-searches-section">
-                        <div class="saved-searches-header">
-                            <h3>Saved Searches</h3>
-                             <button onclick="loadSavedSearches()" class="btn-refresh-searches">Refresh</button>
-                          </div>
-                          <div id="savedSearchesList" class="saved-searches-list">
-                            <!-- Saved searches will be loaded here -->
-                        </div>
-                    </div>
+        <div class="saved-searches-section">
+            <div class="saved-searches-header">
+                <h3>Saved Searches</h3>
+                <button onclick="loadSavedSearches()" class="btn-refresh-searches">Refresh</button>
+            </div>
+            <div id="savedSearchesList" class="saved-searches-list">
+                <!-- Saved searches will be loaded here -->
+            </div>
+        </div>
 
         <!-- Pagination -->
         {% if results.has_other_pages %}
             <div class="pagination">
                 {% if results.has_previous %}
-                    <a href="?page={{ results.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-link">Previous</a>
+                    <a href="?page={{ results.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-link">◀ Previous</a>
                 {% endif %}
                 
                 <span class="page-info">
@@ -224,7 +224,7 @@
                 </span>
                 
                 {% if results.has_next %}
-                    <a href="?page={{ results.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-link">Next</a>
+                    <a href="?page={{ results.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-link">Next ▶</a>
                 {% endif %}
             </div>
         {% endif %}
@@ -234,17 +234,8 @@
             <h2>No Results Found</h2>
             <p>We couldn't find any equipment matching your search criteria.</p>
             <div class="empty-actions">
-                <a href="{% url 'equipment_search' %}" class="btn-secondary">Clear Filters</a>
-                <a href="{% url 'equipment_list' %}" class="btn-primary">Browse All Equipment</a>
-            </div>
-            <div class="empty-tips">
-                <h4>Search Tips:</h4>
-                <ul>
-                    <li>Try using different keywords</li>
-                    <li>Check your spelling</li>
-                    <li>Use fewer filters to broaden your search</li>
-                    <li>Try searching by serial number or asset tag</li>
-                </ul>
+                <a href="{% url 'bookings:equipment_search' %}" class="btn-secondary">Clear Filters</a>
+                <a href="{% url 'bookings:equipment_list' %}" class="btn-primary">Browse All Equipment</a>
             </div>
         </div>
     {% endif %}
@@ -389,7 +380,7 @@ function quickRent(equipmentId) {
         if (data.error) {
             alert('Error: ' + data.error);
         } else {
-            alert('Success ' + data.message);
+            alert('Success: ' + data.message);
             location.reload();
         }
     })
@@ -433,7 +424,7 @@ function saveSearch() {
         if (data.error) {
             alert('Error: ' + data.error);
         } else {
-            alert('Success ' + data.message);
+            alert('Success: ' + data.message);
             loadSavedSearches(); // Refresh the saved searches list
         }
     })
@@ -566,6 +557,7 @@ document.addEventListener('click', function(e) {
 .search-container {
     max-width: 1200px;
     margin: 0 auto;
+    padding: 0 15px;
 }
 
 /* Search Header */
@@ -591,6 +583,7 @@ document.addEventListener('click', function(e) {
 .search-form-section {
     background: white;
     border: 1px solid #e9ecef;
+    border-radius: 4px;
     padding: 20px;
     margin-bottom: 24px;
 }
@@ -604,8 +597,10 @@ document.addEventListener('click', function(e) {
     display: flex;
     align-items: center;
     border: 2px solid #dee2e6;
+    border-radius: 4px;
     transition: border-color 0.2s;
     background: white;
+    overflow: hidden;
 }
 
 .search-input-wrapper:focus-within {
@@ -613,15 +608,9 @@ document.addEventListener('click', function(e) {
     box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
 }
 
-.search-icon {
-    padding: 0 12px;
-    font-size: 1.2rem;
-    color: #6c757d;
-}
-
 .search-input {
     flex: 1;
-    padding: 12px 8px;
+    padding: 12px 16px;
     border: none;
     font-size: 1rem;
     outline: none;
@@ -651,6 +640,7 @@ document.addEventListener('click', function(e) {
     background: white;
     border: 1px solid #dee2e6;
     border-top: none;
+    border-radius: 0 0 4px 4px;
     max-height: 300px;
     overflow-y: auto;
     z-index: 1000;
@@ -715,6 +705,7 @@ document.addEventListener('click', function(e) {
 .filter-group input {
     padding: 8px 10px;
     border: 1px solid #dee2e6;
+    border-radius: 4px;
     font-size: 0.85rem;
     transition: border-color 0.2s;
     background: white;
@@ -760,6 +751,7 @@ document.addEventListener('click', function(e) {
     background: #28a745;
     color: white;
     border: none;
+    border-radius: 4px;
     font-weight: 600;
     cursor: pointer;
     transition: background 0.2s;
@@ -774,6 +766,7 @@ document.addEventListener('click', function(e) {
     background: #6c757d;
     color: white;
     border: none;
+    border-radius: 4px;
     font-weight: 600;
     text-decoration: none;
     transition: background 0.2s;
@@ -792,6 +785,8 @@ document.addEventListener('click', function(e) {
     padding: 12px 0;
     border-bottom: 1px solid #e9ecef;
     margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 10px;
 }
 
 .results-count {
@@ -806,12 +801,14 @@ document.addEventListener('click', function(e) {
 .results-actions {
     display: flex;
     gap: 10px;
+    flex-wrap: wrap;
 }
 
 .btn-save-search,
 .btn-export-results {
     padding: 6px 14px;
     border: 1px solid #dee2e6;
+    border-radius: 4px;
     text-decoration: none;
     font-size: 0.8rem;
     cursor: pointer;
@@ -834,10 +831,11 @@ document.addEventListener('click', function(e) {
 
 /* Saved Searches */
 .saved-searches-section {
-    margin-bottom: 24px;
+    margin-top: 24px;
     background: #f8f9fa;
     padding: 16px;
     border: 1px solid #e9ecef;
+    border-radius: 4px;
 }
 
 .saved-searches-header {
@@ -858,8 +856,13 @@ document.addEventListener('click', function(e) {
     background: #6c757d;
     color: white;
     border: none;
+    border-radius: 4px;
     font-size: 0.75rem;
     cursor: pointer;
+}
+
+.btn-refresh-searches:hover {
+    background: #5a6268;
 }
 
 .saved-search-item {
@@ -869,6 +872,7 @@ document.addEventListener('click', function(e) {
     padding: 8px 12px;
     background: white;
     border: 1px solid #e9ecef;
+    border-radius: 4px;
     margin-bottom: 4px;
     transition: background 0.2s;
 }
@@ -906,6 +910,7 @@ document.addEventListener('click', function(e) {
 .search-actions button {
     padding: 2px 8px;
     border: none;
+    border-radius: 4px;
     cursor: pointer;
     font-size: 0.75rem;
 }
@@ -951,8 +956,10 @@ document.addEventListener('click', function(e) {
     top: 100%;
     background: white;
     border: 1px solid #dee2e6;
+    border-radius: 4px;
     min-width: 120px;
     z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
 .export-menu a {
@@ -967,49 +974,11 @@ document.addEventListener('click', function(e) {
     background: #f8f9fa;
 }
 
-.btn-export-results {
-    padding: 6px 14px;
-    border: 1px solid #dee2e6;
-    background: white;
-    cursor: pointer;
-    font-size: 0.8rem;
-    transition: all 0.2s;
-}
-
-.btn-export-results:hover {
-    background: #f8f9fa;
-    border-color: #007bff;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-    .saved-search-item {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 8px;
-    }
-    
-    .search-info {
-        width: 100%;
-    }
-    
-    .search-actions {
-        width: 100%;
-        justify-content: flex-end;
-    }
-    
-    .export-dropdown {
-        width: 100%;
-    }
-    
-    .export-menu {
-        position: static;
-    }
-}
-
+/* Equipment Card */
 .equipment-card {
     background: white;
     border: 1px solid #e9ecef;
+    border-radius: 4px;
     padding: 18px;
     transition: all 0.2s ease;
 }
@@ -1039,6 +1008,7 @@ document.addEventListener('click', function(e) {
 
 .status-badge {
     padding: 2px 10px;
+    border-radius: 4px;
     font-size: 0.65rem;
     font-weight: 600;
     white-space: nowrap;
@@ -1069,6 +1039,7 @@ document.addEventListener('click', function(e) {
 .card-actions a,
 .card-actions button {
     padding: 4px 12px;
+    border-radius: 4px;
     font-size: 0.75rem;
     font-weight: 600;
     text-decoration: none;
@@ -1104,12 +1075,14 @@ document.addEventListener('click', function(e) {
     margin-top: 24px;
     padding: 16px;
     background: #f8f9fa;
+    border-radius: 4px;
 }
 
 .page-link {
     padding: 8px 16px;
     background: white;
     border: 1px solid #dee2e6;
+    border-radius: 4px;
     text-decoration: none;
     color: #007bff;
     transition: all 0.2s;
@@ -1132,6 +1105,7 @@ document.addEventListener('click', function(e) {
     padding: 60px 20px;
     background: #f8f9fa;
     border: 1px solid #e9ecef;
+    border-radius: 4px;
 }
 
 .empty-icon {
@@ -1161,6 +1135,7 @@ document.addEventListener('click', function(e) {
     background: #6c757d;
     color: white;
     text-decoration: none;
+    border-radius: 4px;
     font-weight: 600;
 }
 
@@ -1169,6 +1144,7 @@ document.addEventListener('click', function(e) {
     background: #007bff;
     color: white;
     text-decoration: none;
+    border-radius: 4px;
     font-weight: 600;
 }
 
@@ -1222,6 +1198,7 @@ document.addEventListener('click', function(e) {
     
     .search-btn {
         width: 100%;
+        border-radius: 0;
     }
     
     .search-results-grid {
@@ -1236,6 +1213,54 @@ document.addEventListener('click', function(e) {
     .price-input,
     .date-input {
         min-width: 100%;
+    }
+    
+    .saved-search-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .search-info {
+        width: 100%;
+    }
+    
+    .search-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+    
+    .export-dropdown {
+        width: 100%;
+    }
+    
+    .export-menu {
+        position: static;
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .search-container {
+        padding: 0 10px;
+    }
+    
+    .search-form-section {
+        padding: 12px;
+    }
+    
+    .search-header h1 {
+        font-size: 1.3rem;
+    }
+    
+    .filter-actions {
+        flex-direction: column;
+    }
+    
+    .btn-apply-filters,
+    .btn-clear-filters {
+        width: 100%;
+        text-align: center;
     }
 }
 </style>

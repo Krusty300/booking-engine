@@ -8,30 +8,30 @@
 
 <!-- Statistics Cards -->
 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 20px;">
-    <div style="background: var(--bg-card); padding: 12px; text-align: center; border-left: 4px solid #007bff;">
+    <div style="background: var(--bg-card); padding: 12px; text-align: center; border-left: 4px solid #007bff; border-radius: 0px;">
         <div style="font-size: 1.3rem; font-weight: 700; color: #007bff;">{{ total }}</div>
         <div style="font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;">Total</div>
     </div>
-    <div style="background: var(--bg-card); padding: 12px; text-align: center; border-left: 4px solid #ffc107; cursor: pointer;" onclick="location.href='?status=PENDING'">
+    <div style="background: var(--bg-card); padding: 12px; text-align: center; border-left: 4px solid #ffc107; border-radius: 0px; cursor: pointer;" onclick="location.href='?status=PENDING'">
         <div style="font-size: 1.3rem; font-weight: 700; color: #ffc107;">{{ pending }}</div>
         <div style="font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;">Pending</div>
     </div>
-    <div style="background: var(--bg-card); padding: 12px; text-align: center; border-left: 4px solid #28a745; cursor: pointer;" onclick="location.href='?status=APPROVED'">
+    <div style="background: var(--bg-card); padding: 12px; text-align: center; border-left: 4px solid #28a745; border-radius: 0px; cursor: pointer;" onclick="location.href='?status=APPROVED'">
         <div style="font-size: 1.3rem; font-weight: 700; color: #28a745;">{{ approved }}</div>
         <div style="font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;">Approved</div>
     </div>
-    <div style="background: var(--bg-card); padding: 12px; text-align: center; border-left: 4px solid #dc3545; cursor: pointer;" onclick="location.href='?status=REJECTED'">
+    <div style="background: var(--bg-card); padding: 12px; text-align: center; border-left: 4px solid #dc3545; border-radius: 0px; cursor: pointer;" onclick="location.href='?status=REJECTED'">
         <div style="font-size: 1.3rem; font-weight: 700; color: #dc3545;">{{ rejected }}</div>
         <div style="font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;">Rejected</div>
     </div>
 </div>
 
 <!-- Filters -->
-<div style="margin: 15px 0 20px 0; padding: 15px; background: var(--bg-card);">
+<div style="margin: 15px 0 20px 0; padding: 15px; background: var(--bg-card); border-radius: 0px;">
     <form method="get" style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
         <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
             <span style="font-size: 0.75rem; font-weight: 600;">Status:</span>
-            <select name="status" style="padding: 4px 8px; border: 2px solid var(--input-border); font-size: 0.75rem; background: var(--bg-input); color: var(--text-primary);">
+            <select name="status" style="padding: 4px 8px; border: 2px solid var(--input-border); border-radius: 0px; font-size: 0.75rem; background: var(--bg-input); color: var(--text-primary);">
                 <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All</option>
                 {% for value, label in status_choices %}
                     <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
@@ -41,7 +41,7 @@
         
         <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
             <span style="font-size: 0.75rem; font-weight: 600;">Rating:</span>
-            <select name="rating" style="padding: 4px 8px; border: 2px solid var(--input-border); font-size: 0.75rem; background: var(--bg-input); color: var(--text-primary);">
+            <select name="rating" style="padding: 4px 8px; border: 2px solid var(--input-border); border-radius: 0px; font-size: 0.75rem; background: var(--bg-input); color: var(--text-primary);">
                 <option value="all" {% if rating_filter == 'all' %}selected{% endif %}>All</option>
                 {% for value, label in rating_choices %}
                     <option value="{{ value }}" {% if rating_filter == value|stringformat:"s" %}selected{% endif %}>{{ label }}</option>
@@ -51,13 +51,13 @@
         
         <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; flex: 1;">
             <span style="font-size: 0.75rem; font-weight: 600;">Search:</span>
-            <input type="text" name="search" placeholder="Search reviews..." value="{{ search_query }}" style="flex: 1; min-width: 150px; padding: 4px 8px; border: 2px solid var(--input-border); font-size: 0.75rem; background: var(--bg-input); color: var(--text-primary);">
+            <input type="text" name="search" placeholder="Search reviews..." value="{{ search_query }}" style="flex: 1; min-width: 150px; padding: 4px 8px; border: 2px solid var(--input-border); border-radius: 0px; font-size: 0.75rem; background: var(--bg-input); color: var(--text-primary);">
         </div>
         
-        <button type="submit" style="padding: 4px 16px; background: #007bff; color: white; border: none; font-size: 0.75rem; font-weight: 600; cursor: pointer;">
+        <button type="submit" style="padding: 4px 16px; background: #007bff; color: white; border: none; border-radius: 0px; font-size: 0.75rem; font-weight: 600; cursor: pointer;">
             Filter
         </button>
-        <a href="?" style="padding: 4px 16px; background: #6c757d; color: white; text-decoration: none; font-size: 0.75rem; font-weight: 600;">
+        <a href="?" style="padding: 4px 16px; background: #6c757d; color: white; text-decoration: none; border-radius: 0px; font-size: 0.75rem; font-weight: 600;">
             Clear
         </a>
     </form>
@@ -65,17 +65,17 @@
 
 <!-- Bulk Actions -->
 {% if reviews %}
-<form method="post" action="{% url 'admin_bulk_action_reviews' %}" id="bulk-action-form">
+<form method="post" action="{% url 'bookings:admin_bulk_action_reviews' %}" id="bulk-action-form">
     {% csrf_token %}
     <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 15px; flex-wrap: wrap;">
         <span style="font-size: 0.75rem; font-weight: 600;">Bulk Actions:</span>
-        <select name="action" style="padding: 4px 8px; border: 2px solid var(--input-border); font-size: 0.75rem; background: var(--bg-input); color: var(--text-primary);">
+        <select name="action" style="padding: 4px 8px; border: 2px solid var(--input-border); border-radius: 0px; font-size: 0.75rem; background: var(--bg-input); color: var(--text-primary);">
             <option value="">Select action...</option>
             <option value="approve">Approve Selected</option>
             <option value="reject">Reject Selected</option>
             <option value="delete">Delete Selected</option>
         </select>
-        <button type="submit" style="padding: 4px 16px; background: #007bff; color: white; border: none; font-size: 0.75rem; font-weight: 600; cursor: pointer;">
+        <button type="submit" style="padding: 4px 16px; background: #007bff; color: white; border: none; border-radius: 0px; font-size: 0.75rem; font-weight: 600; cursor: pointer;">
             Apply
         </button>
         <span style="font-size: 0.7rem; color: var(--text-secondary);">{{ reviews|length }} reviews</span>
@@ -113,7 +113,14 @@
                             <span style="display: block; font-size: 0.65rem; color: var(--text-secondary);">{{ review.user.email }}</span>
                         </td>
                         <td style="padding: 8px 10px; text-align: center; font-size: 0.9rem;">
-                            {{ review.rating }}
+                            {% for i in "12345"|make_list %}
+                                {% if forloop.counter <= review.rating %}
+                                    ⭐
+                                {% else %}
+                                    ☆
+                                {% endif %}
+                            {% endfor %}
+                            <span style="font-size: 0.65rem; color: var(--text-secondary);">({{ review.rating }})</span>
                         </td>
                         <td style="padding: 8px 10px;">
                             {% if review.title %}
@@ -123,23 +130,23 @@
                             <div style="font-size: 0.65rem; color: var(--text-secondary); margin-top: 2px;">
                                 {{ review.created_at|date:"M d, Y" }}
                                 {% if review.is_verified %}
-                                    <span style="background: #28a745; color: white; padding: 1px 6px; font-size: 0.55rem;">Verified</span>
+                                    <span style="background: #28a745; color: white; padding: 1px 6px; font-size: 0.55rem; border-radius: 0px;">Verified</span>
                                 {% endif %}
                             </div>
                         </td>
                         <td style="padding: 8px 10px; text-align: center;">
                             {% if review.status == 'APPROVED' %}
-                                <span style="background: #d4edda; color: #155724; padding: 2px 10px; font-size: 0.65rem; font-weight: 600;">Approved</span>
+                                <span style="background: #d4edda; color: #155724; padding: 2px 10px; border-radius: 0px; font-size: 0.65rem; font-weight: 600;">Approved</span>
                             {% elif review.status == 'PENDING' %}
-                                <span style="background: #fff3cd; color: #856404; padding: 2px 10px; font-size: 0.65rem; font-weight: 600;">Pending</span>
+                                <span style="background: #fff3cd; color: #856404; padding: 2px 10px; border-radius: 0px; font-size: 0.65rem; font-weight: 600;">Pending</span>
                             {% else %}
-                                <span style="background: #f8d7da; color: #721c24; padding: 2px 10px; font-size: 0.65rem; font-weight: 600;">Rejected</span>
+                                <span style="background: #f8d7da; color: #721c24; padding: 2px 10px; border-radius: 0px; font-size: 0.65rem; font-weight: 600;">Rejected</span>
                             {% endif %}
                         </td>
                         <td style="padding: 8px 10px; text-align: center;">
                             <div style="display: flex; gap: 4px; flex-wrap: wrap; justify-content: center;">
-                                <a href="{% url 'admin_review_detail' review.id %}" style="font-size: 0.7rem; color: #007bff; text-decoration: none;">View</a>
-                                <a href="{% url 'resource_detail' review.resource.id %}" style="font-size: 0.7rem; color: #28a745; text-decoration: none;">Resource</a>
+                                <a href="{% url 'bookings:admin_review_detail' review.id %}" style="font-size: 0.7rem; color: #007bff; text-decoration: none;">View</a>
+                                <a href="{% url 'bookings:resource_detail' review.resource.id %}" style="font-size: 0.7rem; color: #28a745; text-decoration: none;">Resource</a>
                             </div>
                         </td>
                     </tr>
@@ -153,27 +160,27 @@
 {% if reviews.paginator.num_pages > 1 %}
     <div style="display: flex; justify-content: center; gap: 5px; margin-top: 20px; flex-wrap: wrap;">
         {% if reviews.has_previous %}
-            <a href="?page=1&status={{ status_filter }}&rating={{ rating_filter }}&search={{ search_query }}" style="padding: 4px 12px; background: #e9ecef; color: #333; text-decoration: none; font-size: 0.75rem;">⏮ First</a>
-            <a href="?page={{ reviews.previous_page_number }}&status={{ status_filter }}&rating={{ rating_filter }}&search={{ search_query }}" style="padding: 4px 12px; background: #e9ecef; color: #333; text-decoration: none; font-size: 0.75rem;">◀ Prev</a>
+            <a href="?page=1&status={{ status_filter }}&rating={{ rating_filter }}&search={{ search_query }}" style="padding: 4px 12px; background: #e9ecef; color: #333; text-decoration: none; border-radius: 0px; font-size: 0.75rem;">⏮ First</a>
+            <a href="?page={{ reviews.previous_page_number }}&status={{ status_filter }}&rating={{ rating_filter }}&search={{ search_query }}" style="padding: 4px 12px; background: #e9ecef; color: #333; text-decoration: none; border-radius: 0px; font-size: 0.75rem;">◀ Prev</a>
         {% endif %}
         
         {% for num in reviews.paginator.page_range %}
             {% if reviews.number == num %}
-                <span style="padding: 4px 12px; background: #007bff; color: white; font-size: 0.75rem;">{{ num }}</span>
+                <span style="padding: 4px 12px; background: #007bff; color: white; border-radius: 0px; font-size: 0.75rem;">{{ num }}</span>
             {% elif num > reviews.number|add:'-3' and num < reviews.number|add:'3' %}
-                <a href="?page={{ num }}&status={{ status_filter }}&rating={{ rating_filter }}&search={{ search_query }}" style="padding: 4px 12px; background: #e9ecef; color: #333; text-decoration: none; font-size: 0.75rem;">{{ num }}</a>
+                <a href="?page={{ num }}&status={{ status_filter }}&rating={{ rating_filter }}&search={{ search_query }}" style="padding: 4px 12px; background: #e9ecef; color: #333; text-decoration: none; border-radius: 0px; font-size: 0.75rem;">{{ num }}</a>
             {% endif %}
         {% endfor %}
         
         {% if reviews.has_next %}
-            <a href="?page={{ reviews.next_page_number }}&status={{ status_filter }}&rating={{ rating_filter }}&search={{ search_query }}" style="padding: 4px 12px; background: #e9ecef; color: #333; text-decoration: none; font-size: 0.75rem;">Next ▶</a>
-            <a href="?page={{ reviews.paginator.num_pages }}&status={{ status_filter }}&rating={{ rating_filter }}&search={{ search_query }}" style="padding: 4px 12px; background: #e9ecef; color: #333; text-decoration: none; font-size: 0.75rem;">Last ⏭</a>
+            <a href="?page={{ reviews.next_page_number }}&status={{ status_filter }}&rating={{ rating_filter }}&search={{ search_query }}" style="padding: 4px 12px; background: #e9ecef; color: #333; text-decoration: none; border-radius: 0px; font-size: 0.75rem;">Next ▶</a>
+            <a href="?page={{ reviews.paginator.num_pages }}&status={{ status_filter }}&rating={{ rating_filter }}&search={{ search_query }}" style="padding: 4px 12px; background: #e9ecef; color: #333; text-decoration: none; border-radius: 0px; font-size: 0.75rem;">Last ⏭</a>
         {% endif %}
     </div>
 {% endif %}
 
 {% else %}
-    <div style="text-align: center; padding: 60px 20px; background: var(--bg-hover); border: 1px solid var(--border-color);">
+    <div style="text-align: center; padding: 60px 20px; background: var(--bg-hover); border: 1px solid var(--border-color); border-radius: 0px;">
         <div style="font-size: 48px; margin-bottom: 15px;">📭</div>
         <h3 style="font-size: 1.2rem; color: var(--text-primary); margin-bottom: 10px;">No reviews found</h3>
         <p style="font-size: 0.85rem; color: var(--text-secondary);">No reviews match your filters.</p>
@@ -185,6 +192,28 @@ function toggleAll(masterCheckbox) {
     const checkboxes = document.querySelectorAll('.review-checkbox');
     checkboxes.forEach(cb => cb.checked = masterCheckbox.checked);
 }
+
+// Confirm before bulk action
+document.getElementById('bulk-action-form').addEventListener('submit', function(e) {
+    const action = this.querySelector('select[name="action"]').value;
+    const selected = document.querySelectorAll('.review-checkbox:checked');
+    
+    if (!action) {
+        e.preventDefault();
+        alert('Please select an action to perform.');
+        return;
+    }
+    
+    if (selected.length === 0) {
+        e.preventDefault();
+        alert('Please select at least one review.');
+        return;
+    }
+    
+    if (!confirm(`Are you sure you want to ${action} ${selected.length} review(s)?`)) {
+        e.preventDefault();
+    }
+});
 </script>
 
 <style>
@@ -194,6 +223,29 @@ function toggleAll(masterCheckbox) {
         }
         th, td {
             padding: 4px 6px !important;
+        }
+        
+        .stats-grid {
+            grid-template-columns: 1fr 1fr !important;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .stats-grid {
+            grid-template-columns: 1fr !important;
+        }
+        
+        .filter-form {
+            flex-direction: column !important;
+            align-items: stretch !important;
+        }
+        
+        .filter-form > div {
+            width: 100% !important;
+        }
+        
+        .filter-form input[type="text"] {
+            min-width: unset !important;
         }
     }
 </style>

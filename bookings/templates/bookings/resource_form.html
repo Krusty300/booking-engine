@@ -21,9 +21,11 @@
     method="post"
     enctype="multipart/form-data"
     id="resource-form"
+    action="{% if resource %}{% url 'bookings:edit_resource' resource.id %}{% else %}{% url 'bookings:create_resource' %}{% endif %}"
     style="
       background: white;
       padding: 25px;
+      border-radius: 0px;
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
     "
   >
@@ -37,12 +39,11 @@
         margin-bottom: 20px;
         background: #f8d7da;
         border-left: 4px solid #dc3545;
+        border-radius: 0px;
         color: #721c24;
       "
     >
-      <strong style="font-size: 0.85rem"
-        >Please correct the following errors:</strong
-      >
+      <strong style="font-size: 0.85rem">❌ Please correct the following errors:</strong>
       <ul style="margin: 5px 0 0 20px; font-size: 0.8rem">
         {% for field in form %} {% for error in field.errors %}
         <li>{{ field.label }}: {{ error }}</li>
@@ -207,6 +208,7 @@
         padding: 15px;
         margin-bottom: 18px;
         border-left: 3px solid #007bff;
+        border-radius: 0px;
       "
     >
       <h4
@@ -283,7 +285,7 @@
           color: #1a1a2e;
         "
       >
-        Tags
+        🏷️ Tags
         <span style="font-weight: 400; font-size: 0.75rem; color: #6c757d"
           >(Optional)</span
         >
@@ -325,6 +327,7 @@
             max-height: 150px;
             object-fit: cover;
             border: 2px solid #e9ecef;
+            border-radius: 0px;
           "
         />
         <div
@@ -336,7 +339,7 @@
             color: white;
             padding: 2px 8px;
             font-size: 0.6rem;
-            border-radius: 0;
+            border-radius: 0px;
           "
         >
           Current
@@ -354,6 +357,7 @@
             max-height: 150px;
             object-fit: cover;
             border: 2px solid #e9ecef;
+            border-radius: 0px;
           "
         />
         <div
@@ -365,7 +369,7 @@
             color: white;
             padding: 2px 8px;
             font-size: 0.6rem;
-            border-radius: 0;
+            border-radius: 0px;
           "
         >
           Current
@@ -388,6 +392,7 @@
             max-height: 150px;
             object-fit: cover;
             border: 2px solid #007bff;
+            border-radius: 0px;
           "
         />
         <p style="font-size: 0.7rem; color: #007bff; margin-top: 3px">
@@ -416,8 +421,337 @@
       </div>
     </div>
 
-    <!-- Meeting Room Specific Fields -->
-    {% if resource.is_meeting_room or request.GET.type == 'meeting_room' %}
+    <!-- ==================== MEETING ROOM TOGGLE ==================== -->
+<div style="margin-bottom: 20px; padding: 15px; background: #f0f8ff; border-left: 4px solid #007bff; border-radius: 0px;">
+    <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
+        <input type="checkbox" 
+               name="is_meeting_room" 
+               id="is_meeting_room"
+               {% if resource and resource.is_meeting_room %}checked{% endif %}
+               onchange="toggleMeetingRoomFields(this.checked)"
+               style="width: 20px; height: 20px; cursor: pointer;">
+        <span style="font-weight: 600; font-size: 1rem; color: #1a1a2e;">
+            This is a Meeting Room
+        </span>
+    </label>
+    <small style="color: #6c757d; font-size: 0.8rem; display: block; margin-top: 4px;">
+        Check this box to enable meeting room features (capacity, amenities, room photos, floor plans, etc.)
+    </small>
+    {% if resource and resource.is_meeting_room %}
+        <div style="margin-top: 8px; padding: 8px 12px; background: #d4edda; border-left: 3px solid #28a745; border-radius: 0px; font-size: 0.8rem; color: #155724;">
+            This resource is currently a meeting room. Uncheck to remove meeting room features.
+        </div>
+    {% endif %}
+</div>
+
+    <!-- ==================== MEETING ROOM SECTION ==================== -->
+    <!-- Check if resource is a meeting room or we're creating one -->
+    {% if resource.is_meeting_room or meeting_room_form %}
+    <hr
+      style="
+        margin: 20px 0;
+        border: none;
+        border-top: 2px solid #e9ecef;
+      "
+    />
+
+    <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 15px">
+      Meeting Room Details
+    </h3>
+
+    <!-- Room Identification -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px">
+      <div style="margin-bottom: 16px">
+        <label
+          for="id_room_number"
+          style="
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: #1a1a2e;
+          "
+        >
+          Room Number
+        </label>
+        {{ meeting_room_form.room_number }}
+      </div>
+
+      <div style="margin-bottom: 16px">
+        <label
+          for="id_floor_number"
+          style="
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: #1a1a2e;
+          "
+        >
+          Floor Number
+        </label>
+        {{ meeting_room_form.floor_number }}
+      </div>
+
+      <div style="margin-bottom: 16px">
+        <label
+          for="id_building_name"
+          style="
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: #1a1a2e;
+          "
+        >
+          Building Name
+        </label>
+        {{ meeting_room_form.building_name }}
+      </div>
+    </div>
+
+    <!-- Capacities -->
+    <h4 style="font-size: 0.95rem; font-weight: 600; margin: 10px 0 15px 0;">
+      Capacities
+    </h4>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px">
+      <div style="margin-bottom: 16px">
+        <label
+          for="id_seating_capacity"
+          style="
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: #1a1a2e;
+          "
+        >
+          Seating Capacity
+        </label>
+        {{ meeting_room_form.seating_capacity }}
+        <small style="color: #6c757d; font-size: 0.7rem"
+          >Number of seats (required)</small
+        >
+      </div>
+
+      <div style="margin-bottom: 16px">
+        <label
+          for="id_standing_capacity"
+          style="
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: #1a1a2e;
+          "
+        >
+          Standing Capacity
+        </label>
+        {{ meeting_room_form.standing_capacity }}
+        <small style="color: #6c757d; font-size: 0.7rem"
+          >Standing capacity (optional)</small
+        >
+      </div>
+
+      <div style="margin-bottom: 16px">
+        <label
+          for="id_classroom_capacity"
+          style="
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: #1a1a2e;
+          "
+        >
+          Classroom Capacity
+        </label>
+        {{ meeting_room_form.classroom_capacity }}
+        <small style="color: #6c757d; font-size: 0.7rem"
+          >Classroom setup capacity (optional)</small
+        >
+      </div>
+
+      <div style="margin-bottom: 16px">
+        <label
+          for="id_theater_capacity"
+          style="
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: #1a1a2e;
+          "
+        >
+          Theater Capacity
+        </label>
+        {{ meeting_room_form.theater_capacity }}
+        <small style="color: #6c757d; font-size: 0.7rem"
+          >Theater setup capacity (optional)</small
+        >
+      </div>
+    </div>
+
+    <!-- Features -->
+    <h4 style="font-size: 0.95rem; font-weight: 600; margin: 10px 0 15px 0;">
+      🛠️ Features
+    </h4>
+    <div
+      style="
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 10px;
+        margin-bottom: 16px;
+      "
+    >
+      <div style="display: flex; align-items: center; gap: 8px">
+        {{ meeting_room_form.has_projector }}
+        <label for="id_has_projector" style="font-size: 0.85rem; cursor: pointer"
+          >Projector</label
+        >
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px">
+        {{ meeting_room_form.has_whiteboard }}
+        <label for="id_has_whiteboard" style="font-size: 0.85rem; cursor: pointer"
+          >Whiteboard</label
+        >
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px">
+        {{ meeting_room_form.has_video_conferencing }}
+        <label for="id_has_video_conferencing" style="font-size: 0.85rem; cursor: pointer"
+          >Video Conferencing</label
+        >
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px">
+        {{ meeting_room_form.has_phone }}
+        <label for="id_has_phone" style="font-size: 0.85rem; cursor: pointer"
+          >Phone</label
+        >
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px">
+        {{ meeting_room_form.has_smart_tv }}
+        <label for="id_has_smart_tv" style="font-size: 0.85rem; cursor: pointer"
+          >Smart TV</label
+        >
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px">
+        {{ meeting_room_form.has_audio_system }}
+        <label for="id_has_audio_system" style="font-size: 0.85rem; cursor: pointer"
+          >Audio System</label
+        >
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px">
+        {{ meeting_room_form.has_wifi }}
+        <label for="id_has_wifi" style="font-size: 0.85rem; cursor: pointer"
+          >WiFi</label
+        >
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px">
+        {{ meeting_room_form.has_air_conditioning }}
+        <label for="id_has_air_conditioning" style="font-size: 0.85rem; cursor: pointer"
+          >Air Conditioning</label
+        >
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px">
+        {{ meeting_room_form.is_accessible }}
+        <label for="id_is_accessible" style="font-size: 0.85rem; cursor: pointer"
+          >Accessible</label
+        >
+      </div>
+    </div>
+
+    <!-- Room Details -->
+    <h4 style="font-size: 0.95rem; font-weight: 600; margin: 10px 0 15px 0;">
+          Room Details
+    </h4>
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px">
+      <div style="margin-bottom: 16px">
+        <label
+          for="id_room_size_sqft"
+          style="
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: #1a1a2e;
+          "
+        >
+          Room Size (sq ft)
+        </label>
+        {{ meeting_room_form.room_size_sqft }}
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 8px; margin-top: 8px">
+        {{ meeting_room_form.natural_light }}
+        <label for="id_natural_light" style="font-size: 0.85rem; cursor: pointer"
+          >Natural Light</label
+        >
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 8px; margin-top: 8px">
+        {{ meeting_room_form.has_window }}
+        <label for="id_has_window" style="font-size: 0.85rem; cursor: pointer"
+          >Window</label
+        >
+      </div>
+    </div>
+
+    <!-- Setup Times -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px">
+      <div style="margin-bottom: 16px">
+        <label
+          for="id_default_setup_time"
+          style="
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: #1a1a2e;
+          "
+        >
+          Default Setup Time (minutes)
+        </label>
+        {{ meeting_room_form.default_setup_time }}
+      </div>
+
+      <div style="margin-bottom: 16px">
+        <label
+          for="id_default_teardown_time"
+          style="
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: #1a1a2e;
+          "
+        >
+          Default Teardown Time (minutes)
+        </label>
+        {{ meeting_room_form.default_teardown_time }}
+      </div>
+    </div>
+
+    <!-- Amenities -->
+    <div style="margin-bottom: 16px">
+      <label
+        for="id_amenities"
+        style="
+          display: block;
+          margin-bottom: 5px;
+          font-weight: 600;
+          font-size: 0.85rem;
+          color: #1a1a2e;
+        "
+      >
+        Amenities
+      </label>
+      {{ meeting_room_form.amenities }}
+      <small style="color: #6c757d; font-size: 0.7rem"
+        >Select amenities available in this room (hold Ctrl to select multiple)</small
+      >
+    </div>
+
+    <!-- Meeting Room Images -->
     <hr
       style="
         margin: 20px 0;
@@ -457,6 +791,7 @@
             max-height: 200px;
             object-fit: cover;
             border: 2px solid #e9ecef;
+            border-radius: 0px;
           "
         />
         <div
@@ -468,15 +803,26 @@
             color: white;
             padding: 2px 8px;
             font-size: 0.6rem;
-            border-radius: 0;
+            border-radius: 0px;
           "
         >
           Current
         </div>
+        <div style="margin-top: 5px">
+          <label style="font-size: 0.75rem; color: #6c757d">
+            <input
+              type="checkbox"
+              name="room_photo_clear"
+              id="room_photo_clear"
+              style="width: auto; margin-right: 5px; cursor: pointer"
+            />
+            Remove current image
+          </label>
+        </div>
       </div>
       {% endif %}
 
-      <div style="margin-bottom: 8px">{{ form.room_photo }}</div>
+      <div style="margin-bottom: 8px">{{ meeting_room_form.room_photo }}</div>
       <small style="color: #6c757d; font-size: 0.7rem; display: block"
         >Upload a photo of the meeting room (JPG, PNG, GIF, WebP). Max 5MB.</small
       >
@@ -494,6 +840,7 @@
             max-height: 200px;
             object-fit: cover;
             border: 2px solid #007bff;
+            border-radius: 0px;
           "
         />
         <p style="font-size: 0.7rem; color: #007bff; margin-top: 3px">
@@ -529,6 +876,7 @@
             max-height: 200px;
             object-fit: cover;
             border: 2px solid #e9ecef;
+            border-radius: 0px;
           "
         />
         <div
@@ -540,15 +888,26 @@
             color: white;
             padding: 2px 8px;
             font-size: 0.6rem;
-            border-radius: 0;
+            border-radius: 0px;
           "
         >
           Current
         </div>
+        <div style="margin-top: 5px">
+          <label style="font-size: 0.75rem; color: #6c757d">
+            <input
+              type="checkbox"
+              name="floor_plan_clear"
+              id="floor_plan_clear"
+              style="width: auto; margin-right: 5px; cursor: pointer"
+            />
+            Remove current image
+          </label>
+        </div>
       </div>
       {% endif %}
 
-      <div style="margin-bottom: 8px">{{ form.floor_plan }}</div>
+      <div style="margin-bottom: 8px">{{ meeting_room_form.floor_plan }}</div>
       <small style="color: #6c757d; font-size: 0.7rem; display: block"
         >Upload a floor plan of the meeting room (JPG, PNG, GIF, WebP). Max
         5MB.</small
@@ -567,6 +926,7 @@
             max-height: 200px;
             object-fit: cover;
             border: 2px solid #007bff;
+            border-radius: 0px;
           "
         />
         <p style="font-size: 0.7rem; color: #007bff; margin-top: 3px">
@@ -574,7 +934,28 @@
         </p>
       </div>
     </div>
+
+    <!-- Room Notes -->
+    <div style="margin-bottom: 16px">
+      <label
+        for="id_notes"
+        style="
+          display: block;
+          margin-bottom: 5px;
+          font-weight: 600;
+          font-size: 0.85rem;
+          color: #1a1a2e;
+        "
+      >
+        Room Notes
+      </label>
+      {{ meeting_room_form.notes }}
+      <small style="color: #6c757d; font-size: 0.7rem"
+        >Any additional information about the room</small
+      >
+    </div>
     {% endif %}
+    <!-- ==================== END MEETING ROOM SECTION ==================== -->
 
     <!-- Terms -->
     <div
@@ -583,6 +964,7 @@
         padding: 15px;
         background: #fff8e1;
         border-left: 3px solid #ffc107;
+        border-radius: 0px;
       "
     >
       <div style="display: flex; align-items: flex-start; gap: 10px">
@@ -618,6 +1000,7 @@
           background: #28a745;
           color: white;
           border: none;
+          border-radius: 0px;
           font-size: 0.95rem;
           font-weight: 600;
           cursor: pointer;
@@ -629,12 +1012,13 @@
         {% if resource %}Update Resource{% else %}Create Resource{% endif %}
       </button>
       <a
-        href="{% url 'my_resources' %}"
+        href="{% url 'bookings:my_resources' %}"
         style="
           padding: 12px 30px;
           background: #6c757d;
           color: white;
           text-decoration: none;
+          border-radius: 0px;
           font-size: 0.95rem;
           font-weight: 600;
           transition: all 0.2s ease;
@@ -712,12 +1096,45 @@
         tagPreview.innerHTML = tags
           .map(
             (tag) =>
-              `<span style="background: #e9ecef; padding: 2px 10px; font-size: 0.7rem; color: #333; border-radius: 0;">${tag}</span>`
+              `<span style="background: #e9ecef; padding: 2px 10px; font-size: 0.7rem; color: #333; border-radius: 0px;">${tag}</span>`
           )
           .join("");
       });
       tagsInput.dispatchEvent(new Event("input"));
     }
+
+    // Toggle Meeting Room Fields
+function toggleMeetingRoomFields(show) {
+    const fields = document.getElementById('meeting-room-fields');
+    const checkbox = document.getElementById('is_meeting_room');
+    
+    if (show) {
+        fields.style.display = 'block';
+        // Enable all inputs in meeting room section
+        fields.querySelectorAll('input, select, textarea').forEach(function(el) {
+            el.disabled = false;
+        });
+        // Scroll to the meeting room section
+        setTimeout(function() {
+            fields.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
+    } else {
+        fields.style.display = 'none';
+        // Disable all inputs to prevent data submission
+        fields.querySelectorAll('input, select, textarea').forEach(function(el) {
+            el.disabled = true;
+        });
+    }
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const checkbox = document.getElementById('is_meeting_room');
+    if (checkbox) {
+        // Set initial state
+        toggleMeetingRoomFields(checkbox.checked);
+    }
+});
 
     // Room Photo Preview
     const roomPhotoInput = document.getElementById("id_room_photo");
@@ -765,6 +1182,35 @@
       });
     }
 
+    // Handle clear image checkboxes
+    const roomPhotoClear = document.getElementById("room_photo_clear");
+    if (roomPhotoClear) {
+      roomPhotoClear.addEventListener("change", function () {
+        const fileInput = document.getElementById("id_room_photo");
+        if (this.checked) {
+          fileInput.disabled = true;
+          fileInput.style.opacity = "0.5";
+        } else {
+          fileInput.disabled = false;
+          fileInput.style.opacity = "1";
+        }
+      });
+    }
+
+    const floorPlanClear = document.getElementById("floor_plan_clear");
+    if (floorPlanClear) {
+      floorPlanClear.addEventListener("change", function () {
+        const fileInput = document.getElementById("id_floor_plan");
+        if (this.checked) {
+          fileInput.disabled = true;
+          fileInput.style.opacity = "0.5";
+        } else {
+          fileInput.disabled = false;
+          fileInput.style.opacity = "1";
+        }
+      });
+    }
+
     // Style form fields
     document.querySelectorAll("input, textarea, select").forEach((el) => {
       if (
@@ -775,6 +1221,7 @@
         el.style.width = "100%";
         el.style.padding = "10px 14px";
         el.style.border = "2px solid #e9ecef";
+        el.style.borderRadius = "4px";
         el.style.fontSize = "0.9rem";
         el.style.fontFamily = "Mona Sans, sans-serif";
         el.style.boxSizing = "border-box";
@@ -811,8 +1258,32 @@
       grid-template-columns: 1fr !important;
     }
     
+    div[style*="grid-template-columns: 1fr 1fr 1fr"] {
+      grid-template-columns: 1fr !important;
+    }
+    
     .meeting-room-images-section {
       padding: 10px;
+    }
+    
+    form {
+      padding: 15px !important;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    h1 {
+      font-size: 1.3rem !important;
+    }
+    
+    .form-actions {
+      flex-direction: column !important;
+    }
+    
+    .form-actions button,
+    .form-actions a {
+      width: 100% !important;
+      text-align: center !important;
     }
   }
 </style>

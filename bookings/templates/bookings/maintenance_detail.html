@@ -9,19 +9,12 @@
             <p class="subtitle">{{ maintenance.title }}</p>
         </div>
         <div class="header-actions">
-            <a href="{% url 'equipment_maintenance' %}" class="btn-back">Back to Maintenance</a>
+            <a href="{% url 'bookings:equipment_maintenance' %}" class="btn-back">← Back to Maintenance</a>
         </div>
     </div>
 
     <!-- Status Banner -->
     <div class="status-banner status-{{ maintenance.status|lower }}">
-        <div class="status-icon">
-            {% if maintenance.status == 'SCHEDULED' %}
-            {% elif maintenance.status == 'IN_PROGRESS' %}
-            {% elif maintenance.status == 'COMPLETED' %}
-            {% elif maintenance.status == 'CANCELLED' %}
-            {% endif %}
-        </div>
         <div class="status-content">
             <span class="status-label">Status:</span>
             <span class="status-value">{{ maintenance.get_status_display }}</span>
@@ -93,7 +86,7 @@
             <h2>Equipment Information</h2>
             <div class="equipment-info">
                 <div class="equipment-details">
-                    <h3><a href="{% url 'equipment_detail' maintenance.equipment.id %}">{{ maintenance.equipment.name }}</a></h3>
+                    <h3><a href="{% url 'bookings:equipment_detail' maintenance.equipment.id %}">{{ maintenance.equipment.name }}</a></h3>
                     <p><span class="label">Serial Number:</span> {{ maintenance.equipment.serial_number }}</p>
                     <p><span class="label">Status:</span> 
                         <span class="status-badge status-{{ maintenance.equipment.status|lower }}">
@@ -107,7 +100,7 @@
             </div>
             
             <div class="equipment-actions">
-                <a href="{% url 'equipment_detail' maintenance.equipment.id %}" class="btn-view-equipment">
+                <a href="{% url 'bookings:equipment_detail' maintenance.equipment.id %}" class="btn-view-equipment">
                     View Equipment Details
                 </a>
             </div>
@@ -119,18 +112,37 @@
     {% if can_complete or maintenance.equipment.owner == request.user %}
         {% if maintenance.status != 'COMPLETED' and maintenance.status != 'CANCELLED' %}
             <button onclick="completeMaintenance({{ maintenance.id }})" class="btn-complete-maintenance">
-                Mark as Completed
+                ✓ Mark as Completed
             </button>
         {% endif %}
     {% endif %}
-    <a href="{% url 'equipment_maintenance' %}" class="btn-secondary-action">Back to Maintenance</a>
+    <a href="{% url 'bookings:equipment_maintenance' %}" class="btn-secondary-action">← Back to Maintenance</a>
     </div>
 </div>
 
 <script>
+// Get CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+const csrftoken = getCookie('csrftoken');
+
 function completeMaintenance(maintenanceId) {
     const confirmComplete = confirm(
         'Are you sure you want to mark this maintenance as completed?\n\n' +
+        'Equipment: {{ maintenance.equipment.name }}\n' +
+        'Serial: {{ maintenance.equipment.serial_number }}\n\n' +
         'This will update the equipment status to "Available".'
     );
     
@@ -138,6 +150,11 @@ function completeMaintenance(maintenanceId) {
     
     const notes = prompt('Add completion notes (optional):', 'Maintenance completed successfully.');
     if (notes === null) return;
+    
+    const btn = event.target;
+    const originalText = btn.textContent;
+    btn.textContent = '⏳ Processing...';
+    btn.disabled = true;
     
     const formData = new FormData();
     formData.append('maintenance_id', maintenanceId);
@@ -153,14 +170,18 @@ function completeMaintenance(maintenanceId) {
     .then(response => response.json())
     .then(data => {
         if (data.error) {
-            alert('Error: ' + data.error);
+            alert('❌ Error: ' + data.error);
+            btn.textContent = originalText;
+            btn.disabled = false;
         } else {
-            alert('Success! ' + data.message);
+            alert('✅ Success! ' + data.message);
             window.location.href = '/equipment-maintenance/';
         }
     })
     .catch(error => {
-        alert('Error: ' + error.message);
+        alert('❌ Error: ' + error.message);
+        btn.textContent = originalText;
+        btn.disabled = false;
     });
 }
 </script>
@@ -398,9 +419,9 @@ function completeMaintenance(maintenanceId) {
     font-weight: 600;
 }
 
-.status-available .status-badge { background: #d4edda; color: #155724; }
-.status-rented .status-badge { background: #fff3cd; color: #856404; }
-.status-maintenance .status-badge { background: #f8d7da; color: #721c24; }
+.status-available { background: #d4edda; color: #155724; }
+.status-rented { background: #fff3cd; color: #856404; }
+.status-maintenance { background: #f8d7da; color: #721c24; }
 
 .equipment-actions {
     margin-top: 12px;

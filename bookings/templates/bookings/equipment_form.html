@@ -7,14 +7,25 @@
         <p class="subtitle">{% if equipment %}Update the equipment information below{% else %}Add new equipment to your inventory{% endif %}</p>
     </div>
 
-    <form method="post" class="equipment-form">
+    <form method="post" class="equipment-form" action="{% if equipment %}{% url 'bookings:edit_equipment' equipment.id %}{% else %}{% url 'bookings:create_equipment' %}{% endif %}">
         {% csrf_token %}
         
-        {% if form.non_field_errors %}
+        <!-- Display all form errors at the top -->
+        {% if form.errors %}
             <div class="alert alert-error">
-                {% for error in form.non_field_errors %}
-                    <p>{{ error }}</p>
-                {% endfor %}
+                <strong>❌ Please correct the following errors:</strong>
+                <ul>
+                    {% for field in form %}
+                        {% if field.errors %}
+                            <li><strong>{{ field.label }}:</strong> {{ field.errors|striptags }}</li>
+                        {% endif %}
+                    {% endfor %}
+                    {% if form.non_field_errors %}
+                        {% for error in form.non_field_errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    {% endif %}
+                </ul>
             </div>
         {% endif %}
 
@@ -22,41 +33,43 @@
         <div class="form-section">
             <h2>Basic Information</h2>
             <div class="form-row">
-                <div class="form-group">
+                <div class="form-group {% if form.name.errors %}has-error{% endif %}">
                     <label for="{{ form.name.id_for_label }}">Equipment Name *</label>
                     {{ form.name }}
                     {% if form.name.errors %}
-                        <div class="field-error">{{ form.name.errors }}</div>
+                        <div class="field-error">❌ {{ form.name.errors|striptags }}</div>
                     {% endif %}
+                    <small class="help-text">Enter a descriptive name for the equipment</small>
                 </div>
                 
-                <div class="form-group">
+                <div class="form-group {% if form.category.errors %}has-error{% endif %}">
                     <label for="{{ form.category.id_for_label }}">Category</label>
                     {{ form.category }}
                     {% if form.category.errors %}
-                        <div class="field-error">{{ form.category.errors }}</div>
+                        <div class="field-error">❌ {{ form.category.errors|striptags }}</div>
                     {% endif %}
                 </div>
             </div>
             
-            <div class="form-group">
+            <div class="form-group {% if form.description.errors %}has-error{% endif %}">
                 <label for="{{ form.description.id_for_label }}">Description</label>
                 {{ form.description }}
                 {% if form.description.errors %}
-                    <div class="field-error">{{ form.description.errors }}</div>
+                    <div class="field-error">❌ {{ form.description.errors|striptags }}</div>
                 {% endif %}
+                <small class="help-text">Provide a detailed description of the equipment</small>
             </div>
         </div>
 
         <!-- OWNER SECTION -->
         <div class="form-section owner-section">
             <h2>Owner Information</h2>
-            <div class="form-group">
+            <div class="form-group {% if form.owner.errors %}has-error{% endif %}">
                 <label for="{{ form.owner.id_for_label }}">{{ form.owner.label }}</label>
                 {{ form.owner }}
                 <small class="help-text">{{ form.owner.help_text }}</small>
                 {% if form.owner.errors %}
-                    <div class="field-error">{{ form.owner.errors }}</div>
+                    <div class="field-error">❌ {{ form.owner.errors|striptags }}</div>
                 {% endif %}
             </div>
             
@@ -80,56 +93,71 @@
             {% endif %}
         </div>
 
+        <!-- Status Field - Visible to staff, hidden for regular users with default value -->
+        <div class="form-section">
+            <h2>Status</h2>
+            <div class="form-group {% if form.status.errors %}has-error{% endif %}">
+                <label for="{{ form.status.id_for_label }}">{{ form.status.label }}</label>
+                {{ form.status }}
+                {% if form.status.errors %}
+                    <div class="field-error">❌ {{ form.status.errors|striptags }}</div>
+                {% endif %}
+                <small class="help-text">{{ form.status.help_text }}</small>
+            </div>
+        </div>
+
         <!-- Tracking Information -->
         <div class="form-section">
             <h2>Tracking Information</h2>
             <div class="form-row">
-                <div class="form-group">
+                <div class="form-group {% if form.serial_number.errors %}has-error{% endif %}">
                     <label for="{{ form.serial_number.id_for_label }}">Serial Number *</label>
                     {{ form.serial_number }}
                     <small class="help-text">{{ form.serial_number.help_text }}</small>
                     {% if form.serial_number.errors %}
-                        <div class="field-error">{{ form.serial_number.errors }}</div>
+                        <div class="field-error">❌ {{ form.serial_number.errors|striptags }}</div>
                     {% endif %}
                 </div>
                 
-                <div class="form-group">
+                <div class="form-group {% if form.asset_tag.errors %}has-error{% endif %}">
                     <label for="{{ form.asset_tag.id_for_label }}">Asset Tag</label>
                     {{ form.asset_tag }}
                     <small class="help-text">{{ form.asset_tag.help_text }}</small>
                     {% if form.asset_tag.errors %}
-                        <div class="field-error">{{ form.asset_tag.errors }}</div>
+                        <div class="field-error">❌ {{ form.asset_tag.errors|striptags }}</div>
                     {% endif %}
                 </div>
             </div>
             
-            <div class="form-group">
+            <div class="form-group {% if form.barcode.errors %}has-error{% endif %}">
                 <label for="{{ form.barcode.id_for_label }}">Barcode</label>
                 {{ form.barcode }}
                 {% if form.barcode.errors %}
-                    <div class="field-error">{{ form.barcode.errors }}</div>
+                    <div class="field-error">❌ {{ form.barcode.errors|striptags }}</div>
                 {% endif %}
+                <small class="help-text">Optional barcode for scanning</small>
             </div>
         </div>
 
-        <!-- Status & Location -->
+        <!-- Condition & Location -->
         <div class="form-section">
-            <h2>Status & Location</h2>
+            <h2>Condition & Location</h2>
             <div class="form-row">
-                <div class="form-group">
+                <div class="form-group {% if form.condition.errors %}has-error{% endif %}">
                     <label for="{{ form.condition.id_for_label }}">Condition</label>
                     {{ form.condition }}
                     {% if form.condition.errors %}
-                        <div class="field-error">{{ form.condition.errors }}</div>
+                        <div class="field-error">❌ {{ form.condition.errors|striptags }}</div>
                     {% endif %}
                 </div>
                 
-                <div class="form-group">
+                <div class="form-group {% if form.location.errors %}has-error{% endif %}">
                     <label for="{{ form.location.id_for_label }}">Location</label>
                     {{ form.location }}
                     {% if form.location.errors %}
-                        <div class="field-error">{{ form.location.errors }}</div>
+                        <div class="field-error">❌ {{ form.location.errors|striptags }}</div>
                     {% endif %}
+                    <small class="help-text">Where is this equipment located?</small>
                 </div>
             </div>
         </div>
@@ -138,28 +166,28 @@
         <div class="form-section">
             <h2>Purchase Information</h2>
             <div class="form-row">
-                <div class="form-group">
+                <div class="form-group {% if form.purchase_date.errors %}has-error{% endif %}">
                     <label for="{{ form.purchase_date.id_for_label }}">Purchase Date</label>
                     {{ form.purchase_date }}
                     {% if form.purchase_date.errors %}
-                        <div class="field-error">{{ form.purchase_date.errors }}</div>
+                        <div class="field-error">❌ {{ form.purchase_date.errors|striptags }}</div>
                     {% endif %}
                 </div>
                 
-                <div class="form-group">
+                <div class="form-group {% if form.purchase_price.errors %}has-error{% endif %}">
                     <label for="{{ form.purchase_price.id_for_label }}">Purchase Price ($)</label>
                     {{ form.purchase_price }}
                     {% if form.purchase_price.errors %}
-                        <div class="field-error">{{ form.purchase_price.errors }}</div>
+                        <div class="field-error">❌ {{ form.purchase_price.errors|striptags }}</div>
                     {% endif %}
                 </div>
             </div>
             
-            <div class="form-group">
+            <div class="form-group {% if form.warranty_expiry.errors %}has-error{% endif %}">
                 <label for="{{ form.warranty_expiry.id_for_label }}">Warranty Expiry</label>
                 {{ form.warranty_expiry }}
                 {% if form.warranty_expiry.errors %}
-                    <div class="field-error">{{ form.warranty_expiry.errors }}</div>
+                    <div class="field-error">❌ {{ form.warranty_expiry.errors|striptags }}</div>
                 {% endif %}
             </div>
         </div>
@@ -167,29 +195,182 @@
         <!-- Notes -->
         <div class="form-section">
             <h2>Additional Notes</h2>
-            <div class="form-group">
+            <div class="form-group {% if form.notes.errors %}has-error{% endif %}">
                 <label for="{{ form.notes.id_for_label }}">Notes</label>
                 {{ form.notes }}
                 {% if form.notes.errors %}
-                    <div class="field-error">{{ form.notes.errors }}</div>
+                    <div class="field-error">❌ {{ form.notes.errors|striptags }}</div>
                 {% endif %}
+                <small class="help-text">Any additional information about this equipment</small>
             </div>
         </div>
 
         <div class="form-actions">
             <button type="submit" class="btn-submit">{{ button_text }}</button>
-            <a href="{% if equipment %}{% url 'my_equipment' %}{% else %}{% url 'my_equipment' %}{% endif %}" class="btn-cancel">Cancel</a>
+            <a href="{% url 'bookings:my_equipment' %}" class="btn-cancel">Cancel</a>
         </div>
     </form>
 </div>
 
+<script>
+    // Show/hide status field based on user role
+    document.addEventListener('DOMContentLoaded', function() {
+        const statusField = document.querySelector('.form-group:has(#id_status)');
+        if (statusField) {
+            // Check if the user is staff by looking for the status field visibility
+            // The field is hidden for non-staff users in the form initialization
+            const statusSelect = document.getElementById('id_status');
+            if (statusSelect) {
+                // If the select exists, it's visible
+                console.log('Status field is visible');
+            }
+        }
+    });
+</script>
+
 <style>
+/* Form Styles */
+.equipment-form-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 0 15px;
+}
+
+.form-header {
+    margin-bottom: 30px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.form-header h1 {
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: 700;
+}
+
+.form-header .subtitle {
+    margin: 4px 0 0;
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.equipment-form {
+    background: white;
+    padding: 24px;
+    border-radius: 4px;
+    border: 1px solid #e9ecef;
+}
+
+.form-section {
+    margin-bottom: 24px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.form-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.form-section h2 {
+    margin: 0 0 16px 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #495057;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group:last-child {
+    margin-bottom: 0;
+}
+
+.form-group.has-error label {
+    color: #dc3545;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 4px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: #495057;
+}
+
+.form-group .form-control {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    box-sizing: border-box;
+    background: white;
+    color: #1a1a2e;
+}
+
+.form-group .form-control:focus {
+    border-color: #007bff;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.form-group .form-control:disabled,
+.form-group .form-control[readonly] {
+    background: #e9ecef;
+    cursor: not-allowed;
+}
+
+.form-group.has-error .form-control {
+    border-color: #dc3545;
+}
+
+.form-group.has-error .form-control:focus {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
+}
+
+/* Select styling */
+.form-group select.form-control {
+    appearance: auto;
+    -webkit-appearance: auto;
+    -moz-appearance: auto;
+}
+
+.help-text {
+    display: block;
+    font-size: 0.7rem;
+    color: #6c757d;
+    margin-top: 4px;
+}
+
+.field-error {
+    color: #dc3545;
+    font-size: 0.8rem;
+    margin-top: 4px;
+    font-weight: 500;
+}
+
+.field-error ul {
+    margin: 0;
+    padding-left: 16px;
+}
+
 /* Owner Section */
 .owner-section {
     background: #f8f9fa;
     padding: 20px;
-    border-radius: 0px;
-    border-left: 4px solid #11151a;
+    border-radius: 4px;
+    border-left: 4px solid #007bff;
 }
 
 .owner-section h2 {
@@ -206,6 +387,7 @@
     border-radius: 4px;
     border: 1px solid #e9ecef;
     margin-top: 10px;
+    flex-wrap: wrap;
 }
 
 .current-owner-info .owner-label {
@@ -250,118 +432,7 @@
     font-weight: 600;
 }
 
-/* Form Styles */
-.equipment-form-container {
-    max-width: 800px;
-    margin: 0 auto;
-}
-
-.form-header {
-    margin-bottom: 30px;
-    padding-bottom: 16px;
-    border-bottom: 2px solid #e9ecef;
-}
-
-.form-header h1 {
-    margin: 0;
-    font-size: 1.8rem;
-    font-weight: 700;
-}
-
-.form-header .subtitle {
-    margin: 4px 0 0;
-    color: #6c757d;
-    font-size: 0.9rem;
-}
-
-.equipment-form {
-    background: white;
-    padding: 24px;
-    border-radius: 8px;
-    border: 1px solid #e9ecef;
-}
-
-.form-section {
-    margin-bottom: 24px;
-    padding-bottom: 24px;
-    border-bottom: 1px solid #e9ecef;
-}
-
-.form-section:last-child {
-    border-bottom: none;
-    margin-bottom: 0;
-    padding-bottom: 0;
-}
-
-.form-section h2 {
-    margin: 0 0 16px 0;
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #495057;
-}
-
-.form-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-}
-
-.form-group {
-    margin-bottom: 16px;
-}
-
-.form-group:last-child {
-    margin-bottom: 0;
-}
-
-.form-group label {
-    display: block;
-    margin-bottom: 4px;
-    font-weight: 600;
-    font-size: 0.85rem;
-    color: #495057;
-}
-
-.form-group .form-control {
-    width: 100%;
-    padding: 8px 12px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 0.9rem;
-    transition: border-color 0.2s, box-shadow 0.2s;
-    box-sizing: border-box;
-}
-
-.form-group .form-control:focus {
-    border-color: #007bff;
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
-}
-
-.form-group .form-control:disabled,
-.form-group .form-control[readonly] {
-    background: #e9ecef;
-    cursor: not-allowed;
-}
-
-.help-text {
-    display: block;
-    font-size: 0.7rem;
-    color: #6c757d;
-    margin-top: 4px;
-}
-
-.field-error {
-    color: #dc3545;
-    font-size: 0.8rem;
-    margin-top: 4px;
-}
-
-.field-error ul {
-    margin: 0;
-    padding-left: 16px;
-}
-
+/* Alert */
 .alert {
     padding: 12px 16px;
     border-radius: 4px;
@@ -374,10 +445,17 @@
     color: #721c24;
 }
 
-.alert-error p {
-    margin: 0;
+.alert-error ul {
+    margin: 5px 0 0 20px;
+    padding: 0;
 }
 
+.alert-error strong {
+    display: block;
+    margin-bottom: 5px;
+}
+
+/* Form Actions */
 .form-actions {
     display: flex;
     gap: 12px;
@@ -391,7 +469,7 @@
     background: #28a745;
     color: white;
     border: none;
-    border-radius: 0px;
+    border-radius: 4px;
     cursor: pointer;
     font-size: 0.95rem;
     font-weight: 600;
@@ -409,7 +487,7 @@
     background: #6c757d;
     color: white;
     text-decoration: none;
-    border-radius: 0px;
+    border-radius: 4px;
     font-size: 0.95rem;
     font-weight: 600;
     transition: background 0.2s;
@@ -420,6 +498,7 @@
     color: white;
 }
 
+/* Responsive */
 @media (max-width: 768px) {
     .form-row {
         grid-template-columns: 1fr;
@@ -442,6 +521,24 @@
     
     .current-owner-info {
         flex-wrap: wrap;
+    }
+    
+    .owner-section {
+        padding: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .form-header h1 {
+        font-size: 1.3rem;
+    }
+    
+    .equipment-form-container {
+        padding: 0 10px;
+    }
+    
+    .alert-error ul {
+        padding-left: 10px;
     }
 }
 </style>

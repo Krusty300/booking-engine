@@ -22,7 +22,7 @@
             </div>
         </div>
         <div class="header-actions">
-            <a href="{% url 'my_equipment' %}" class="btn-back">Back to My Equipment</a>
+            <a href="{% url 'bookings:my_equipment' %}" class="btn-back">← Back to My Equipment</a>
         </div>
     </div>
 
@@ -88,7 +88,7 @@
                 <h4>Rental Status</h4>
                 {% if equipment.is_available %}
                     <div class="action-available">
-                        <p class="status-message available">This equipment is available for rental</p>
+                        <p class="status-message available"> This equipment is available for rental</p>
                         <button onclick="rentEquipment({{ equipment.id }})" class="btn-rent-large">
                             Rent Now
                         </button>
@@ -97,13 +97,13 @@
                     {% with rental=equipment.rentals.first %}
                         {% if rental %}
                             <div class="action-rented">
-                                <p class="status-message rented">Currently rented</p>
+                                <p class="status-message rented"> Currently rented</p>
                                 <div class="rental-info">
                                     <p><strong>Rented by:</strong> {{ rental.rented_by.username }}</p>
                                     <p><strong>Expected return:</strong> {{ rental.expected_return_date|date:"M d, Y H:i" }}</p>
                                     <p><strong>Days rented:</strong> {{ rental.days_rented }} days</p>
                                     {% if rental.is_overdue %}
-                                        <p class="overdue-warning">This rental is OVERDUE!</p>
+                                        <p class="overdue-warning"> This rental is OVERDUE!</p>
                                     {% endif %}
                                 </div>
                             </div>
@@ -111,16 +111,16 @@
                     {% endwith %}
                 {% elif equipment.status == 'MAINTENANCE' %}
                     <div class="action-maintenance">
-                        <p class="status-message maintenance">Currently under maintenance</p>
+                        <p class="status-message maintenance"> Currently under maintenance</p>
                         <p>This equipment is not available for rental until maintenance is completed.</p>
                     </div>
                 {% elif equipment.status == 'RETIRED' %}
                     <div class="action-retired">
-                        <p class="status-message retired">This equipment has been retired</p>
+                        <p class="status-message retired"> his equipment has been retired</p>
                     </div>
                 {% elif equipment.status == 'LOST' %}
                     <div class="action-lost">
-                        <p class="status-message lost">This equipment has been marked as lost</p>
+                        <p class="status-message lost"> This equipment has been marked as lost</p>
                     </div>
                 {% endif %}
             </div>
@@ -131,14 +131,14 @@
             <div class="quick-actions-card">
                 <h3>Quick Actions</h3>
                 <ul>
-                    <li><a href="{% url 'equipment_list' %}" class="action-link">
-                        <span class="action-icon">←</span> Back to Equipment List
+                    <li><a href="{% url 'bookings:equipment_list' %}" class="action-link">
+                        Back to Equipment List
                     </a></li>
                     {% if user.is_staff %}
                         <li><a href="/admin/bookings/equipment/{{ equipment.id }}/change/" class="action-link" target="_blank">
                             Edit in Admin
                         </a></li>
-                        <li><a href="{% url 'equipment_maintenance' %}?equipment_id={{ equipment.id }}" class="action-link">
+                        <li><a href="{% url 'bookings:equipment_maintenance' %}?equipment_id={{ equipment.id }}" class="action-link">
                             Schedule Maintenance
                         </a></li>
                     {% endif %}
@@ -251,8 +251,24 @@
     </div>
 </div>
 
-<!-- JavaScript -->
 <script>
+// Get CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+const csrftoken = getCookie('csrftoken');
+
 // Rent Equipment
 function rentEquipment(equipmentId) {
     const returnDate = prompt(
@@ -267,7 +283,7 @@ function rentEquipment(equipmentId) {
     const formData = new FormData();
     formData.append('equipment_id', equipmentId);
     formData.append('expected_return_date', returnDate);
-    formData.append('condition_notes', conditionNotes);
+    formData.append('condition_notes', conditionNotes || '');
     
     const confirmRent = confirm(
         `Are you sure you want to rent this equipment?\n\n` +
@@ -277,6 +293,11 @@ function rentEquipment(equipmentId) {
     );
     
     if (!confirmRent) return;
+    
+    const btn = event.target;
+    const originalText = btn.textContent;
+    btn.textContent = ' Processing...';
+    btn.disabled = true;
     
     fetch('/equipment/rent/', {
         method: 'POST',
@@ -288,14 +309,18 @@ function rentEquipment(equipmentId) {
     .then(response => response.json())
     .then(data => {
         if (data.error) {
-            alert('Error: ' + data.error);
+            alert(' Error: ' + data.error);
         } else {
-            alert('Success! ' + data.message);
+            alert(' Success! ' + data.message);
             location.reload();
         }
     })
     .catch(error => {
-        alert('Error: ' + error.message);
+        alert(' Error: ' + error.message);
+    })
+    .finally(() => {
+        btn.textContent = originalText;
+        btn.disabled = false;
     });
 }
 
@@ -309,6 +334,7 @@ function returnCurrentRental() {
     }
     
     const conditionNotes = prompt('Condition notes for return (optional):', '');
+    if (conditionNotes === null) return;
     
     const confirmReturn = confirm(
         `Are you sure you want to return this equipment?\n\n` +
@@ -320,7 +346,12 @@ function returnCurrentRental() {
     
     const formData = new FormData();
     formData.append('rental_id', rentalId);
-    formData.append('condition_notes', conditionNotes);
+    formData.append('condition_notes', conditionNotes || '');
+    
+    const btn = event.target;
+    const originalText = btn.textContent;
+    btn.textContent = ' Processing...';
+    btn.disabled = true;
     
     fetch('/equipment/return/', {
         method: 'POST',
@@ -332,14 +363,18 @@ function returnCurrentRental() {
     .then(response => response.json())
     .then(data => {
         if (data.error) {
-            alert('Error: ' + data.error);
+            alert(' Error: ' + data.error);
         } else {
-            alert('Success! ' + data.message);
+            alert(' Success! ' + data.message);
             location.reload();
         }
     })
     .catch(error => {
-        alert('Error: ' + error.message);
+        alert(' Error: ' + error.message);
+    })
+    .finally(() => {
+        btn.textContent = originalText;
+        btn.disabled = false;
     });
 }
 </script>
@@ -359,6 +394,8 @@ function returnCurrentRental() {
     margin-bottom: 24px;
     padding-bottom: 16px;
     border-bottom: 2px solid #e9ecef;
+    flex-wrap: wrap;
+    gap: 16px;
 }
 
 .equipment-detail-header h1 {
@@ -383,7 +420,6 @@ function returnCurrentRental() {
     background: #f8f9fa;
     color: #495057;
     text-decoration: none;
-    border-radius: 6px;
     border: 1px solid #dee2e6;
     transition: all 0.2s;
 }
@@ -396,7 +432,6 @@ function returnCurrentRental() {
 /* Badges */
 .status-badge {
     padding: 4px 14px;
-    border-radius: 0px;
     font-weight: 600;
     font-size: 0.8rem;
     display: inline-block;
@@ -416,7 +451,6 @@ function returnCurrentRental() {
 
 .condition-badge {
     padding: 4px 14px;
-    border-radius: 0px;
     font-weight: 600;
     font-size: 0.75rem;
     display: inline-block;
@@ -440,7 +474,6 @@ function returnCurrentRental() {
 .info-card {
     background: white;
     border: 1px solid #e9ecef;
-    border-radius: 8px;
     padding: 20px;
     margin-bottom: 20px;
 }
@@ -492,7 +525,6 @@ function returnCurrentRental() {
 .notes-card {
     background: #f8f9fa;
     border: 1px solid #e9ecef;
-    border-radius: 8px;
     padding: 16px 20px;
     margin-bottom: 20px;
 }
@@ -513,7 +545,6 @@ function returnCurrentRental() {
 .action-card {
     background: white;
     border: 1px solid #e9ecef;
-    border-radius: 8px;
     padding: 20px;
 }
 
@@ -544,7 +575,6 @@ function returnCurrentRental() {
     background: #28a745;
     color: white;
     border: none;
-    border-radius: 0px;
     cursor: pointer;
     font-size: 1rem;
     font-weight: 600;
@@ -557,14 +587,9 @@ function returnCurrentRental() {
     box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
 }
 
-.btn-rent-large:active {
-    transform: translateY(0);
-}
-
 /* Rental Info */
 .rental-info {
     background: #f8f9fa;
-    border-radius: 6px;
     padding: 12px 16px;
     margin-top: 10px;
 }
@@ -580,10 +605,6 @@ function returnCurrentRental() {
     margin-top: 6px !important;
 }
 
-.action-rented .status-message {
-    font-size: 1rem;
-}
-
 /* Sidebar */
 .equipment-sidebar {
     display: flex;
@@ -594,7 +615,6 @@ function returnCurrentRental() {
 .quick-actions-card {
     background: #f8f9fa;
     border: 1px solid #e9ecef;
-    border-radius: 8px;
     padding: 20px;
 }
 
@@ -625,7 +645,6 @@ function returnCurrentRental() {
     padding: 8px 12px;
     color: #007bff;
     text-decoration: none;
-    border-radius: 4px;
     transition: all 0.2s;
     background: white;
     border: 1px solid #e9ecef;
@@ -663,7 +682,6 @@ function returnCurrentRental() {
     margin-top: 30px;
     background: white;
     border: 1px solid #e9ecef;
-    border-radius: 8px;
     padding: 20px;
 }
 
@@ -686,7 +704,6 @@ function returnCurrentRental() {
     color: #6c757d;
     background: #f8f9fa;
     padding: 2px 10px;
-    border-radius: 12px;
 }
 
 .table-responsive {
@@ -742,7 +759,6 @@ function returnCurrentRental() {
     color: white;
     font-size: 0.6rem;
     font-weight: 700;
-    border-radius: 10px;
     animation: pulse 2s infinite;
 }
 
@@ -760,7 +776,6 @@ function returnCurrentRental() {
     font-size: 0.75rem;
     padding: 2px 8px;
     background: #e9ecef;
-    border-radius: 4px;
     color: #495057;
 }
 
@@ -770,7 +785,6 @@ function returnCurrentRental() {
     padding: 30px;
     color: #6c757d;
     background: #f8f9fa;
-    border-radius: 6px;
 }
 
 /* Responsive */

@@ -53,7 +53,7 @@
         <hr style="margin: 20px 0; border: none; border-top: 1px solid #e9ecef;">
         <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
             {% if profile.website %}
-                <a href="{{ profile.website }}" target="_blank" style="color: #007bff; text-decoration: none;"> Website</a>
+                <a href="{{ profile.website }}" target="_blank" style="color: #007bff; text-decoration: none;">Website</a>
             {% endif %}
             {% if profile.twitter %}
                 <a href="https://twitter.com/{{ profile.twitter }}" target="_blank" style="color: #1da1f2; text-decoration: none;">Twitter</a>
@@ -68,20 +68,20 @@
         
         <!-- Action Buttons -->
         <div style="margin-top: 20px; display: flex; flex-direction: column; gap: 8px;">
-            <a href="{% url 'edit_profile' %}" 
-               style="background: #007bff; color: white; padding: 10px; text-decoration: none; font-weight: 600; text-align: center; transition: all 0.2s ease;"
+            <a href="{% url 'bookings:edit_profile' %}" 
+               style="background: #007bff; color: white; padding: 10px; text-decoration: none; font-weight: 600; text-align: center; transition: all 0.2s ease; border-radius: 0px;"
                onmouseover="this.style.background='#0056b3'"
                onmouseout="this.style.background='#007bff'">
                 Edit Profile
             </a>
-            <a href="{% url 'change_password' %}" 
-               style="background: #6c757d; color: white; padding: 10px; text-decoration: none; font-weight: 600; text-align: center; transition: all 0.2s ease;"
+            <a href="{% url 'bookings:change_password' %}" 
+               style="background: #6c757d; color: white; padding: 10px; text-decoration: none; font-weight: 600; text-align: center; transition: all 0.2s ease; border-radius: 0px;"
                onmouseover="this.style.background='#5a6268'"
                onmouseout="this.style.background='#6c757d'">
                 Change Password
             </a>
-            <a href="{% url 'booking_history' %}" 
-               style="background: #28a745; color: white; padding: 10px; text-decoration: none; font-weight: 600; text-align: center; transition: all 0.2s ease;"
+            <a href="{% url 'bookings:booking_history' %}" 
+               style="background: #28a745; color: white; padding: 10px; text-decoration: none; font-weight: 600; text-align: center; transition: all 0.2s ease; border-radius: 0px;"
                onmouseover="this.style.background='#218838'"
                onmouseout="this.style.background='#28a745'">
                 View All Bookings
@@ -90,12 +90,12 @@
     </div>
     
     <!-- Main Content - Upcoming Bookings -->
-    <div style="background: white; padding: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.08);">
+    <div style="background: white; padding: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); border-radius: 0px;">
         <h3 style="font-size: 1.1rem; font-weight: 700; margin: 0 0 15px 0;">Upcoming Bookings</h3>
         
         {% if upcoming_bookings %}
             {% for booking in upcoming_bookings %}
-                <div style="padding: 15px; margin-bottom: 10px; background: #f8f9fa; border-left: 4px solid #28a745;">
+                <div style="padding: 15px; margin-bottom: 10px; background: #f8f9fa; border-left: 4px solid #28a745; border-radius: 0px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
                         <div>
                             <strong>{{ booking.resource.name }}</strong>
@@ -107,7 +107,7 @@
                             </div>
                         </div>
                         <div style="text-align: right;">
-                            <span style="background: #28a745; color: white; padding: 2px 10px; font-size: 0.7rem;">Upcoming</span>
+                            <span style="background: #28a745; color: white; padding: 2px 10px; font-size: 0.7rem; border-radius: 0px;">Upcoming</span>
                             <div style="font-size: 0.8rem; color: #6c757d; margin-top: 5px;">
                                 {{ booking.start_time|timeuntil }} from now
                             </div>
@@ -116,10 +116,10 @@
                 </div>
             {% endfor %}
         {% else %}
-            <div style="text-align: center; padding: 40px 20px; background: #f8f9fa;">
+            <div style="text-align: center; padding: 40px 20px; background: #f8f9fa; border-radius: 0px;">
                 <div style="font-size: 48px; margin-bottom: 15px;">📭</div>
                 <p style="font-size: 0.9rem; color: #6c757d;">No upcoming bookings</p>
-                <a href="{% url 'resource_list' %}" style="color: #007bff; text-decoration: none;">Browse resources to book</a>
+                <a href="{% url 'bookings:resource_list' %}" style="color: #007bff; text-decoration: none;">Browse resources to book →</a>
             </div>
         {% endif %}
         
@@ -133,7 +133,7 @@
                     {% if booking.status == 'CONFIRMED' %}#28a745
                     {% elif booking.status == 'CANCELLED' %}#dc3545
                     {% elif booking.status == 'COMPLETED' %}#6c757d
-                    {% else %}#ffc107{% endif %};">
+                    {% else %}#ffc107{% endif %}; border-radius: 0px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
                         <div>
                             <span style="font-weight: 600;">{{ booking.resource.name }}</span>
@@ -142,7 +142,7 @@
                             </span>
                         </div>
                         <div>
-                            <span style="font-size: 0.75rem; padding: 2px 10px; 
+                            <span style="font-size: 0.75rem; padding: 2px 10px; border-radius: 0px; 
                                 {% if booking.status == 'CONFIRMED' %}background: #d4edda; color: #155724;
                                 {% elif booking.status == 'CANCELLED' %}background: #f8d7da; color: #721c24;
                                 {% elif booking.status == 'COMPLETED' %}background: #d1ecf1; color: #0c5460;
@@ -154,7 +154,7 @@
                 </div>
             {% endfor %}
         {% else %}
-            <p style="color: #6c757d; font-size: 0.9rem;">No bookings yet</p>
+            <p style="color: #6c757d; font-size: 0.9rem; text-align: center; padding: 20px 0;">No bookings yet</p>
         {% endif %}
     </div>
 </div>
@@ -163,6 +163,29 @@
     @media (max-width: 768px) {
         div[style*="grid-template-columns: 300px 1fr"] {
             grid-template-columns: 1fr !important;
+        }
+        
+        div[style*="display: grid; grid-template-columns: 300px 1fr"] {
+            gap: 15px !important;
+        }
+        
+        .profile-sidebar {
+            padding: 20px !important;
+        }
+        
+        .main-content {
+            padding: 20px !important;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        div[style*="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;"] {
+            grid-template-columns: 1fr 1fr !important;
+        }
+        
+        .profile-picture {
+            width: 100px !important;
+            height: 100px !important;
         }
     }
 </style>

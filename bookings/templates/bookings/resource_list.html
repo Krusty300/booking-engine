@@ -152,7 +152,7 @@
                 </p>
                 
                 {% if resource.location %}
-                    <p style="font-size: 0.75rem; color: var(--text-secondary); margin: 0 0 5px 0;">📍 {{ resource.location }}</p>
+                    <p style="font-size: 0.75rem; color: var(--text-secondary); margin: 0 0 5px 0;">{{ resource.location }}</p>
                 {% endif %}
                 
                 {% if resource.price_per_hour %}
@@ -197,7 +197,7 @@
                     <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 5px;">
                         <span>Created by: 
                             {% if resource.owner == user %}
-                                <a href="{% url 'profile' %}" 
+                                <a href="{% url 'bookings:profile' %}" 
                                    style="color: var(--link-color); text-decoration: none; font-weight: 600; transition: color 0.2s ease;"
                                    onmouseover="this.style.textDecoration='underline'; this.style.color='var(--link-hover)'"
                                    onmouseout="this.style.textDecoration='none'; this.style.color='var(--link-color)'">
@@ -216,7 +216,7 @@
                     {% endif %}
                 </div>
                 
-                <a href="{% url 'resource_detail' resource.id %}" 
+                <a href="{% url 'bookings:resource_detail' resource.id %}" 
                    style="display: inline-block; background: #007bff; color: white; padding: 8px 16px; text-decoration: none; font-size: 0.85rem; font-weight: 600; transition: all 0.2s ease;"
                    onmouseover="this.style.background='#0056b3'; this.style.transform='translateY(-1px)'"
                    onmouseout="this.style.background='#007bff'; this.style.transform='none'">
