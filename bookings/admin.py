@@ -6,7 +6,8 @@ from django.utils.html import format_html
 from .models import (
     Resource, Booking, Category, UserProfile, 
     Equipment, EquipmentCategory, EquipmentRental, MaintenanceRecord,
-    Review, MeetingRoom, Amenity, AnalyticsEvent, DailyAnalytics, SavedSearch
+    Review, MeetingRoom, Amenity, AnalyticsEvent, DailyAnalytics, SavedSearch,
+    EquipmentReservation  # ✅ Added EquipmentReservation
 )
 
 # ============ CUSTOM ADMIN FORMS ============
@@ -122,7 +123,7 @@ class ResourceAdmin(admin.ModelAdmin):
     )
     
     def view_on_site(self, obj):
-        url = reverse('bookings:resource_detail', kwargs={'resource_id': obj.id})  # ✅ Fixed
+        url = reverse('bookings:resource_detail', kwargs={'resource_id': obj.id})
         return format_html('<a href="{}" target="_blank">🔍 View</a>', url)
     view_on_site.short_description = 'Preview'
     
@@ -269,7 +270,7 @@ class EquipmentAdmin(admin.ModelAdmin):
     )
     
     def view_equipment(self, obj):
-        url = reverse('bookings:equipment_detail', kwargs={'equipment_id': obj.id})  # ✅ Fixed
+        url = reverse('bookings:equipment_detail', kwargs={'equipment_id': obj.id})
         return format_html('<a href="{}" target="_blank">🔍 View</a>', url)
     view_equipment.short_description = 'Preview'
     
@@ -342,6 +343,156 @@ class EquipmentRentalAdmin(admin.ModelAdmin):
         return obj.days_rented()
     days_rented.short_description = 'Days Rented'
 
+# ============ EQUIPMENT RESERVATIONS ============
+
+@admin.register(EquipmentReservation)
+class EquipmentReservationAdmin(admin.ModelAdmin):
+    """Admin configuration for Equipment Reservations"""
+    
+    list_display = [
+        'id', 'equipment', 'user', 'start_date', 'end_date', 
+        'status', 'get_status_badge', 'is_expired_display', 'created_at'
+    ]
+    list_filter = [
+        'status', 'created_at', 'start_date', 'end_date',
+        ('equipment', admin.RelatedOnlyFieldListFilter),
+        ('user', admin.RelatedOnlyFieldListFilter),
+    ]
+    search_fields = [
+        'equipment__name', 'equipment__serial_number', 
+        'user__username', 'user__email', 'purpose', 'notes'
+    ]
+    readonly_fields = ['created_at', 'updated_at', 'expires_at', 'confirmed_at']
+    autocomplete_fields = ['equipment', 'user']
+    date_hierarchy = 'start_date'
+    list_editable = ['status']
+    list_per_page = 25
+    
+    fieldsets = (
+        ('Reservation Information', {
+            'fields': ('equipment', 'user', 'status')
+        }),
+        ('Date & Time', {
+            'fields': ('start_date', 'end_date', 'expires_at', 'confirmed_at')
+        }),
+        ('Details', {
+            'fields': ('purpose', 'notes')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def get_status_badge(self, obj):
+        """Display status with color badge"""
+        colors = {
+            'PENDING': '#ff9800',
+            'CONFIRMED': '#4caf50',
+            'CANCELLED': '#f44336',
+            'EXPIRED': '#9e9e9e',
+            'COMPLETED': '#2196f3',
+        }
+        color = colors.get(obj.status, '#757575')
+        return format_html(
+            '<span style="background-color: {}; color: white; padding: 4px 12px; '
+            'border-radius: 12px; font-size: 12px; font-weight: bold; display: inline-block;">'
+            '{}</span>',
+            color,
+            obj.get_status_display()
+        )
+    get_status_badge.short_description = 'Status'
+    get_status_badge.allow_html = True
+    
+    def is_expired_display(self, obj):
+        """Display if reservation is expired"""
+        if obj.is_expired():
+            return format_html('<span style="color: #f44336; font-weight: bold;">⚠️ Expired</span>')
+        return format_html('<span style="color: #4caf50; font-weight: bold;">✓ Active</span>')
+    is_expired_display.short_description = 'Expired?'
+    is_expired_display.allow_html = True
+    
+    actions = [
+        'confirm_reservations', 'cancel_reservations', 
+        'complete_reservations', 'expire_reservations'
+    ]
+    
+    def confirm_reservations(self, request, queryset):
+        """Admin action to confirm reservations"""
+        count = 0
+        errors = 0
+        for reservation in queryset:
+            if reservation.status == 'PENDING':
+                try:
+                    reservation.confirm()
+                    count += 1
+                except Exception as e:
+                    errors += 1
+                    self.message_user(request, f'Error confirming #{reservation.id}: {str(e)}', level='ERROR')
+        if count > 0:
+            self.message_user(request, f'{count} reservations confirmed successfully.')
+        if errors > 0:
+            self.message_user(request, f'{errors} reservations failed to confirm.', level='WARNING')
+    confirm_reservations.short_description = "Confirm selected PENDING reservations"
+    
+    def cancel_reservations(self, request, queryset):
+        """Admin action to cancel reservations"""
+        count = 0
+        errors = 0
+        for reservation in queryset:
+            if reservation.status in ['PENDING', 'CONFIRMED']:
+                try:
+                    reservation.cancel()
+                    count += 1
+                except Exception as e:
+                    errors += 1
+                    self.message_user(request, f'Error cancelling #{reservation.id}: {str(e)}', level='ERROR')
+        if count > 0:
+            self.message_user(request, f'{count} reservations cancelled successfully.')
+        if errors > 0:
+            self.message_user(request, f'{errors} reservations failed to cancel.', level='WARNING')
+    cancel_reservations.short_description = "Cancel selected PENDING/CONFIRMED reservations"
+    
+    def complete_reservations(self, request, queryset):
+        """Admin action to complete reservations"""
+        count = 0
+        errors = 0
+        for reservation in queryset:
+            if reservation.status in ['PENDING', 'CONFIRMED']:
+                try:
+                    reservation.complete()
+                    count += 1
+                except Exception as e:
+                    errors += 1
+                    self.message_user(request, f'Error completing #{reservation.id}: {str(e)}', level='ERROR')
+        if count > 0:
+            self.message_user(request, f'{count} reservations completed successfully.')
+        if errors > 0:
+            self.message_user(request, f'{errors} reservations failed to complete.', level='WARNING')
+    complete_reservations.short_description = "Complete selected PENDING/CONFIRMED reservations"
+    
+    def expire_reservations(self, request, queryset):
+        """Admin action to expire reservations"""
+        count = 0
+        errors = 0
+        for reservation in queryset:
+            if reservation.status == 'PENDING':
+                try:
+                    reservation.expire()
+                    count += 1
+                except Exception as e:
+                    errors += 1
+                    self.message_user(request, f'Error expiring #{reservation.id}: {str(e)}', level='ERROR')
+        if count > 0:
+            self.message_user(request, f'{count} reservations expired successfully.')
+        if errors > 0:
+            self.message_user(request, f'{errors} reservations failed to expire.', level='WARNING')
+    expire_reservations.short_description = "Expire selected PENDING reservations"
+    
+    def get_queryset(self, request):
+        """Optimize queryset with select_related"""
+        return super().get_queryset(request).select_related('equipment', 'user')
+
 @admin.register(MaintenanceRecord)
 class MaintenanceRecordAdmin(admin.ModelAdmin):
     list_display = [
@@ -405,16 +556,26 @@ class ReviewAdmin(admin.ModelAdmin):
     
     def approve_reviews(self, request, queryset):
         from django.utils import timezone
+        count = 0
         for review in queryset:
-            review.moderate('APPROVED', request.user, None)
-        self.message_user(request, f'{queryset.count()} reviews approved.')
+            try:
+                review.moderate('APPROVED', request.user, None)
+                count += 1
+            except Exception as e:
+                self.message_user(request, f'Error approving review #{review.id}: {str(e)}', level='ERROR')
+        self.message_user(request, f'{count} reviews approved.')
     approve_reviews.short_description = "Approve selected reviews"
     
     def reject_reviews(self, request, queryset):
         from django.utils import timezone
+        count = 0
         for review in queryset:
-            review.moderate('REJECTED', request.user, None)
-        self.message_user(request, f'{queryset.count()} reviews rejected.')
+            try:
+                review.moderate('REJECTED', request.user, None)
+                count += 1
+            except Exception as e:
+                self.message_user(request, f'Error rejecting review #{review.id}: {str(e)}', level='ERROR')
+        self.message_user(request, f'{count} reviews rejected.')
     reject_reviews.short_description = "Reject selected reviews"
     
     def delete_reviews(self, request, queryset):

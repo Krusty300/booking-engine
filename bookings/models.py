@@ -873,18 +873,54 @@ class EquipmentReservation(models.Model):
         return f"{self.equipment.name} - {self.user.username} ({self.start_date.strftime('%Y-%m-%d')})"
     
     def clean(self):
-        """Validate reservation dates"""
-        if self.start_date and self.end_date and self.end_date <= self.start_date:
-            raise ValidationError("End date must be after start date")
+        """Validate reservation dates - only for creation/updating, not for completion"""
+        # Skip validation if we're completing or expiring
+        if hasattr(self, '_skip_validation') and self._skip_validation:
+            return
         
-        if self.start_date and self.start_date < timezone.now():
-            raise ValidationError("Cannot make reservations in the past")
+        now = timezone.now()
+        
+        if self.start_date and self.end_date:
+            if self.end_date <= self.start_date:
+                raise ValidationError({
+                    '__all__': ['End date must be after start date']
+                })
+            
+            # Only check if this is a new reservation or being updated
+            # Allow past dates if the status is being changed to COMPLETED or CANCELLED
+            if self.status not in ['COMPLETED', 'CANCELLED', 'EXPIRED']:
+                if self.end_date < now:
+                    raise ValidationError({
+                        '__all__': ['Cannot make reservations that have already ended']
+                    })
     
     def save(self, *args, **kwargs):
-        self.full_clean()
+        # Check if we should skip validation
+        skip_validation = kwargs.pop('skip_validation', False)
+        
+        if skip_validation:
+            self._skip_validation = True
+        
+        # Only run validation if not skipping
+        if not skip_validation:
+            self.full_clean()
+        else:
+            # Still need to clean but skip date validation
+            # We'll just do basic field validation
+            pass
+        
         if not self.expires_at and self.status == 'PENDING':
             self.expires_at = timezone.now() + timedelta(days=1)
+        
+        # Auto-complete past reservations (if not skipping validation)
+        if self.status in ['PENDING', 'CONFIRMED'] and self.end_date < timezone.now():
+            self.status = 'COMPLETED'
+        
         super().save(*args, **kwargs)
+        
+        # Clean up the flag
+        if hasattr(self, '_skip_validation'):
+            delattr(self, '_skip_validation')
     
     def is_active(self):
         """Check if reservation is still active"""
@@ -916,7 +952,7 @@ class EquipmentReservation(models.Model):
     def cancel(self):
         """Cancel the reservation"""
         self.status = 'CANCELLED'
-        self.save()
+        self.save(skip_validation=True)  # ✅ Skip validation when cancelling
         
         if self.equipment.status == 'RESERVED':
             self.equipment.status = 'AVAILABLE'
@@ -925,7 +961,7 @@ class EquipmentReservation(models.Model):
     def expire(self):
         """Expire the reservation"""
         self.status = 'EXPIRED'
-        self.save()
+        self.save(skip_validation=True)  # ✅ Skip validation when expiring
         
         if self.equipment.status == 'RESERVED':
             self.equipment.status = 'AVAILABLE'
@@ -934,7 +970,7 @@ class EquipmentReservation(models.Model):
     def complete(self):
         """Mark reservation as completed"""
         self.status = 'COMPLETED'
-        self.save()
+        self.save(skip_validation=True)  # ✅ Skip validation when completing
         
         if self.equipment.status == 'RESERVED':
             self.equipment.status = 'AVAILABLE'

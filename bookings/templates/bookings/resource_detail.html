@@ -325,6 +325,12 @@
 
 <div id="booking-message"></div>
 
+{% if booking.status == 'CONFIRMED' and not booking.is_paid %}
+    <a href="{% url 'bookings:initiate_payment' booking.id %}" class="btn btn-success">
+        Pay Now
+    </a>
+{% endif %}
+
 <!-- Reviews Section -->
 <div style="margin: 30px 0; padding: 20px; background: var(--bg-card); border: 1px solid var(--border-color);">
     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 15px;">

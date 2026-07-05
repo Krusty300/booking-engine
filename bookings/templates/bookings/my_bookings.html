@@ -25,7 +25,7 @@
                         <polyline points="7 10 12 15 17 10"/>
                         <line x1="12" y1="15" x2="12" y2="3"/>
                     </svg>
-                    Export ▾
+                    Export
                 </button>
                 <div id="exportMenu" class="export-menu" style="display: none;">
                     <a href="#" onclick="exportBookings('csv')">CSV</a>
@@ -169,7 +169,6 @@
         {% endif %}
     {% else %}
         <div class="empty-state">
-            <div class="empty-icon">📋</div>
             <h2>No Bookings Found</h2>
             <p>You don't have any bookings yet. Start exploring available resources!</p>
             <div class="empty-actions">

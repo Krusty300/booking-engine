@@ -14,13 +14,15 @@ class ReservationService:
         Create a new reservation with conflict detection
         """
         equipment = Equipment.objects.select_for_update().get(id=equipment_id)
+        now = timezone.now()
         
         # Validate dates
         if start_date >= end_date:
             raise ValidationError("End date must be after start date")
         
-        if start_date < timezone.now():
-            raise ValidationError("Cannot make reservations in the past")
+        # ✅ Fixed: Check if the reservation has already ended
+        if end_date < now:
+            raise ValidationError("Cannot make reservations that have already ended")
         
         # Check if equipment is available
         if equipment.status not in ['AVAILABLE', 'RENTED']:
@@ -164,16 +166,46 @@ class ReservationService:
             reservation.expire()
         return expired.count()
 
+    # ✅ FIX: This method must be indented at the same level as other methods
     @staticmethod
     def auto_complete_reservations():
-        """Auto-complete reservations that have passed their end date"""
+        """
+        Auto-complete reservations that have passed their end date.
+        Returns a dictionary with completion statistics.
+        """
+        now = timezone.now()
+        
+        # Find all active reservations that have ended
         completed = EquipmentReservation.objects.filter(
             status__in=['PENDING', 'CONFIRMED'],
-            end_date__lte=timezone.now()
-        )
+            end_date__lte=now
+        ).select_related('equipment')
+        
+        total_count = completed.count()
+        successful_count = 0
+        error_count = 0
+        errors = []
+        
         for reservation in completed:
-            reservation.complete()
-        return completed.count()
+            try:
+                with transaction.atomic():
+                    # Check if equipment still exists
+                    if not reservation.equipment:
+                        continue
+                    
+                    reservation.complete()
+                    successful_count += 1
+                    
+            except Exception as e:
+                error_count += 1
+                errors.append(f"Reservation #{reservation.id}: {str(e)}")
+        
+        return {
+            'total': total_count,
+            'successful': successful_count,
+            'error_count': error_count,
+            'errors': errors
+        }
 
     @staticmethod
     def get_calendar_data(year=None, month=None):
