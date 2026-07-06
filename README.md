@@ -192,52 +192,6 @@ Before creating resources, you need to create categories:
 3. Create categories like "Meeting Rooms", "Equipment", "Services"
 
 
-
-
-Project Structure
-
-booking-engine/
-├── booking_engine/              # Project settings
-│   ├── settings.py              # Configuration
-│   └── urls.py                  # Main URLs
-├── bookings/                    # Main application
-│   ├── migrations/              # Database migrations
-│   ├── templates/               # HTML templates
-│   │   ├── bookings/            # Main templates
-│   │   │   ├── base.html        # Base template with navigation
-│   │   │   ├── resource_list.html
-│   │   │   ├── resource_detail.html
-│   │   │   ├── resource_form.html
-│   │   │   ├── my_resources.html
-│   │   │   ├── my_bookings.html
-│   │   │   ├── profile.html
-│   │   │   ├── edit_profile.html
-│   │   │   ├── booking_history.html
-│   │   │   ├── admin_manage_resources.html
-│   │   │   └── manage_categories.html
-│   │   └── registration/        # Auth templates
-│   │       ├── login.html
-│   │       ├── signup.html
-│   │       └── password_reset_*.html
-│   ├── static/                  # Static files
-│   │   └── bookings/
-│   │       ├── fonts/           # Mona Sans font
-│   │       └── images/          # Default images
-│   ├── admin.py                 # Admin interface
-│   ├── models.py                # Database models
-│   ├── views.py                 # View functions
-│   ├── services.py              # Business logic
-│   ├── forms.py                 # Forms
-│   └── urls.py                  # App URLs
-├── media/                       # User uploaded files
-├── manage.py                    # Django management script
-├── requirements.txt             # Dependencies
-├── README.md                    # This file
-└── LICENSE                      # MIT License
-
-
-
-
 Core Models
 
 Category
