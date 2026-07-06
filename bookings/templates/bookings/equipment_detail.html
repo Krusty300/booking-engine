@@ -23,7 +23,7 @@
             </div>
         </div>
         <div class="header-actions">
-            <a href="{% url 'bookings:equipment_list' %}" class="btn-back">← Back to Equipment</a>
+            <a href="{% url 'bookings:equipment_list' %}" class="btn-back">Back to Equipment</a>
         </div>
     </div>
 
@@ -36,7 +36,12 @@
                 <div class="main-image-container">
                     <img id="mainImage" src="{{ primary_image }}" class="main-image" 
                          alt="{{ equipment.name }}"
-                         onerror="this.src='{% static 'bookings/images/default-resource.png' %}'">
+                         onerror="this.onerror=null; this.src='{% static 'bookings/images/default-resource.png' %}'">
+                    
+                    <!-- Loading Spinner -->
+                    <div class="image-loading" id="imageLoading">
+                        <div class="spinner"></div>
+                    </div>
                     
                     <!-- Status Badge Overlay -->
                     <span class="image-status-badge status-{{ equipment.status|lower }}">
@@ -65,7 +70,7 @@
                     <div class="thumbnail-item {% if image.is_primary %}active{% endif %}" 
                          onclick="changeImage('{{ image.url }}', this)">
                         <img src="{{ image.url }}" alt="{{ image.caption|default:'Equipment image' }}"
-                             onerror="this.src='{% static 'bookings/images/default-resource.png' %}'">
+                             onerror="this.onerror=null; this.src='{% static 'bookings/images/default-resource.png' %}'">
                         {% if image.is_primary %}
                         <span class="thumbnail-badge">★</span>
                         {% endif %}
@@ -316,10 +321,54 @@
 </div>
 
 <script>
+// ============ IMAGE LOADING HANDLER ============
+document.addEventListener('DOMContentLoaded', function() {
+    const mainImage = document.getElementById('mainImage');
+    const loadingSpinner = document.getElementById('imageLoading');
+    
+    if (mainImage) {
+        // Show loading spinner
+        if (loadingSpinner) {
+            loadingSpinner.style.display = 'flex';
+        }
+        
+        // When image loads, hide spinner
+        mainImage.addEventListener('load', function() {
+            if (loadingSpinner) {
+                loadingSpinner.style.display = 'none';
+            }
+        });
+        
+        // If image fails, hide spinner and show default
+        mainImage.addEventListener('error', function() {
+            if (loadingSpinner) {
+                loadingSpinner.style.display = 'none';
+            }
+            this.onerror = null;
+            this.src = "{% static 'bookings/images/default-resource.png' %}";
+        });
+        
+        // If image is already cached, hide spinner
+        if (mainImage.complete) {
+            if (loadingSpinner) {
+                loadingSpinner.style.display = 'none';
+            }
+        }
+    }
+});
+
 // ============ IMAGE GALLERY ============
 function changeImage(imageUrl, element) {
+    const mainImage = document.getElementById('mainImage');
+    const loadingSpinner = document.getElementById('imageLoading');
+    
+    // Show loading spinner
+    if (loadingSpinner) {
+        loadingSpinner.style.display = 'flex';
+    }
+    
     // Update main image
-    document.getElementById('mainImage').src = imageUrl;
+    mainImage.src = imageUrl;
     
     // Update active thumbnail
     document.querySelectorAll('.thumbnail-item').forEach(item => {
@@ -329,13 +378,6 @@ function changeImage(imageUrl, element) {
         element.classList.add('active');
     }
 }
-
-// Keyboard navigation for gallery
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        // Close any lightbox if we add one
-    }
-});
 
 // ============ GET CSRF TOKEN ============
 function getCookie(name) {
@@ -506,6 +548,7 @@ function returnCurrentRental() {
     text-decoration: none;
     border: 1px solid #dee2e6;
     transition: all 0.2s;
+    border-radius: 4px;
 }
 
 .btn-back:hover {
@@ -519,6 +562,7 @@ function returnCurrentRental() {
     font-weight: 600;
     font-size: 0.8rem;
     display: inline-block;
+    border-radius: 4px;
 }
 
 .status-available { background: #d4edda; color: #155724; }
@@ -538,6 +582,7 @@ function returnCurrentRental() {
     font-weight: 600;
     font-size: 0.75rem;
     display: inline-block;
+    border-radius: 4px;
 }
 
 .condition-excellent { background: #d4edda; color: #155724; }
@@ -564,7 +609,7 @@ function returnCurrentRental() {
     background: white;
     border: 1px solid #e9ecef;
     padding: 16px;
-    border-radius: 4px;
+    border-radius: 8px;
 }
 
 .main-image-container {
@@ -581,6 +626,32 @@ function returnCurrentRental() {
     object-fit: contain;
 }
 
+/* ============ IMAGE LOADING SPINNER ============ */
+.image-loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 5;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
 .image-status-badge {
     position: absolute;
     top: 12px;
@@ -588,7 +659,7 @@ function returnCurrentRental() {
     padding: 6px 16px;
     font-weight: 600;
     font-size: 0.8rem;
-    border-radius: 0px;
+    border-radius: 4px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
@@ -645,7 +716,7 @@ function returnCurrentRental() {
     height: 80px;
     flex-shrink: 0;
     border: 2px solid transparent;
-    border-radius: 0px;
+    border-radius: 4px;
     overflow: hidden;
     cursor: pointer;
     transition: all 0.2s;
@@ -702,7 +773,7 @@ function returnCurrentRental() {
     background: white;
     border: 1px solid #e9ecef;
     padding: 20px;
-    border-radius: 0px;
+    border-radius: 4px;
 }
 
 .info-card h3 {
@@ -753,6 +824,7 @@ function returnCurrentRental() {
     background: #f8f9fa;
     border: 1px solid #e9ecef;
     padding: 16px 20px;
+    border-radius: 4px;
 }
 
 .notes-card h4 {
@@ -772,6 +844,7 @@ function returnCurrentRental() {
     background: white;
     border: 1px solid #e9ecef;
     padding: 20px;
+    border-radius: 4px;
 }
 
 .action-card h4 {
@@ -805,7 +878,7 @@ function returnCurrentRental() {
     font-size: 1rem;
     font-weight: 600;
     transition: all 0.3s ease;
-    border-radius: 0px;
+    border-radius: 4px;
 }
 
 .btn-rent-large:hover {
@@ -819,6 +892,7 @@ function returnCurrentRental() {
     background: #f8f9fa;
     padding: 12px 16px;
     margin-top: 10px;
+    border-radius: 4px;
 }
 
 .rental-info p {
@@ -841,6 +915,7 @@ function returnCurrentRental() {
     background: #f8f9fa;
     border: 1px solid #e9ecef;
     padding: 20px;
+    border-radius: 4px;
 }
 
 .quick-actions-card h3 {
@@ -877,6 +952,7 @@ function returnCurrentRental() {
     cursor: pointer;
     font-size: 0.85rem;
     font-family: inherit;
+    border-radius: 4px;
 }
 
 .action-link:hover {
@@ -904,6 +980,7 @@ function returnCurrentRental() {
     background: white;
     border: 1px solid #e9ecef;
     padding: 20px;
+    border-radius: 4px;
 }
 
 .history-header {
@@ -925,6 +1002,7 @@ function returnCurrentRental() {
     color: #6c757d;
     background: #f8f9fa;
     padding: 2px 10px;
+    border-radius: 12px;
 }
 
 .table-responsive {
@@ -980,6 +1058,7 @@ function returnCurrentRental() {
     color: white;
     font-size: 0.6rem;
     font-weight: 700;
+    border-radius: 4px;
     animation: pulse 2s infinite;
 }
 
@@ -998,6 +1077,7 @@ function returnCurrentRental() {
     padding: 2px 8px;
     background: #e9ecef;
     color: #495057;
+    border-radius: 4px;
 }
 
 /* ============ EMPTY STATE ============ */
@@ -1006,6 +1086,7 @@ function returnCurrentRental() {
     padding: 30px;
     color: #6c757d;
     background: #f8f9fa;
+    border-radius: 4px;
 }
 
 /* ============ RESPONSIVE ============ */

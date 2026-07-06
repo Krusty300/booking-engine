@@ -4,7 +4,7 @@
 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 20px;">
     <h1 style="font-size: 1.6rem; font-weight: 800; margin: 0;">My Resources</h1>
     <a href="{% url 'bookings:create_resource' %}" 
-       style="background: #28a745; color: white; padding: 8px 16px; text-decoration: none; font-size: 0.85rem; font-weight: 600; border-radius: 0px; transition: all 0.2s ease;"
+       style="background: #28a745; color: white; padding: 8px 16px; text-decoration: none; font-size: 0.85rem; font-weight: 600; border-radius: 6px; transition: all 0.2s ease;"
        onmouseover="this.style.background='#218838'"
        onmouseout="this.style.background='#28a745'">
         Create Resource
@@ -38,7 +38,7 @@
 {% if resources %}
     <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;">
         {% for resource in resources %}
-            <div style="border: 1px solid var(--border-color); background: var(--bg-card); position: relative; overflow: hidden; border-radius: 0px; transition: all 0.2s ease;"
+            <div style="border: 1px solid var(--border-color); background: var(--bg-card); position: relative; overflow: hidden; border-radius: 6px; transition: all 0.2s ease;"
                  onmouseover="this.style.boxShadow='0 2px 10px rgba(0,0,0,0.08)'; this.style.transform='translateY(-2px)'"
                  onmouseout="this.style.boxShadow='none'; this.style.transform='none'">
                 
@@ -61,7 +61,7 @@
                     
                     <!-- Meeting Room Badge -->
                     {% if resource.is_meeting_room %}
-                        <div style="position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,0.7); color: white; padding: 2px 10px; font-size: 0.6rem; font-weight: 600; display: flex; align-items: center; gap: 4px; border-radius: 0px;">
+                        <div style="position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,0.7); color: white; padding: 2px 10px; font-size: 0.6rem; font-weight: 600; display: flex; align-items: center; gap: 4px; border-radius: 6px;">
                             Meeting Room
                         </div>
                     {% endif %}
@@ -69,13 +69,13 @@
                     <!-- Status Badge on Image -->
                     <div style="position: absolute; top: 8px; right: 8px;">
                         {% if resource.status == 'APPROVED' %}
-                            <span style="background: rgba(40, 167, 69, 0.9); color: white; padding: 2px 10px; font-size: 0.65rem; font-weight: 600; border-radius: 0px;">Approved</span>
+                            <span style="background: rgba(40, 167, 69, 0.9); color: white; padding: 2px 10px; font-size: 0.65rem; font-weight: 600; border-radius: 6px;">Approved</span>
                         {% elif resource.status == 'PENDING' %}
-                            <span style="background: rgba(255, 193, 7, 0.9); color: #856404; padding: 2px 10px; font-size: 0.65rem; font-weight: 600; border-radius: 0px;">Pending</span>
+                            <span style="background: rgba(255, 193, 7, 0.9); color: #856404; padding: 2px 10px; font-size: 0.65rem; font-weight: 600; border-radius: 6px;">Pending</span>
                         {% elif resource.status == 'REJECTED' %}
-                            <span style="background: rgba(220, 53, 69, 0.9); color: white; padding: 2px 10px; font-size: 0.65rem; font-weight: 600; border-radius: 0px;">Rejected</span>
+                            <span style="background: rgba(220, 53, 69, 0.9); color: white; padding: 2px 10px; font-size: 0.65rem; font-weight: 600; border-radius: 6px;">Rejected</span>
                         {% else %}
-                            <span style="background: rgba(108, 117, 125, 0.9); color: white; padding: 2px 10px; font-size: 0.65rem; font-weight: 600; border-radius: 0px;">Inactive</span>
+                            <span style="background: rgba(108, 117, 125, 0.9); color: white; padding: 2px 10px; font-size: 0.65rem; font-weight: 600; border-radius: 6px;">Inactive</span>
                         {% endif %}
                     </div>
                 </div>
@@ -91,32 +91,32 @@
                     {% if resource.is_meeting_room %}
                         <div style="margin: 0 0 8px 0; display: flex; flex-wrap: wrap; gap: 4px;">
                             {% if resource.meeting_room.seating_capacity %}
-                                <span style="background: var(--bg-hover); padding: 1px 8px; font-size: 0.6rem; color: var(--text-secondary); border-radius: 0px;">
+                                <span style="background: var(--bg-hover); padding: 1px 8px; font-size: 0.6rem; color: var(--text-secondary); border-radius: 6px;">
                                     {{ resource.meeting_room.seating_capacity }}
                                 </span>
                             {% endif %}
                             {% if resource.meeting_room.room_number %}
-                                <span style="background: var(--bg-hover); padding: 1px 8px; font-size: 0.6rem; color: var(--text-secondary); border-radius: 0px;">
+                                <span style="background: var(--bg-hover); padding: 1px 8px; font-size: 0.6rem; color: var(--text-secondary); border-radius: 6px;">
                                     {{ resource.meeting_room.room_number }}
                                 </span>
                             {% endif %}
                             {% if resource.meeting_room.floor_number %}
-                                <span style="background: var(--bg-hover); padding: 1px 8px; font-size: 0.6rem; color: var(--text-secondary); border-radius: 0px;">
+                                <span style="background: var(--bg-hover); padding: 1px 8px; font-size: 0.6rem; color: var(--text-secondary); border-radius: 6px;">
                                     Floor {{ resource.meeting_room.floor_number }}
                                 </span>
                             {% endif %}
                             {% if resource.meeting_room.has_projector %}
-                                <span style="background: var(--bg-hover); padding: 1px 8px; font-size: 0.6rem; color: var(--text-secondary); border-radius: 0px;">
+                                <span style="background: var(--bg-hover); padding: 1px 8px; font-size: 0.6rem; color: var(--text-secondary); border-radius: 6px;">
                                     Projector
                                 </span>
                             {% endif %}
                             {% if resource.meeting_room.has_video_conferencing %}
-                                <span style="background: var(--bg-hover); padding: 1px 8px; font-size: 0.6rem; color: var(--text-secondary); border-radius: 0px;">
+                                <span style="background: var(--bg-hover); padding: 1px 8px; font-size: 0.6rem; color: var(--text-secondary); border-radius: 6px;">
                                     VC
                                 </span>
                             {% endif %}
                             {% if resource.meeting_room.has_wifi %}
-                                <span style="background: var(--bg-hover); padding: 1px 8px; font-size: 0.6rem; color: var(--text-secondary); border-radius: 0px;">
+                                <span style="background: var(--bg-hover); padding: 1px 8px; font-size: 0.6rem; color: var(--text-secondary); border-radius: 6px;">
                                     Wifi
                                 </span>
                             {% endif %}
@@ -153,7 +153,7 @@
                     </div>
                     
                     <!-- Created By and Created At -->
-                    <div style="font-size: 0.7rem; color: var(--text-secondary); margin: 8px 0 12px 0; padding: 8px 10px; background: var(--bg-hover); border-top: 1px solid var(--border-color); border-radius: 0px;">
+                    <div style="font-size: 0.7rem; color: var(--text-secondary); margin: 8px 0 12px 0; padding: 8px 10px; background: var(--bg-hover); border-top: 1px solid var(--border-color); border-radius: 6px;">
                         <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 5px;">
                             <span><strong>Created by:</strong> {{ resource.owner.username }}</span>
                             <span><strong>Created:</strong> {{ resource.created_at|date:"M d, Y" }}</span>
@@ -169,20 +169,20 @@
                     <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                         {% if resource.status == 'APPROVED' %}
                             <a href="{% url 'bookings:resource_detail' resource.id %}" 
-                               style="background: #28a745; color: white; padding: 5px 12px; text-decoration: none; font-size: 0.75rem; font-weight: 400; border-radius: 0px; transition: all 0.2s ease;"
+                               style="background: #28a745; color: white; padding: 5px 12px; text-decoration: none; font-size: 0.75rem; font-weight: 400; border-radius: 6px; transition: all 0.2s ease;"
                                onmouseover="this.style.background='#218838'"
                                onmouseout="this.style.background='#28a745'">
                                 View Details
                             </a>
                         {% endif %}
                         <a href="{% url 'bookings:edit_resource' resource.id %}" 
-                           style="background: #007bff; color: white; padding: 5px 12px; text-decoration: none; font-size: 0.75rem; font-weight: 400; border-radius: 0px; transition: all 0.2s ease;"
+                           style="background: #007bff; color: white; padding: 5px 12px; text-decoration: none; font-size: 0.75rem; font-weight: 400; border-radius: 6px; transition: all 0.2s ease;"
                            onmouseover="this.style.background='#0056b3'"
                            onmouseout="this.style.background='#007bff'">
                             Edit
                         </a>
                         <a href="{% url 'bookings:delete_resource' resource.id %}" 
-                            style="background: #dc3545; color: white; padding: 5px 12px; text-decoration: none; font-size: 0.75rem; font-weight: 400; border-radius: 0px; transition: all 0.2s ease;"
+                            style="background: #dc3545; color: white; padding: 5px 12px; text-decoration: none; font-size: 0.75rem; font-weight: 400; border-radius: 6px; transition: all 0.2s ease;"
                             onmouseover="this.style.background='#c82333'"
                             onmouseout="this.style.background='#dc3545'">
                             Delete
@@ -193,12 +193,12 @@
         {% endfor %}
     </div>
 {% else %}
-    <div style="text-align: center; padding: 60px 20px; background: var(--bg-hover); margin-top: 20px; border: 1px solid var(--border-color); border-radius: 0px;">
+    <div style="text-align: center; padding: 60px 20px; background: var(--bg-hover); margin-top: 20px; border: 1px solid var(--border-color); border-radius: 6px;">
         <div style="font-size: 48px; margin-bottom: 15px;">📭</div>
         <h3 style="font-size: 1.2rem; color: var(--text-primary); margin-bottom: 10px;">No resources created yet</h3>
         <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 20px;">Start by creating your first resource!</p>
         <a href="{% url 'bookings:create_resource' %}" 
-           style="background: #28a745; color: white; padding: 10px 25px; text-decoration: none; font-size: 0.85rem; font-weight: 600; display: inline-block; border-radius: 0px; transition: all 0.2s ease;"
+           style="background: #28a745; color: white; padding: 10px 25px; text-decoration: none; font-size: 0.85rem; font-weight: 600; display: inline-block; border-radius: 6px; transition: all 0.2s ease;"
            onmouseover="this.style.background='#218838'"
            onmouseout="this.style.background='#28a745'">
             Create Resource

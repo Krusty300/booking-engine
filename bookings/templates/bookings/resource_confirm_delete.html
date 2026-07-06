@@ -49,14 +49,14 @@
         <form method="post">
             {% csrf_token %}
             <button type="submit" 
-                    style="padding: 10px 30px; background: #dc3545; color: white; border: none; border-radius: 0px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease;"
+                    style="padding: 10px 30px; background: #dc3545; color: white; border: none; border-radius: 6px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease;"
                     onmouseover="this.style.background='#c82333'"
                     onmouseout="this.style.background='#dc3545'">
                 Yes, Delete
             </button>
         </form>
         <a href="{% url 'bookings:my_resources' %}" 
-           style="padding: 10px 30px; background: #6c757d; color: white; text-decoration: none; border-radius: 0px; font-size: 0.9rem; font-weight: 600; transition: all 0.2s ease;"
+           style="padding: 10px 30px; background: #6c757d; color: white; text-decoration: none; border-radius: 6px; font-size: 0.9rem; font-weight: 600; transition: all 0.2s ease;"
            onmouseover="this.style.background='#5a6268'"
            onmouseout="this.style.background='#6c757d'">
             Cancel

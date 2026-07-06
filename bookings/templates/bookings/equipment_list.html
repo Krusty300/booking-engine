@@ -37,7 +37,6 @@
             </select>
         </div>
 
-        <!-- ADD OWNER FILTER -->
         <div class="filter-group">
             <label for="owner">Owner:</label>
             <select name="owner" id="owner">
@@ -75,30 +74,27 @@
                     <i class="fas fa-images"></i> {{ equipment.image_count }}
                 </span>
                 {% endif %}
-                
-                <!-- Status Badge -->
-                <div class="equipment-status-badge">{{ equipment.get_status_display }}</div>
-                
-                <!-- Condition Badge -->
-                <div class="equipment-condition-badge">{{ equipment.get_condition_display }}</div>
             </div>
             <!-- ============ END IMAGE SECTION ============ -->
             
             <div class="equipment-content">
-                <h3>{{ equipment.name }}</h3>
+                <div class="equipment-header-row">
+                    <h3>{{ equipment.name }}</h3>
+                    <!-- ============ STATUS BADGE ADDED HERE ============ -->
+                    <span class="status-badge status-{{ equipment.status|lower }}">
+                        {{ equipment.get_status_display }}
+                    </span>
+                    <!-- ============ END STATUS BADGE ============ -->
+                </div>
                 <div class="equipment-details">
                     <p><span class="label">Serial:</span> {{ equipment.serial_number }}</p>
                     <p><span class="label">Category:</span> {{ equipment.category.name|default:"Uncategorized" }}</p>
                     <p><span class="label">Condition:</span> {{ equipment.get_condition_display }}</p>
                     <p><span class="label">Location:</span> {{ equipment.location|default:"Not specified" }}</p>
-                    <!-- Owner Display -->
                     <p>
                         <span class="label">Owner:</span>
                         {% if equipment.owner %}
                             {{ equipment.owner.username }}
-                            {% if equipment.owner == user %}
-                                <span class="owner-badge">(You)</span>
-                            {% endif %}
                         {% else %}
                             <span class="no-owner">No owner assigned</span>
                         {% endif %}
@@ -214,7 +210,7 @@ function rentEquipment(equipmentId) {
 
 .stat {
     padding: 5px 12px;
-    border-radius: 0px;
+    border-radius: 6px;
     font-weight: 600;
     font-size: 0.85rem;
 }
@@ -227,7 +223,7 @@ function rentEquipment(equipmentId) {
 .filter-section {
     background: #f8f9fa;
     padding: 15px;
-    border-radius: 0px;
+    border-radius: 6px;
     margin-bottom: 20px;
 }
 
@@ -254,7 +250,7 @@ function rentEquipment(equipmentId) {
 .filter-group input {
     padding: 6px 10px;
     border: 1px solid #ddd;
-    border-radius: 0px;
+    border-radius: 6px;
     font-size: 0.9rem;
     min-width: 140px;
 }
@@ -299,7 +295,7 @@ function rentEquipment(equipmentId) {
 
 .equipment-card {
     border: 1px solid #ddd;
-    border-radius: 0px;
+    border-radius: 8px;
     overflow: hidden;
     transition: box-shadow 0.3s ease, transform 0.2s ease;
     background: white;
@@ -309,11 +305,6 @@ function rentEquipment(equipmentId) {
     box-shadow: 0 6px 20px rgba(0,0,0,0.12);
     transform: translateY(-2px);
 }
-
-.equipment-card.available { border-left: 4px solid #28a745; }
-.equipment-card.rented { border-left: 4px solid #ffc107; }
-.equipment-card.maintenance { border-left: 4px solid #dc3545; }
-.equipment-card.reserved { border-left: 4px solid #17a2b8; }
 
 /* ============ IMAGE SECTION ============ */
 .equipment-image-container {
@@ -340,11 +331,11 @@ function rentEquipment(equipmentId) {
     top: 10px;
     right: 10px;
     padding: 3px 10px;
-    background: rgba(0, 0, 0, 0.7);
+    background: transparent;
     color: white;
     border-radius: 20px;
     font-size: 0.7rem;
-    font-weight: 600;
+    font-weight: 800;
     display: flex;
     align-items: center;
     gap: 4px;
@@ -360,7 +351,7 @@ function rentEquipment(equipmentId) {
     top: 10px;
     left: 10px;
     padding: 3px 12px;
-    border-radius: 20px;
+    border-radius: 6px;
     font-size: 0.7rem;
     font-weight: 600;
     text-transform: uppercase;
@@ -394,7 +385,7 @@ function rentEquipment(equipmentId) {
     left: 10px;
     padding: 2px 10px;
     background: rgba(255, 255, 255, 0.9);
-    border-radius: 20px;
+    border-radius: 6px;
     font-size: 0.65rem;
     font-weight: 600;
     color: #495057;
@@ -407,12 +398,38 @@ function rentEquipment(equipmentId) {
     padding: 15px;
 }
 
-.equipment-card h3 {
-    margin: 0 0 10px 0;
+.equipment-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    gap: 10px;
+}
+
+.equipment-header-row h3 {
+    margin: 0;
     font-size: 1.1rem;
     font-weight: 600;
     color: #212529;
+    flex: 1;
 }
+
+/* ============ STATUS BADGE IN CARD ============ */
+.status-badge {
+    padding: 2px 10px;
+    border-radius: 6px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.status-available .status-badge { background: #d4edda; color: #155724; }
+.status-rented .status-badge { background: #fff3cd; color: #856404; }
+.status-maintenance .status-badge { background: #f8d7da; color: #721c24; }
+.status-retired .status-badge { background: #e2e3e5; color: #383d41; }
+.status-lost .status-badge { background: #f8d7da; color: #721c24; }
+/* ============ END STATUS BADGE IN CARD ============ */
 
 .equipment-details p {
     margin: 4px 0;
@@ -428,8 +445,8 @@ function rentEquipment(equipmentId) {
 }
 
 .owner-badge {
-    background: #ffffff;
-    color: rgb(0, 0, 0);
+    background: #007bff;
+    color: white;
     padding: 1px 8px;
     border-radius: 12px;
     font-size: 0.65rem;
@@ -455,7 +472,7 @@ function rentEquipment(equipmentId) {
     background: #17a2b8;
     color: white;
     text-decoration: none;
-    border-radius: 0px;
+    border-radius: 6px;
     font-size: 0.85rem;
     transition: background 0.2s;
     border: none;
@@ -472,7 +489,7 @@ function rentEquipment(equipmentId) {
     background: #28a745;
     color: white;
     border: none;
-    border-radius: 0px;
+    border-radius: 6px;
     cursor: pointer;
     font-size: 0.85rem;
     transition: background 0.2s;
@@ -487,7 +504,7 @@ function rentEquipment(equipmentId) {
     background: #ffc107;
     color: #212529;
     border: none;
-    border-radius: 0px;
+    border-radius: 6px;
     cursor: pointer;
     font-size: 0.85rem;
     text-decoration: none;
@@ -590,6 +607,11 @@ function rentEquipment(equipmentId) {
         width: 100%;
         text-align: center;
         justify-content: center;
+    }
+    
+    .equipment-header-row {
+        flex-direction: column;
+        align-items: flex-start;
     }
 }
 </style>

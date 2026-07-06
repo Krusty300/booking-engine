@@ -15,6 +15,7 @@
             <!-- Main Search Bar -->
             <div class="search-bar">
                 <div class="search-input-wrapper">
+                    <span class="search-icon"><i class="fas fa-search"></i></span>
                     <input type="text" 
                            name="search" 
                            id="searchInput" 
@@ -22,7 +23,7 @@
                            value="{{ search_query }}"
                            class="search-input"
                            autocomplete="off">
-                    <button type="submit" class="search-btn">Search</button>
+                    <button type="submit" class="search-btn"><i class="fas fa-arrow-right"></i> Search</button>
                 </div>
                 <!-- Autocomplete Suggestions -->
                 <div id="suggestionsContainer" class="suggestions-container" style="display: none;"></div>
@@ -32,7 +33,7 @@
             <div class="advanced-filters">
                 <div class="filter-row">
                     <div class="filter-group">
-                        <label for="category">Category</label>
+                        <label for="category"><i class="fas fa-folder"></i> Category</label>
                         <select name="category" id="category">
                             <option value="">All Categories</option>
                             {% for category in filter_options.categories %}
@@ -44,7 +45,7 @@
                     </div>
                     
                     <div class="filter-group">
-                        <label for="status">Status</label>
+                        <label for="status"><i class="fas fa-circle"></i> Status</label>
                         <select name="status" id="status">
                             <option value="">All Statuses</option>
                             {% for value, label in filter_options.statuses %}
@@ -56,7 +57,7 @@
                     </div>
                     
                     <div class="filter-group">
-                        <label for="condition">Condition</label>
+                        <label for="condition"><i class="fas fa-clipboard-check"></i> Condition</label>
                         <select name="condition" id="condition">
                             <option value="">All Conditions</option>
                             {% for value, label in filter_options.conditions %}
@@ -68,7 +69,7 @@
                     </div>
                     
                     <div class="filter-group">
-                        <label for="location">Location</label>
+                        <label for="location"><i class="fas fa-map-marker-alt"></i> Location</label>
                         <select name="location" id="location">
                             <option value="">All Locations</option>
                             {% for location in filter_options.locations %}
@@ -84,29 +85,29 @@
 
                 <div class="filter-row">
                     <div class="filter-group price-range">
-                        <label>Price Range</label>
+                        <label><i class="fas fa-dollar-sign"></i> Price Range</label>
                         <div class="price-inputs">
                             <input type="number" name="min_price" id="minPrice" 
                                    placeholder="Min $" value="{{ min_price }}" class="price-input">
-                            <span class="price-separator">-</span>
+                            <span class="price-separator">—</span>
                             <input type="number" name="max_price" id="maxPrice" 
                                    placeholder="Max $" value="{{ max_price }}" class="price-input">
                         </div>
                     </div>
                     
                     <div class="filter-group availability-range">
-                        <label>Availability Date Range</label>
+                        <label><i class="fas fa-calendar-alt"></i> Availability Date Range</label>
                         <div class="date-inputs">
                             <input type="date" name="start_date" id="startDate" 
-                                   value="{{ start_date }}" class="date-input">
+                                   value="{{ start_date }}" class="date-input" placeholder="Start">
                             <span class="date-separator">to</span>
                             <input type="date" name="end_date" id="endDate" 
-                                   value="{{ end_date }}" class="date-input">
+                                   value="{{ end_date }}" class="date-input" placeholder="End">
                         </div>
                     </div>
                     
                     <div class="filter-group">
-                        <label for="sort">Sort By</label>
+                        <label for="sort"><i class="fas fa-sort"></i> Sort By</label>
                         <select name="sort" id="sort">
                             <option value="name" {% if sort_by == 'name' %}selected{% endif %}>Name (A-Z)</option>
                             <option value="-name" {% if sort_by == '-name' %}selected{% endif %}>Name (Z-A)</option>
@@ -120,7 +121,7 @@
                     </div>
                     
                     <div class="filter-group per-page">
-                        <label for="perPage">Results Per Page</label>
+                        <label for="perPage"><i class="fas fa-list"></i> Results Per Page</label>
                         <select name="per_page" id="perPage">
                             <option value="12" {% if metadata.per_page == 12 %}selected{% endif %}>12</option>
                             <option value="24" {% if metadata.per_page == 24 %}selected{% endif %}>24</option>
@@ -131,8 +132,8 @@
                 </div>
 
                 <div class="filter-actions">
-                    <button type="submit" class="btn-apply-filters">Apply Filters</button>
-                    <a href="{% url 'bookings:equipment_search' %}" class="btn-clear-filters">Clear All</a>
+                    <button type="submit" class="btn-apply-filters"><i class="fas fa-filter"></i> Apply Filters</button>
+                    <a href="{% url 'bookings:equipment_search' %}" class="btn-clear-filters"><i class="fas fa-undo"></i> Clear All</a>
                 </div>
             </div>
         </form>
@@ -147,13 +148,13 @@
             {% endif %}
         </span>
         <div class="results-actions">
-            <button onclick="saveSearch()" class="btn-save-search">Save Search</button>
+            <button onclick="saveSearch()" class="btn-save-search"><i class="fas fa-bookmark"></i> Save Search</button>
             <div class="export-dropdown">
-                <button onclick="toggleExportMenu()" class="btn-export-results">Export Results ▾</button>
+                <button onclick="toggleExportMenu()" class="btn-export-results"><i class="fas fa-download"></i> Export Results ▾</button>
                 <div id="exportMenu" class="export-menu" style="display: none;">
-                    <a href="#" onclick="exportResults('csv')">CSV</a>
-                    <a href="#" onclick="exportResults('excel')">Excel</a>
-                    <a href="#" onclick="exportResults('pdf')">PDF</a>
+                    <a href="#" onclick="exportResults('csv')"><i class="fas fa-file-csv"></i> CSV</a>
+                    <a href="#" onclick="exportResults('excel')"><i class="fas fa-file-excel"></i> Excel</a>
+                    <a href="#" onclick="exportResults('pdf')"><i class="fas fa-file-pdf"></i> PDF</a>
                 </div>
             </div>
         </div>
@@ -164,38 +165,51 @@
         <div class="search-results-grid">
             {% for equipment in results %}
                 <div class="equipment-card status-{{ equipment.status|lower }}">
-                    <div class="card-header">
-                        <h3>{{ equipment.name }}</h3>
-                        <span class="status-badge status-{{ equipment.status|lower }}">
-                            {{ equipment.get_status_display }}
+                    <!-- ============ IMAGE SECTION ============ -->
+                    <div class="equipment-image-container">
+                        <img src="{{ equipment.get_image_url }}" class="equipment-image" alt="{{ equipment.name }}"
+                             onerror="this.src='{% static 'bookings/images/default-resource.png' %}'">
+                        
+                        <!-- Image count badge -->
+                        {% if equipment.image_count > 1 %}
+                        <span class="image-count-badge">
+                            <i class="fas fa-images"></i> {{ equipment.image_count }}
                         </span>
+                        {% endif %}
                     </div>
+                    <!-- ============ END IMAGE SECTION ============ -->
                     
-                    <div class="card-details">
-                        <p><span class="label">Serial:</span> {{ equipment.serial_number }}</p>
-                        <p><span class="label">Category:</span> {{ equipment.category.name|default:"Uncategorized" }}</p>
-                        <p><span class="label">Condition:</span> {{ equipment.get_condition_display }}</p>
-                        <p><span class="label">Location:</span> {{ equipment.location|default:"Not specified" }}</p>
-                        {% if equipment.purchase_price %}
-                            <p><span class="label">Price:</span> ${{ equipment.purchase_price }}</p>
-                        {% endif %}
-                        <p><span class="label">Owner:</span>
-                        {% if equipment.owner %}
-                        {{ equipment.owner.username }}
-                        {% if equipment.owner == request.user %}
-                        <span class="owner-badge">(You)</span>
-                        {% endif %}
-                        {% else %}
-                        <span class="no-owner">No owner assigned</span>
-                        {% endif %}
-                        </p>
-                    </div>
-                    
-                    <div class="card-actions">
-                        <a href="{% url 'bookings:equipment_detail' equipment.id %}" class="btn-view">View Details</a>
-                        {% if equipment.is_available %}
-                            <button onclick="quickRent({{ equipment.id }})" class="btn-rent">Rent Now</button>
-                        {% endif %}
+                    <div class="card-content">
+                        <div class="card-header">
+                            <h3><a href="{% url 'bookings:equipment_detail' equipment.id %}" class="equipment-link">{{ equipment.name }}</a></h3>
+                            <span class="status-badge status-{{ equipment.status|lower }}">
+                                {{ equipment.get_status_display }}
+                            </span>
+                        </div>
+                        
+                        <div class="card-details">
+                            <p><span class="label">Serial:</span> {{ equipment.serial_number }}</p>
+                            <p><span class="label">Category:</span> {{ equipment.category.name|default:"Uncategorized" }}</p>
+                            <p><span class="label">Condition:</span> {{ equipment.get_condition_display }}</p>
+                            <p><span class="label">Location:</span> {{ equipment.location|default:"Not specified" }}</p>
+                            {% if equipment.purchase_price %}
+                                <p><span class="label">Price:</span> ${{ equipment.purchase_price }}</p>
+                            {% endif %}
+                            <p><span class="label">Owner:</span>
+                            {% if equipment.owner %}
+                            {{ equipment.owner.username }}
+                            {% else %}
+                            <span class="no-owner">No owner assigned</span>
+                            {% endif %}
+                            </p>
+                        </div>
+                        
+                        <div class="card-actions">
+                            <a href="{% url 'bookings:equipment_detail' equipment.id %}" class="btn-view"><i class="fas fa-eye"></i> View Details</a>
+                            {% if equipment.is_available %}
+                                <button onclick="quickRent({{ equipment.id }})" class="btn-rent"><i class="fas fa-hand-holding"></i> Rent Now</button>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
             {% endfor %}
@@ -204,8 +218,8 @@
         <!-- Saved Searches Section -->
         <div class="saved-searches-section">
             <div class="saved-searches-header">
-                <h3>Saved Searches</h3>
-                <button onclick="loadSavedSearches()" class="btn-refresh-searches">Refresh</button>
+                <h3><i class="fas fa-bookmark"></i> Saved Searches</h3>
+                <button onclick="loadSavedSearches()" class="btn-refresh-searches"><i class="fas fa-sync"></i> Refresh</button>
             </div>
             <div id="savedSearchesList" class="saved-searches-list">
                 <!-- Saved searches will be loaded here -->
@@ -216,7 +230,7 @@
         {% if results.has_other_pages %}
             <div class="pagination">
                 {% if results.has_previous %}
-                    <a href="?page={{ results.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-link">◀ Previous</a>
+                    <a href="?page={{ results.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-link"><i class="fas fa-chevron-left"></i> Previous</a>
                 {% endif %}
                 
                 <span class="page-info">
@@ -224,18 +238,19 @@
                 </span>
                 
                 {% if results.has_next %}
-                    <a href="?page={{ results.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-link">Next ▶</a>
+                    <a href="?page={{ results.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-link">Next <i class="fas fa-chevron-right"></i></a>
                 {% endif %}
             </div>
         {% endif %}
     {% else %}
         <!-- Empty State -->
         <div class="empty-state">
+            <div class="empty-icon"><i class="fas fa-search"></i></div>
             <h2>No Results Found</h2>
             <p>We couldn't find any equipment matching your search criteria.</p>
             <div class="empty-actions">
-                <a href="{% url 'bookings:equipment_search' %}" class="btn-secondary">Clear Filters</a>
-                <a href="{% url 'bookings:equipment_list' %}" class="btn-primary">Browse All Equipment</a>
+                <a href="{% url 'bookings:equipment_search' %}" class="btn-secondary"><i class="fas fa-undo"></i> Clear Filters</a>
+                <a href="{% url 'bookings:equipment_list' %}" class="btn-primary"><i class="fas fa-th-list"></i> Browse All Equipment</a>
             </div>
         </div>
     {% endif %}
@@ -402,7 +417,6 @@ function saveSearch() {
     const formData = new FormData();
     formData.append('name', searchName);
     
-    // Add all current search parameters
     for (const [key, value] of searchParams) {
         formData.append(key, value);
     }
@@ -425,7 +439,7 @@ function saveSearch() {
             alert('Error: ' + data.error);
         } else {
             alert('Success: ' + data.message);
-            loadSavedSearches(); // Refresh the saved searches list
+            loadSavedSearches();
         }
     })
     .catch(error => {
@@ -523,7 +537,6 @@ function exportResults(format) {
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
-    // Load saved searches if container exists
     const savedSearchesContainer = document.getElementById('savedSearchesList');
     if (savedSearchesContainer) {
         loadSavedSearches();
@@ -549,18 +562,17 @@ document.addEventListener('click', function(e) {
         }
     }
 });
-
-
 </script>
 
 <style>
+/* ============ CONTAINER ============ */
 .search-container {
     max-width: 1200px;
     margin: 0 auto;
     padding: 0 15px;
 }
 
-/* Search Header */
+/* ============ SEARCH HEADER ============ */
 .search-header {
     margin-bottom: 24px;
     padding-bottom: 16px;
@@ -573,23 +585,29 @@ document.addEventListener('click', function(e) {
     font-weight: 700;
 }
 
+.search-header h1 i {
+    color: #000000;
+    margin-right: 10px;
+}
+
 .search-header .subtitle {
     margin: 4px 0 0;
     color: #6c757d;
     font-size: 0.9rem;
 }
 
-/* Search Form */
+/* ============ SEARCH FORM ============ */
 .search-form-section {
     background: white;
     border: 1px solid #e9ecef;
-    border-radius: 4px;
-    padding: 20px;
+    border-radius: 8px;
+    padding: 24px;
     margin-bottom: 24px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.04);
 }
 
 .search-bar {
-    margin-bottom: 16px;
+    margin-bottom: 20px;
     position: relative;
 }
 
@@ -597,20 +615,25 @@ document.addEventListener('click', function(e) {
     display: flex;
     align-items: center;
     border: 2px solid #dee2e6;
-    border-radius: 4px;
-    transition: border-color 0.2s;
+    border-radius: 8px;
+    transition: border-color 0.2s, box-shadow 0.2s;
     background: white;
     overflow: hidden;
 }
 
 .search-input-wrapper:focus-within {
-    border-color: #007bff;
+    border-color: #ffffff;
     box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.search-icon {
+    padding: 0 12px 0 16px;
+    color: #000000;
 }
 
 .search-input {
     flex: 1;
-    padding: 12px 16px;
+    padding: 12px 0;
     border: none;
     font-size: 1rem;
     outline: none;
@@ -619,19 +642,19 @@ document.addEventListener('click', function(e) {
 
 .search-btn {
     padding: 12px 24px;
-    background: #007bff;
-    color: white;
+    background: #ffffff;
+    color: rgb(0, 0, 0);
     border: none;
+    border-radius: 6px 6px 6px 6px;
     font-weight: 600;
     cursor: pointer;
     transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
-.search-btn:hover {
-    background: #0056b3;
-}
-
-/* Suggestions */
+/* ============ SUGGESTIONS ============ */
 .suggestions-container {
     position: absolute;
     top: 100%;
@@ -640,7 +663,7 @@ document.addEventListener('click', function(e) {
     background: white;
     border: 1px solid #dee2e6;
     border-top: none;
-    border-radius: 0 0 4px 4px;
+    border-radius: 0 0 8px 8px;
     max-height: 300px;
     overflow-y: auto;
     z-index: 1000;
@@ -656,6 +679,10 @@ document.addEventListener('click', function(e) {
     border-bottom: 1px solid #f1f3f5;
 }
 
+.suggestion-item:last-child {
+    border-bottom: none;
+}
+
 .suggestion-item:hover {
     background: #f8f9fa;
 }
@@ -666,18 +693,18 @@ document.addEventListener('click', function(e) {
     text-transform: uppercase;
     letter-spacing: 0.5px;
     background: #e9ecef;
-    padding: 2px 8px;
-    border-radius: 0;
+    padding: 2px 10px;
+    border-radius: 4px;
 }
 
 .suggestion-label {
     flex: 1;
 }
 
-/* Advanced Filters */
+/* ============ ADVANCED FILTERS ============ */
 .advanced-filters {
     border-top: 1px solid #e9ecef;
-    padding-top: 16px;
+    padding-top: 20px;
 }
 
 .filter-row {
@@ -701,13 +728,19 @@ document.addEventListener('click', function(e) {
     letter-spacing: 0.3px;
 }
 
+.filter-group label i {
+    margin-right: 4px;
+    color: #007bff;
+    font-size: 0.7rem;
+}
+
 .filter-group select,
 .filter-group input {
-    padding: 8px 10px;
+    padding: 8px 12px;
     border: 1px solid #dee2e6;
-    border-radius: 4px;
+    border-radius: 6px;
     font-size: 0.85rem;
-    transition: border-color 0.2s;
+    transition: border-color 0.2s, box-shadow 0.2s;
     background: white;
 }
 
@@ -716,6 +749,11 @@ document.addEventListener('click', function(e) {
     border-color: #007bff;
     outline: none;
     box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.filter-group select:hover,
+.filter-group input:hover {
+    border-color: #adb5bd;
 }
 
 .price-inputs,
@@ -728,18 +766,44 @@ document.addEventListener('click', function(e) {
 .price-input {
     flex: 1;
     min-width: 60px;
+    padding: 8px 12px;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    background: white;
+}
+
+.price-input:focus {
+    border-color: #007bff;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
 }
 
 .price-separator,
 .date-separator {
     color: #6c757d;
+    font-weight: 300;
 }
 
 .date-input {
     flex: 1;
     min-width: 100px;
+    padding: 8px 12px;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    background: white;
 }
 
+.date-input:focus {
+    border-color: #007bff;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+/* ============ FILTER ACTIONS ============ */
 .filter-actions {
     display: flex;
     gap: 10px;
@@ -751,14 +815,19 @@ document.addEventListener('click', function(e) {
     background: #28a745;
     color: white;
     border: none;
-    border-radius: 4px;
+    border-radius: 6px;
     font-weight: 600;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .btn-apply-filters:hover {
     background: #218838;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
 }
 
 .btn-clear-filters {
@@ -766,10 +835,13 @@ document.addEventListener('click', function(e) {
     background: #6c757d;
     color: white;
     border: none;
-    border-radius: 4px;
+    border-radius: 6px;
     font-weight: 600;
     text-decoration: none;
-    transition: background 0.2s;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .btn-clear-filters:hover {
@@ -777,7 +849,7 @@ document.addEventListener('click', function(e) {
     color: white;
 }
 
-/* Results Summary */
+/* ============ RESULTS SUMMARY ============ */
 .results-summary {
     display: flex;
     justify-content: space-between;
@@ -806,14 +878,17 @@ document.addEventListener('click', function(e) {
 
 .btn-save-search,
 .btn-export-results {
-    padding: 6px 14px;
+    padding: 6px 16px;
     border: 1px solid #dee2e6;
-    border-radius: 4px;
+    border-radius: 6px;
     text-decoration: none;
     font-size: 0.8rem;
     cursor: pointer;
     background: white;
     transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .btn-save-search:hover,
@@ -822,20 +897,199 @@ document.addEventListener('click', function(e) {
     border-color: #007bff;
 }
 
-/* Search Results Grid */
+/* ============ SEARCH RESULTS GRID ============ */
 .search-results-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 20px;
 }
 
-/* Saved Searches */
+/* ============ EQUIPMENT CARD ============ */
+.equipment-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: all 0.2s ease;
+}
+
+.equipment-card:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    transform: translateY(-3px);
+}
+
+/* ============ IMAGE SECTION ============ */
+.equipment-image-container {
+    position: relative;
+    background: #f8f9fa;
+    overflow: hidden;
+    height: 200px;
+}
+
+.equipment-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.equipment-card:hover .equipment-image {
+    transform: scale(1.03);
+}
+
+.image-count-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 3px 10px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.image-count-badge i {
+    font-size: 0.6rem;
+}
+
+.image-status-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    padding: 3px 12px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.image-status-badge.status-available { background: rgba(40, 167, 69, 0.9); color: white; }
+.image-status-badge.status-rented { background: rgba(255, 193, 7, 0.9); color: #856404; }
+.image-status-badge.status-maintenance { background: rgba(220, 53, 69, 0.9); color: white; }
+.image-status-badge.status-retired { background: rgba(108, 117, 125, 0.9); color: white; }
+.image-status-badge.status-lost { background: rgba(220, 53, 69, 0.9); color: white; }
+
+/* ============ CARD CONTENT ============ */
+.card-content {
+    padding: 16px;
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+    gap: 8px;
+}
+
+.card-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.equipment-link {
+    color: #212529;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.equipment-link:hover {
+    color: #007bff;
+}
+
+.status-badge {
+    padding: 2px 10px;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.status-available .status-badge { background: #d4edda; color: #155724; }
+.status-rented .status-badge { background: #fff3cd; color: #856404; }
+.status-maintenance .status-badge { background: #f8d7da; color: #721c24; }
+.status-retired .status-badge { background: #e2e3e5; color: #383d41; }
+.status-lost .status-badge { background: #f8d7da; color: #721c24; }
+
+.card-details p {
+    margin: 3px 0;
+    font-size: 0.8rem;
+    color: #495057;
+}
+
+.card-details .label {
+    font-weight: 600;
+    color: #6c757d;
+    font-size: 0.75rem;
+}
+
+.owner-badge {
+    background: #007bff;
+    color: white;
+    padding: 1px 8px;
+    border-radius: 12px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    margin-left: 4px;
+}
+
+.no-owner {
+    color: #6c757d;
+    font-style: italic;
+}
+
+.card-actions {
+    margin-top: 12px;
+    display: flex;
+    gap: 6px;
+}
+
+.card-actions a,
+.card-actions button {
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-view {
+    background: #17a2b8;
+    color: white;
+}
+
+.btn-view:hover {
+    background: #138496;
+}
+
+.btn-rent {
+    background: #28a745;
+    color: white;
+}
+
+.btn-rent:hover {
+    background: #218838;
+}
+
+/* ============ SAVED SEARCHES ============ */
 .saved-searches-section {
     margin-top: 24px;
     background: #f8f9fa;
     padding: 16px;
     border: 1px solid #e9ecef;
-    border-radius: 4px;
+    border-radius: 8px;
 }
 
 .saved-searches-header {
@@ -851,14 +1105,22 @@ document.addEventListener('click', function(e) {
     font-weight: 600;
 }
 
+.saved-searches-header h3 i {
+    color: #007bff;
+    margin-right: 6px;
+}
+
 .btn-refresh-searches {
-    padding: 4px 12px;
+    padding: 4px 14px;
     background: #6c757d;
-    color: white;
+    color: rgb(255, 255, 255);
     border: none;
-    border-radius: 4px;
+    border-radius: 6px;
     font-size: 0.75rem;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .btn-refresh-searches:hover {
@@ -870,9 +1132,9 @@ document.addEventListener('click', function(e) {
     justify-content: space-between;
     align-items: center;
     padding: 8px 12px;
-    background: white;
+    background: rgb(0, 0, 0);
     border: 1px solid #e9ecef;
-    border-radius: 4px;
+    border-radius: 6px;
     margin-bottom: 4px;
     transition: background 0.2s;
 }
@@ -908,11 +1170,11 @@ document.addEventListener('click', function(e) {
 }
 
 .search-actions button {
-    padding: 2px 8px;
+    padding: 2px 10px;
     border: none;
     border-radius: 4px;
-    cursor: pointer;
     font-size: 0.75rem;
+    cursor: pointer;
 }
 
 .btn-load-search {
@@ -944,7 +1206,7 @@ document.addEventListener('click', function(e) {
     padding: 16px;
 }
 
-/* Export Dropdown */
+/* ============ EXPORT DROPDOWN ============ */
 .export-dropdown {
     position: relative;
     display: inline-block;
@@ -956,14 +1218,18 @@ document.addEventListener('click', function(e) {
     top: 100%;
     background: white;
     border: 1px solid #dee2e6;
-    border-radius: 4px;
-    min-width: 120px;
+    border-radius: 6px;
+    min-width: 140px;
     z-index: 1000;
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    overflow: hidden;
+    margin-top: 4px;
 }
 
 .export-menu a {
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 8px;
     padding: 8px 16px;
     text-decoration: none;
     color: #1a1a2e;
@@ -974,99 +1240,7 @@ document.addEventListener('click', function(e) {
     background: #f8f9fa;
 }
 
-/* Equipment Card */
-.equipment-card {
-    background: white;
-    border: 1px solid #e9ecef;
-    border-radius: 4px;
-    padding: 18px;
-    transition: all 0.2s ease;
-}
-
-.equipment-card:hover {
-    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-    transform: translateY(-2px);
-}
-
-.equipment-card.status-available { border-left: 4px solid #28a745; }
-.equipment-card.status-rented { border-left: 4px solid #ffc107; }
-.equipment-card.status-maintenance { border-left: 4px solid #dc3545; }
-
-.card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 10px;
-    gap: 8px;
-}
-
-.card-header h3 {
-    margin: 0;
-    font-size: 1rem;
-    font-weight: 600;
-}
-
-.status-badge {
-    padding: 2px 10px;
-    border-radius: 4px;
-    font-size: 0.65rem;
-    font-weight: 600;
-    white-space: nowrap;
-}
-
-.status-available .status-badge { background: #d4edda; color: #155724; }
-.status-rented .status-badge { background: #fff3cd; color: #856404; }
-.status-maintenance .status-badge { background: #f8d7da; color: #721c24; }
-
-.card-details p {
-    margin: 3px 0;
-    font-size: 0.8rem;
-    color: #495057;
-}
-
-.card-details .label {
-    font-weight: 600;
-    color: #6c757d;
-    font-size: 0.75rem;
-}
-
-.card-actions {
-    margin-top: 12px;
-    display: flex;
-    gap: 6px;
-}
-
-.card-actions a,
-.card-actions button {
-    padding: 4px 12px;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-decoration: none;
-    border: none;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.btn-view {
-    background: #17a2b8;
-    color: white;
-}
-
-.btn-view:hover {
-    background: #138496;
-}
-
-.btn-rent {
-    background: #28a745;
-    color: white;
-}
-
-.btn-rent:hover {
-    background: #218838;
-}
-
-/* Pagination */
+/* ============ PAGINATION ============ */
 .pagination {
     display: flex;
     justify-content: center;
@@ -1075,17 +1249,20 @@ document.addEventListener('click', function(e) {
     margin-top: 24px;
     padding: 16px;
     background: #f8f9fa;
-    border-radius: 4px;
+    border-radius: 8px;
 }
 
 .page-link {
-    padding: 8px 16px;
+    padding: 8px 18px;
     background: white;
     border: 1px solid #dee2e6;
-    border-radius: 4px;
+    border-radius: 6px;
     text-decoration: none;
     color: #007bff;
     transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .page-link:hover {
@@ -1099,17 +1276,18 @@ document.addEventListener('click', function(e) {
     color: #495057;
 }
 
-/* Empty State */
+/* ============ EMPTY STATE ============ */
 .empty-state {
     text-align: center;
     padding: 60px 20px;
     background: #f8f9fa;
     border: 1px solid #e9ecef;
-    border-radius: 4px;
+    border-radius: 8px;
 }
 
 .empty-icon {
     font-size: 4rem;
+    color: #adb5bd;
     margin-bottom: 16px;
 }
 
@@ -1135,8 +1313,11 @@ document.addEventListener('click', function(e) {
     background: #6c757d;
     color: white;
     text-decoration: none;
-    border-radius: 4px;
+    border-radius: 6px;
     font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .empty-actions .btn-primary {
@@ -1144,37 +1325,14 @@ document.addEventListener('click', function(e) {
     background: #007bff;
     color: white;
     text-decoration: none;
-    border-radius: 4px;
+    border-radius: 6px;
     font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
-.empty-tips {
-    margin-top: 24px;
-    padding-top: 20px;
-    border-top: 1px solid #e9ecef;
-    text-align: left;
-    max-width: 400px;
-    margin-left: auto;
-    margin-right: auto;
-}
-
-.empty-tips h4 {
-    margin: 0 0 8px 0;
-    font-size: 0.85rem;
-}
-
-.empty-tips ul {
-    margin: 0;
-    padding-left: 20px;
-}
-
-.empty-tips li {
-    font-size: 0.8rem;
-    color: #6c757d;
-    margin-bottom: 4px;
-}
-
-/* Responsive */
+/* ============ RESPONSIVE ============ */
 @media (max-width: 992px) {
     .filter-row {
         grid-template-columns: repeat(2, 1fr);
@@ -1198,7 +1356,12 @@ document.addEventListener('click', function(e) {
     
     .search-btn {
         width: 100%;
-        border-radius: 0;
+        border-radius: 0 0 6px 6px;
+        justify-content: center;
+    }
+    
+    .search-icon {
+        display: none;
     }
     
     .search-results-grid {
@@ -1238,6 +1401,10 @@ document.addEventListener('click', function(e) {
         position: static;
         width: 100%;
     }
+    
+    .equipment-image-container {
+        height: 180px;
+    }
 }
 
 @media (max-width: 480px) {
@@ -1261,6 +1428,15 @@ document.addEventListener('click', function(e) {
     .btn-clear-filters {
         width: 100%;
         text-align: center;
+        justify-content: center;
+    }
+    
+    .equipment-image-container {
+        height: 200px;
+    }
+    
+    .pagination {
+        flex-wrap: wrap;
     }
 }
 </style>

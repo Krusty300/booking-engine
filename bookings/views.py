@@ -389,18 +389,211 @@ def delete_resource(request, resource_id):
 @user_passes_test(lambda u: u.is_staff)
 def admin_manage_resources(request):
     """Admin view to manage all resources"""
+    # Check if export is requested
+    export_format = request.GET.get('format')
+    if export_format:
+        return export_resources(request, export_format)
+    
     resources = Resource.objects.all().order_by('-created_at', 'id')
     
     status_filter = request.GET.get('status', 'all')
     if status_filter != 'all':
         resources = resources.filter(status=status_filter)
     
+    # Calculate counts for statistics cards
+    total_count = Resource.objects.count()
+    approved_count = Resource.objects.filter(status='APPROVED').count()
+    pending_count = Resource.objects.filter(status='PENDING').count()
+    rejected_count = Resource.objects.filter(status='REJECTED').count()
+    inactive_count = Resource.objects.filter(status='INACTIVE').count()
+    
     context = {
         'resources': resources,
         'status_filter': status_filter,
         'status_choices': Resource.STATUS_CHOICES,
+        'total_count': total_count,
+        'approved_count': approved_count,
+        'pending_count': pending_count,
+        'rejected_count': rejected_count,
+        'inactive_count': inactive_count,
     }
     return render(request, 'bookings/admin_manage_resources.html', context)
+
+def export_resources(request, export_format):
+    """Export resources in various formats"""
+    resources = Resource.objects.all().order_by('-created_at', 'id')
+    
+    # Apply status filter if present
+    status_filter = request.GET.get('status', 'all')
+    if status_filter != 'all':
+        resources = resources.filter(status=status_filter)
+    
+    # Prepare data for export
+    data = []
+    for resource in resources:
+        data.append({
+            'ID': resource.id,
+            'Name': resource.name,
+            'Description': resource.description[:100] + '...' if resource.description and len(resource.description) > 100 else resource.description,
+            'Category': resource.category.name if resource.category else 'Uncategorized',
+            'Owner': resource.owner.username if resource.owner else 'No owner',
+            'Owner Email': resource.owner.email if resource.owner else 'No email',
+            'Status': resource.get_status_display(),
+            'Location': resource.location or 'Not specified',
+            'Price per Hour': str(resource.price_per_hour) if resource.price_per_hour else 'Free',
+            'Max Capacity': resource.max_capacity,
+            'Meeting Room': 'Yes' if resource.is_meeting_room() else 'No',
+            'Created': resource.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+            'Last Updated': resource.updated_at.strftime('%Y-%m-%d %H:%M:%S'),
+        })
+    
+    if export_format == 'csv':
+        return export_csv(data, 'resources_export')
+    elif export_format == 'excel':
+        return export_excel(data, 'resources_export')
+    elif export_format == 'pdf':
+        return export_pdf(data, 'resources_export')
+    else:
+        return JsonResponse({'error': 'Invalid format'}, status=400)
+
+def export_csv(data, filename):
+    """Export data as CSV"""
+    import csv
+    from django.http import HttpResponse
+    
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="{filename}_{timezone.now().strftime("%Y%m%d_%H%M%S")}.csv"'
+    
+    if data:
+        writer = csv.DictWriter(response, fieldnames=data[0].keys())
+        writer.writeheader()
+        writer.writerows(data)
+    
+    return response
+
+def export_excel(data, filename):
+    """Export data as Excel"""
+    try:
+        import openpyxl
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+        from openpyxl.utils import get_column_letter
+        from django.http import HttpResponse
+        
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Resources"
+        
+        # Define styles
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill(start_color="007bff", end_color="007bff", fill_type="solid")
+        header_alignment = Alignment(horizontal="center", vertical="center")
+        border = Border(
+            left=Side(style='thin'),
+            right=Side(style='thin'),
+            top=Side(style='thin'),
+            bottom=Side(style='thin')
+        )
+        
+        # Write headers
+        if data:
+            headers = list(data[0].keys())
+            for col, header in enumerate(headers, 1):
+                cell = ws.cell(row=1, column=col, value=header)
+                cell.font = header_font
+                cell.fill = header_fill
+                cell.alignment = header_alignment
+                cell.border = border
+                ws.column_dimensions[get_column_letter(col)].width = 20
+        
+        # Write data
+        for row_idx, item in enumerate(data, 2):
+            for col_idx, key in enumerate(headers, 1):
+                cell = ws.cell(row=row_idx, column=col_idx, value=item.get(key, ''))
+                cell.border = border
+                cell.alignment = Alignment(vertical="center")
+        
+        # Freeze header row
+        ws.freeze_panes = 'A2'
+        
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = f'attachment; filename="{filename}_{timezone.now().strftime("%Y%m%d_%H%M%S")}.xlsx"'
+        wb.save(response)
+        return response
+        
+    except ImportError:
+        # Fallback to CSV if openpyxl is not installed
+        return export_csv(data, filename)
+
+def export_pdf(data, filename):
+    """Export data as PDF"""
+    try:
+        from reportlab.lib import colors
+        from reportlab.lib.pagesizes import landscape, letter
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.units import inch
+        from django.http import HttpResponse
+        
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{filename}_{timezone.now().strftime("%Y%m%d_%H%M%S")}.pdf"'
+        
+        doc = SimpleDocTemplate(response, pagesize=landscape(letter))
+        styles = getSampleStyleSheet()
+        elements = []
+        
+        # Title
+        title_style = styles['Title']
+        elements.append(Paragraph("Resources Export", title_style))
+        elements.append(Spacer(1, 0.2*inch))
+        
+        # Summary info
+        summary_style = styles['Normal']
+        elements.append(Paragraph(f"Total Resources: {len(data)}", summary_style))
+        elements.append(Paragraph(f"Generated on: {timezone.now().strftime('%B %d, %Y at %H:%M')}", summary_style))
+        elements.append(Spacer(1, 0.2*inch))
+        
+        # Table data
+        if data:
+            headers = list(data[0].keys())
+            # Limit columns for PDF readability
+            display_headers = ['ID', 'Name', 'Category', 'Owner', 'Status', 'Price per Hour', 'Created']
+            header_indices = [headers.index(h) for h in display_headers if h in headers]
+            
+            table_data = [display_headers]
+            for item in data:
+                row = []
+                for idx in header_indices:
+                    value = list(item.values())[idx]
+                    # Truncate long text
+                    if isinstance(value, str) and len(value) > 30:
+                        value = value[:27] + '...'
+                    row.append(str(value) if value is not None else '')
+                table_data.append(row)
+            
+            table = Table(table_data, repeatRows=1)
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#007bff')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                ('FONTSIZE', (0, 1), (-1, -1), 8),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ]))
+            
+            elements.append(table)
+        
+        doc.build(elements)
+        return response
+        
+    except ImportError:
+        # Fallback to CSV if reportlab is not installed
+        return export_csv(data, filename)
 
 @user_passes_test(lambda u: u.is_staff)
 def admin_update_resource_status(request, resource_id):

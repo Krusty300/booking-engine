@@ -159,11 +159,11 @@
         {% if bookings.has_other_pages %}
             <div class="pagination">
                 {% if bookings.has_previous %}
-                    <a href="?page={{ bookings.previous_page_number }}" class="page-link">← Previous</a>
+                    <a href="?page={{ bookings.previous_page_number }}" class="page-link">Previous</a>
                 {% endif %}
                 <span class="page-info">Page {{ bookings.number }} of {{ bookings.paginator.num_pages }}</span>
                 {% if bookings.has_next %}
-                    <a href="?page={{ bookings.next_page_number }}" class="page-link">Next →</a>
+                    <a href="?page={{ bookings.next_page_number }}" class="page-link">Next</a>
                 {% endif %}
             </div>
         {% endif %}

@@ -1,167 +1,1181 @@
 {% extends 'bookings/base.html' %}
+{% load static %}
 
 {% block content %}
-<h1 style="font-size: 1.6rem; font-weight: 800; margin-bottom: 20px;">Admin: Manage Resources</h1>
+<div class="admin-resources-container">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div>
+            <h1>Resource Management : Admin view</h1>
+            <p class="subtitle">Manage and moderate all resources across the platform</p>
+        </div>
+        <div class="header-actions">
+            <a href="{% url 'bookings:create_resource' %}" class="btn-add">
+                <i class="fas fa-plus"></i> Add Resource
+            </a>
+            <a href="{% url 'bookings:admin_dashboard' %}" class="btn-dashboard">
+                <i class="fas fa-chart-bar"></i> Dashboard
+            </a>
+        </div>
+    </div>
 
-<!-- Filter -->
-<div style="margin: 15px 0 20px 0; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
-    <span style="font-size: 0.8rem; font-weight: 600; color: #6c757d;">Filter by status:</span>
-    <a href="?status=all" style="padding: 4px 12px; background: {% if status_filter == 'all' %}#007bff; color: white;{% else %}#e9ecef; color: #333;{% endif %} text-decoration: none; font-size: 0.75rem; font-weight: 600; border-radius: 4px;">All</a>
-    {% for value, label in status_choices %}
-        <a href="?status={{ value }}" style="padding: 4px 12px; background: {% if status_filter == value %}#007bff; color: white;{% else %}#e9ecef; color: #333;{% endif %} text-decoration: none; font-size: 0.75rem; font-weight: 600; border-radius: 4px;">
-            {{ label }}
-        </a>
-    {% endfor %}
+    <!-- Statistics Cards -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <span class="stat-number">{{ total_count|default:0 }}</span>
+            <span class="stat-label">Total Resources</span>
+        </div>
+        <div class="stat-card stat-approved">
+            <span class="stat-number">{{ approved_count|default:0 }}</span>
+            <span class="stat-label">Approved</span>
+        </div>
+        <div class="stat-card stat-pending">
+            <span class="stat-number">{{ pending_count|default:0 }}</span>
+            <span class="stat-label">Pending</span>
+        </div>
+        <div class="stat-card stat-rejected">
+            <span class="stat-number">{{ rejected_count|default:0 }}</span>
+            <span class="stat-label">Rejected</span>
+        </div>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="filter-section">
+        <div class="filter-left">
+            <span class="filter-label"><i class="fas fa-filter"></i> Filter:</span>
+            <div class="filter-buttons">
+                <a href="?status=all" class="filter-btn {% if status_filter == 'all' %}active{% endif %}">
+                    All
+                    <span class="filter-count">{{ total_count|default:0 }}</span>
+                </a>
+                <a href="?status=APPROVED" class="filter-btn {% if status_filter == 'APPROVED' %}active{% endif %}">
+                    Approved
+                    <span class="filter-count">{{ approved_count|default:0 }}</span>
+                </a>
+                <a href="?status=PENDING" class="filter-btn {% if status_filter == 'PENDING' %}active{% endif %}">
+                    Pending
+                    <span class="filter-count">{{ pending_count|default:0 }}</span>
+                </a>
+                <a href="?status=REJECTED" class="filter-btn {% if status_filter == 'REJECTED' %}active{% endif %}">
+                    Rejected
+                    <span class="filter-count">{{ rejected_count|default:0 }}</span>
+                </a>
+                <a href="?status=INACTIVE" class="filter-btn {% if status_filter == 'INACTIVE' %}active{% endif %}">
+                    Inactive
+                    <span class="filter-count">{{ inactive_count|default:0 }}</span>
+                </a>
+            </div>
+        </div>
+        <div class="filter-right">
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" placeholder="Search resources..." id="searchResources" value="{{ search_query|default:'' }}">
+            </div>
+        </div>
+    </div>
+
+    <!-- Resources Table -->
+    {% if resources %}
+        <div class="table-container">
+            <!-- ============ UPDATED TABLE TOOLBAR ============ -->
+            <div class="table-toolbar">
+                <span class="results-count">Showing <strong>{{ resources|length }}</strong> resource{{ resources|pluralize }}</span>
+                <div class="table-actions">
+                    <div class="export-dropdown">
+                        <button class="btn-export" onclick="toggleExportMenu()">
+                            <i class="fas fa-download"></i> Export ▾
+                        </button>
+                        <div id="exportMenu" class="export-menu" style="display: none;">
+                            <a href="?status={{ status_filter }}&format=csv" class="export-option">
+                                <i class="fas fa-file-csv"></i> CSV
+                            </a>
+                            <a href="?status={{ status_filter }}&format=excel" class="export-option">
+                                <i class="fas fa-file-excel"></i> Excel
+                            </a>
+                            <a href="?status={{ status_filter }}&format=pdf" class="export-option">
+                                <i class="fas fa-file-pdf"></i> PDF
+                            </a>
+                        </div>
+                    </div>
+                    <button class="btn-refresh" onclick="location.reload()">
+                        <i class="fas fa-sync"></i> Refresh
+                    </button>
+                </div>
+            </div>
+            <!-- ============ END UPDATED TABLE TOOLBAR ============ -->
+            
+            <div class="table-responsive">
+                <table class="resources-table">
+                    <thead>
+                        <tr>
+                            <th>Image</th>
+                            <th>Resource</th>
+                            <th>Owner</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for resource in resources %}
+                            <tr class="status-{{ resource.status|lower }}">
+                                <td>
+                                    <div class="resource-image">
+                                        {% if resource.is_meeting_room and resource.meeting_room.room_photo %}
+                                            <img src="{{ resource.meeting_room.room_photo.url }}" alt="{{ resource.name }}" loading="lazy">
+                                        {% elif resource.image %}
+                                            <img src="{{ resource.image.url }}" alt="{{ resource.name }}" loading="lazy">
+                                        {% elif resource.image_url %}
+                                            <img src="{{ resource.image_url }}" alt="{{ resource.name }}" loading="lazy">
+                                        {% else %}
+                                            <img src="{% static 'bookings/images/default-resource.png' %}" alt="No image">
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="resource-info">
+                                        <div class="resource-name">
+                                            <a href="{% url 'bookings:resource_detail' resource.id %}">{{ resource.name }}</a>
+                                        </div>
+                                        <div class="resource-meta">
+                                            {% if resource.price_per_hour %}
+                                                <span class="resource-price">${{ resource.price_per_hour }}/hour</span>
+                                            {% endif %}
+                                            {% if resource.location %}
+                                                <span class="resource-location">{{ resource.location }}</span>
+                                            {% endif %}
+                                            {% if resource.is_meeting_room %}
+                                                <span class="badge-meeting">Meeting Room</span>
+                                            {% endif %}
+                                            <span class="resource-category">{{ resource.category.name|default:"Uncategorized" }}</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="owner-info">
+                                        <span class="owner-name">{{ resource.owner.username }}</span>
+                                        <span class="owner-email">{{ resource.owner.email }}</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="status-badge status-{{ resource.status|lower }}">
+                                        {{ resource.get_status_display }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="date-info">
+                                        <span class="date-main">{{ resource.created_at|date:"M d, Y" }}</span>
+                                        <span class="date-time">{{ resource.created_at|date:"H:i" }}</span>
+                                    </div>
+                                </td>
+                                <td class="actions-cell">
+                                    <div class="actions-wrapper">
+                                        <form method="post" action="{% url 'bookings:admin_update_resource_status' resource.id %}" class="status-form">
+                                            {% csrf_token %}
+                                            <select name="status" class="status-select">
+                                                <option value="APPROVED" {% if resource.status == 'APPROVED' %}selected{% endif %}>Approve</option>
+                                                <option value="PENDING" {% if resource.status == 'PENDING' %}selected{% endif %}>Pending</option>
+                                                <option value="REJECTED" {% if resource.status == 'REJECTED' %}selected{% endif %}>Reject</option>
+                                                <option value="INACTIVE" {% if resource.status == 'INACTIVE' %}selected{% endif %}>Inactive</option>
+                                            </select>
+                                            <button type="submit" class="btn-update" title="Update status">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                        </form>
+                                        <div class="action-buttons">
+                                            <a href="{% url 'bookings:edit_resource' resource.id %}" class="btn-action btn-edit" title="Edit resource">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <a href="{% url 'bookings:delete_resource' resource.id %}" class="btn-action btn-delete" title="Delete resource" onclick="return confirm('Are you sure you want to delete this resource?')">
+                                                <i class="fas fa-trash"></i>
+                                            </a>
+                                            <a href="{% url 'bookings:resource_detail' resource.id %}" class="btn-action btn-view" title="View resource">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% else %}
+        <!-- Empty State -->
+        <div class="empty-state">
+            <div class="empty-icon">
+                <i class="fas fa-folder-open"></i>
+            </div>
+            <h2>No Resources Found</h2>
+            <p>
+                {% if status_filter != 'all' %}
+                    No resources with status "{{ status_filter|title }}" found.
+                {% else %}
+                    There are no resources available matching your filter criteria.
+                {% endif %}
+            </p>
+            <div class="empty-actions">
+                <a href="{% url 'bookings:create_resource' %}" class="btn-primary">
+                    <i class="fas fa-plus"></i> Create Resource
+                </a>
+                <a href="{% url 'bookings:admin_manage_resources' %}?status=all" class="btn-secondary">
+                    <i class="fas fa-undo"></i> Clear Filters
+                </a>
+            </div>
+        </div>
+    {% endif %}
 </div>
 
-{% if resources %}
-    <div style="overflow-x: auto;">
-        <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem;">
-            <thead>
-                <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">
-                    <th style="padding: 10px 12px; text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700;">Image</th>
-                    <th style="padding: 10px 12px; text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700;">Resource</th>
-                    <th style="padding: 10px 12px; text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700;">Owner</th>
-                    <th style="padding: 10px 12px; text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700;">Status</th>
-                    <th style="padding: 10px 12px; text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700;">Created</th>
-                    <th style="padding: 10px 12px; text-align: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700;">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for resource in resources %}
-                    <tr style="border-bottom: 1px solid #dee2e6; 
-                               {% if resource.status == 'PENDING' %}background: #fff8e1;{% endif %}
-                               {% if resource.status == 'REJECTED' %}background: #fce4ec;{% endif %}
-                               {% if resource.status == 'INACTIVE' %}background: #f5f5f5;{% endif %}">
-                        
-                        <!-- Image Column -->
-                        <td style="padding: 10px 12px;">
-                            <!-- Check if resource is meeting room with room_photo -->
-                            {% if resource.is_meeting_room and resource.meeting_room.room_photo %}
-                                <img src="{{ resource.meeting_room.room_photo.url }}" alt="{{ resource.name }}" 
-                                     style="width: 50px; height: 50px; object-fit: cover; border: 1px solid #e9ecef; border-radius: 4px;">
-                            <!-- Check if resource has image -->
-                            {% elif resource.image %}
-                                <img src="{{ resource.image.url }}" alt="{{ resource.name }}" 
-                                     style="width: 50px; height: 50px; object-fit: cover; border: 1px solid #e9ecef; border-radius: 4px;">
-                            <!-- Check if resource has image_url -->
-                            {% elif resource.image_url %}
-                                <img src="{{ resource.image_url }}" alt="{{ resource.name }}" 
-                                     style="width: 50px; height: 50px; object-fit: cover; border: 1px solid #e9ecef; border-radius: 4px;">
-                            <!-- Default placeholder -->
-                            {% else %}
-                                <img src="/static/bookings/images/default-resource.png" alt="No image" 
-                                     style="width: 50px; height: 50px; object-fit: cover; border: 1px solid #e9ecef; border-radius: 4px;">
-                            {% endif %}
-                        </td>
-                        
-                        <!-- Resource Name -->
-                        <td style="padding: 10px 12px;">
-                            <strong>{{ resource.name }}</strong>
-                            {% if resource.price_per_hour %}
-                                <span style="display: block; font-size: 0.7rem; color: #28a745;">${{ resource.price_per_hour }}/hour</span>
-                            {% endif %}
-                            {% if resource.location %}
-                                <span style="display: block; font-size: 0.65rem; color: #6c757d;">{{ resource.location }}</span>
-                            {% endif %}
-                            {% if resource.is_meeting_room %}
-                                <span style="display: inline-block; font-size: 0.6rem; background: #17a2b8; color: white; padding: 1px 8px; border-radius: 4px; margin-top: 4px;">Meeting Room</span>
-                            {% endif %}
-                        </td>
-                        
-                        <!-- Owner -->
-                        <td style="padding: 10px 12px;">
-                            {{ resource.owner.username }}
-                            <span style="display: block; font-size: 0.65rem; color: #999;">{{ resource.owner.email }}</span>
-                        </td>
-                        
-                        <!-- Status -->
-                        <td style="padding: 10px 12px;">
-                            {% if resource.status == 'APPROVED' %}
-                                <span style="background: #28a745; color: white; padding: 2px 10px; font-size: 0.65rem; font-weight: 600; border-radius: 4px;">Approved</span>
-                            {% elif resource.status == 'PENDING' %}
-                                <span style="background: #ffc107; color: #856404; padding: 2px 10px; font-size: 0.65rem; font-weight: 600; border-radius: 4px;">Pending</span>
-                            {% elif resource.status == 'REJECTED' %}
-                                <span style="background: #dc3545; color: white; padding: 2px 10px; font-size: 0.65rem; font-weight: 600; border-radius: 4px;">Rejected</span>
-                            {% else %}
-                                <span style="background: #6c757d; color: white; padding: 2px 10px; font-size: 0.65rem; font-weight: 600; border-radius: 4px;">Inactive</span>
-                            {% endif %}
-                        </td>
-                        
-                        <!-- Created -->
-                        <td style="padding: 10px 12px; font-size: 0.75rem;">
-                            {{ resource.created_at|date:"M d, Y" }}
-                        </td>
-                        
-                        <!-- Actions -->
-                        <td style="padding: 10px 12px; text-align: center;">
-                            <form method="post" action="{% url 'bookings:admin_update_resource_status' resource.id %}" style="display: flex; gap: 4px; flex-wrap: wrap; justify-content: center;">
-                                {% csrf_token %}
-                                <select name="status" style="padding: 4px 6px; border: 1px solid #ddd; font-size: 0.7rem; border-radius: 4px;">
-                                    <option value="APPROVED" {% if resource.status == 'APPROVED' %}selected{% endif %}>Approve</option>
-                                    <option value="PENDING" {% if resource.status == 'PENDING' %}selected{% endif %}>Pending</option>
-                                    <option value="REJECTED" {% if resource.status == 'REJECTED' %}selected{% endif %}>Reject</option>
-                                    <option value="INACTIVE" {% if resource.status == 'INACTIVE' %}selected{% endif %}>Inactive</option>
-                                </select>
-                                <button type="submit" style="padding: 4px 10px; background: #007bff; color: white; border: none; font-size: 0.65rem; cursor: pointer; transition: all 0.2s ease; border-radius: 4px;"
-                                        onmouseover="this.style.background='#0056b3'"
-                                        onmouseout="this.style.background='#007bff'">
-                                    Update
-                                </button>
-                            </form>
-                            <div style="margin-top: 4px; display: flex; gap: 4px; justify-content: center; flex-wrap: wrap;">
-                                <a href="{% url 'bookings:edit_resource' resource.id %}" style="font-size: 0.65rem; color: #007bff; text-decoration: none; padding: 2px 6px; border-radius: 4px;" onmouseover="this.style.background='#e3f2fd'" onmouseout="this.style.background='transparent'">Edit</a>
-                                <a href="{% url 'bookings:delete_resource' resource.id %}" style="font-size: 0.65rem; color: #dc3545; text-decoration: none; padding: 2px 6px; border-radius: 4px;" onclick="return confirm('Are you sure you want to delete this resource?')" onmouseover="this.style.background='#fce4ec'" onmouseout="this.style.background='transparent'">Delete</a>
-                                <a href="{% url 'bookings:resource_detail' resource.id %}" style="font-size: 0.65rem; color: #28a745; text-decoration: none; padding: 2px 6px; border-radius: 4px;" onmouseover="this.style.background='#e8f5e9'" onmouseout="this.style.background='transparent'">View</a>
-                            </div>
-                        </td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-{% else %}
-    <div style="text-align: center; padding: 40px; background: #f8f9fa; margin-top: 20px; border-radius: 8px;">
-        <div style="font-size: 48px; margin-bottom: 15px;">📭</div>
-        <p style="font-size: 0.9rem; color: #6c757d;">No resources found.</p>
-        <p style="font-size: 0.8rem; color: #999; margin-top: 10px;">
-            <a href="{% url 'bookings:create_resource' %}" style="color: #007bff; text-decoration: none; font-weight: 600;">Create your first resource</a>
-        </p>
-    </div>
-{% endif %}
-
-<style>
-    @media (max-width: 768px) {
-        table {
-            font-size: 0.7rem !important;
+<!-- ============ UPDATED JAVASCRIPT ============ -->
+<script>
+// ============ SEARCH FUNCTIONALITY ============
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchResources');
+    const tableRows = document.querySelectorAll('.resources-table tbody tr');
+    const resultsCount = document.querySelector('.results-count strong');
+    
+    if (searchInput) {
+        // Handle search with URL parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const searchQuery = urlParams.get('search');
+        if (searchQuery) {
+            searchInput.value = searchQuery;
+            performSearch(searchQuery);
         }
-        th, td {
-            padding: 6px 8px !important;
-        }
-        .filter-btn {
-            font-size: 0.65rem !important;
-            padding: 3px 8px !important;
-        }
-        td img {
-            width: 35px !important;
-            height: 35px !important;
-        }
+        
+        searchInput.addEventListener('input', function() {
+            const query = this.value.trim();
+            performSearch(query);
+            
+            // Update URL with search parameter
+            const url = new URL(window.location.href);
+            if (query) {
+                url.searchParams.set('search', query);
+            } else {
+                url.searchParams.delete('search');
+            }
+            window.history.replaceState({}, '', url);
+        });
     }
     
-    @media (max-width: 480px) {
-        td img {
-            width: 30px !important;
-            height: 30px !important;
+    function performSearch(query) {
+        let visibleCount = 0;
+        const lowerQuery = query.toLowerCase();
+        
+        tableRows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            if (text.includes(lowerQuery)) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+        
+        if (resultsCount) {
+            resultsCount.textContent = visibleCount;
         }
-        .filter-btn {
-            font-size: 0.6rem !important;
-            padding: 2px 6px !important;
-        }
-        .action-buttons {
-            flex-direction: column !important;
-            align-items: center !important;
+        
+        // Show/hide empty state for search results
+        const tableContainer = document.querySelector('.table-container');
+        const emptyState = document.querySelector('.empty-state');
+        if (visibleCount === 0 && tableRows.length > 0) {
+            let noResultsMsg = document.querySelector('.no-search-results');
+            if (!noResultsMsg) {
+                noResultsMsg = document.createElement('div');
+                noResultsMsg.className = 'no-search-results';
+                noResultsMsg.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #6c757d;">
+                        <i class="fas fa-search" style="font-size: 2rem; display: block; margin-bottom: 10px;"></i>
+                        <p>No resources match your search "<strong>${query}</strong>"</p>
+                    </div>
+                `;
+                tableContainer.parentNode.insertBefore(noResultsMsg, tableContainer.nextSibling);
+            }
+            noResultsMsg.style.display = 'block';
+            tableContainer.style.display = 'none';
+        } else {
+            const noResultsMsg = document.querySelector('.no-search-results');
+            if (noResultsMsg) {
+                noResultsMsg.style.display = 'none';
+            }
+            tableContainer.style.display = 'block';
         }
     }
-</style>
+});
 
+// ============ STATUS SELECT AUTO-SUBMIT ============
+document.querySelectorAll('.status-select').forEach(select => {
+    select.addEventListener('change', function() {
+        this.closest('.status-form').submit();
+    });
+});
+
+// ============ EXPORT DROPDOWN ============
+function toggleExportMenu() {
+    const menu = document.getElementById('exportMenu');
+    if (menu) {
+        menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+    }
+}
+
+// Close export menu on click outside
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.export-dropdown')) {
+        const menu = document.getElementById('exportMenu');
+        if (menu) {
+            menu.style.display = 'none';
+        }
+    }
+});
+</script>
+<!-- ============ END UPDATED JAVASCRIPT ============ -->
+
+<style>
+/* ============ CONTAINER ============ */
+.admin-resources-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 15px;
+}
+
+/* ============ PAGE HEADER ============ */
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #e9ecef;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.page-header h1 {
+    margin: 0;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #1a1a2e;
+}
+
+.page-header .subtitle {
+    margin: 4px 0 0;
+    color: #6c757d;
+    font-size: 0.85rem;
+}
+
+.header-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.btn-add,
+.btn-dashboard {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+
+.btn-add {
+    background: #28a745;
+    color: white;
+}
+
+.btn-add:hover {
+    background: #218838;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+}
+
+.btn-dashboard {
+    background: #007bff;
+    color: white;
+}
+
+.btn-dashboard:hover {
+    background: #0056b3;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+}
+
+/* ============ STATISTICS CARDS ============ */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.stat-card {
+    background: white;
+    padding: 16px;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    text-align: center;
+    transition: all 0.2s;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.stat-number {
+    display: block;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #1a1a2e;
+    line-height: 1.2;
+}
+
+.stat-label {
+    display: block;
+    font-size: 0.75rem;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 4px;
+}
+
+.stat-card.stat-approved .stat-number { color: #28a745; }
+.stat-card.stat-pending .stat-number { color: #ffc107; }
+.stat-card.stat-rejected .stat-number { color: #dc3545; }
+
+/* ============ FILTER SECTION ============ */
+.filter-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8f9fa;
+    padding: 12px 16px;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.filter-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.filter-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #495057;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.filter-label i {
+    color: #007bff;
+    margin-right: 4px;
+}
+
+.filter-buttons {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.filter-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #495057;
+    transition: all 0.2s;
+}
+
+.filter-btn:hover {
+    background: #e9ecef;
+}
+
+.filter-btn.active {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+.filter-btn .filter-count {
+    padding: 0 6px;
+    background: rgba(0,0,0,0.1);
+    border-radius: 10px;
+    font-size: 0.65rem;
+    font-weight: 600;
+}
+
+.filter-btn.active .filter-count {
+    background: rgba(255,255,255,0.2);
+    color: white;
+}
+
+.filter-right {
+    flex-shrink: 0;
+}
+
+.search-box {
+    display: flex;
+    align-items: center;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 4px 12px;
+    transition: all 0.2s;
+}
+
+.search-box:focus-within {
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.search-box i {
+    color: #6c757d;
+    font-size: 0.8rem;
+}
+
+.search-box input {
+    border: none;
+    padding: 6px 10px;
+    font-size: 0.85rem;
+    outline: none;
+    background: transparent;
+    min-width: 180px;
+}
+
+/* ============ TABLE SECTION ============ */
+.table-container {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.table-toolbar {
+    padding: 12px 16px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.results-count {
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+
+.results-count strong {
+    color: #1a1a2e;
+}
+
+.table-actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* ============ EXPORT DROPDOWN ============ */
+.export-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.export-menu {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    min-width: 140px;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    overflow: hidden;
+    margin-top: 4px;
+}
+
+.export-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    text-decoration: none;
+    color: #1a1a2e;
+    font-size: 0.8rem;
+    transition: background 0.2s;
+    border: none;
+    background: white;
+    width: 100%;
+    cursor: pointer;
+}
+
+.export-option:hover {
+    background: #f8f9fa;
+}
+
+.export-option i {
+    font-size: 0.9rem;
+    width: 18px;
+}
+
+.export-option i.fa-file-csv { color: #28a745; }
+.export-option i.fa-file-excel { color: #217346; }
+.export-option i.fa-file-pdf { color: #dc3545; }
+
+.btn-export {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 12px;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #495057;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-export:hover {
+    background: #e9ecef;
+}
+
+.btn-refresh {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 12px;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #495057;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-refresh:hover {
+    background: #e9ecef;
+}
+
+.no-search-results {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    margin-top: -1px;
+}
+
+.table-responsive {
+    overflow-x: auto;
+}
+
+.resources-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.resources-table thead {
+    background: #f8f9fa;
+}
+
+.resources-table th {
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #495057;
+    border-bottom: 2px solid #dee2e6;
+    white-space: nowrap;
+}
+
+.resources-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid #e9ecef;
+    vertical-align: middle;
+}
+
+.resources-table tbody tr {
+    transition: background 0.2s;
+}
+
+.resources-table tbody tr:hover {
+    background: #f8f9fa;
+}
+
+/* Row status colors */
+.resources-table tbody tr.status-pending {
+    border-left: 3px solid #ffc107;
+}
+
+.resources-table tbody tr.status-rejected {
+    border-left: 3px solid #dc3545;
+}
+
+.resources-table tbody tr.status-approved {
+    border-left: 3px solid #28a745;
+}
+
+.resources-table tbody tr.status-inactive {
+    border-left: 3px solid #6c757d;
+}
+
+.text-center {
+    text-align: center;
+}
+
+/* ============ RESOURCE IMAGE ============ */
+.resource-image {
+    width: 50px;
+    height: 50px;
+    border-radius: 6px;
+    overflow: hidden;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    flex-shrink: 0;
+}
+
+.resource-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* ============ RESOURCE INFO ============ */
+.resource-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.resource-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.resource-name a {
+    color: #1a1a2e;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.resource-name a:hover {
+    color: #007bff;
+}
+
+.resource-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+}
+
+.resource-price {
+    font-size: 0.7rem;
+    color: #28a745;
+    font-weight: 600;
+}
+
+.resource-location {
+    font-size: 0.65rem;
+    color: #6c757d;
+}
+
+.badge-meeting {
+    display: inline-block;
+    font-size: 0.55rem;
+    background: #17a2b8;
+    color: white;
+    padding: 1px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.resource-category {
+    font-size: 0.6rem;
+    color: #6c757d;
+    background: #e9ecef;
+    padding: 1px 8px;
+    border-radius: 4px;
+}
+
+/* ============ OWNER INFO ============ */
+.owner-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.owner-name {
+    font-weight: 500;
+    color: #1a1a2e;
+    font-size: 0.85rem;
+}
+
+.owner-email {
+    font-size: 0.7rem;
+    color: #6c757d;
+}
+
+/* ============ STATUS BADGE ============ */
+.status-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.status-approved { background: #d4edda; color: #155724; }
+.status-pending { background: #fff3cd; color: #856404; }
+.status-rejected { background: #f8d7da; color: #721c24; }
+.status-inactive { background: #e2e3e5; color: #383d41; }
+
+/* ============ DATE INFO ============ */
+.date-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.date-main {
+    font-size: 0.8rem;
+    color: #1a1a2e;
+}
+
+.date-time {
+    font-size: 0.65rem;
+    color: #6c757d;
+}
+
+/* ============ ACTIONS ============ */
+.actions-cell {
+    min-width: 160px;
+}
+
+.actions-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: center;
+}
+
+.status-form {
+    display: flex;
+    gap: 4px;
+    width: 100%;
+}
+
+.status-select {
+    flex: 1;
+    padding: 4px 8px;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    background: white;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.status-select:focus {
+    border-color: #007bff;
+    outline: none;
+}
+
+.btn-update {
+    padding: 4px 10px;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-update:hover {
+    background: #0056b3;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+}
+
+.btn-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 4px;
+    text-decoration: none;
+    transition: all 0.2s;
+    font-size: 0.75rem;
+}
+
+.btn-edit {
+    background: #e3f2fd;
+    color: #0056b3;
+}
+
+.btn-edit:hover {
+    background: #007bff;
+    color: white;
+}
+
+.btn-delete {
+    background: #fce4ec;
+    color: #c82333;
+}
+
+.btn-delete:hover {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-view {
+    background: #e8f5e9;
+    color: #1e7e34;
+}
+
+.btn-view:hover {
+    background: #28a745;
+    color: white;
+}
+
+/* ============ EMPTY STATE ============ */
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+}
+
+.empty-icon {
+    font-size: 4rem;
+    color: #adb5bd;
+    margin-bottom: 16px;
+}
+
+.empty-state h2 {
+    margin: 0 0 8px;
+    font-size: 1.3rem;
+    color: #1a1a2e;
+}
+
+.empty-state p {
+    color: #6c757d;
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+}
+
+.empty-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.empty-actions .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 20px;
+    background: #28a745;
+    color: white;
+    text-decoration: none;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+}
+
+.empty-actions .btn-primary:hover {
+    background: #218838;
+    transform: translateY(-1px);
+}
+
+.empty-actions .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 20px;
+    background: #6c757d;
+    color: white;
+    text-decoration: none;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+}
+
+.empty-actions .btn-secondary:hover {
+    background: #5a6268;
+}
+
+/* ============ RESPONSIVE ============ */
+@media (max-width: 992px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .header-actions {
+        width: 100%;
+    }
+    
+    .header-actions a {
+        flex: 1;
+        justify-content: center;
+    }
+    
+    .filter-section {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .filter-left {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .filter-buttons {
+        width: 100%;
+    }
+    
+    .filter-btn {
+        flex: 1;
+        justify-content: center;
+    }
+    
+    .search-box {
+        width: 100%;
+    }
+    
+    .search-box input {
+        width: 100%;
+        min-width: unset;
+    }
+    
+    .resources-table {
+        font-size: 0.75rem;
+    }
+    
+    .resources-table th,
+    .resources-table td {
+        padding: 8px 10px;
+    }
+    
+    .actions-cell {
+        min-width: 120px;
+    }
+    
+    .stats-grid {
+        gap: 10px;
+    }
+    
+    .stat-card {
+        padding: 12px;
+    }
+    
+    .stat-number {
+        font-size: 1.4rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .stats-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+    
+    .stat-card {
+        padding: 8px 12px;
+    }
+    
+    .stat-number {
+        font-size: 1.1rem;
+    }
+    
+    .stat-label {
+        font-size: 0.65rem;
+    }
+    
+    .resources-table {
+        font-size: 0.65rem;
+    }
+    
+    .resources-table th,
+    .resources-table td {
+        padding: 6px 8px;
+    }
+    
+    .resource-image {
+        width: 35px;
+        height: 35px;
+    }
+    
+    .actions-wrapper {
+        gap: 4px;
+    }
+    
+    .status-select {
+        font-size: 0.6rem;
+        padding: 2px 4px;
+    }
+    
+    .btn-action {
+        width: 24px;
+        height: 24px;
+        font-size: 0.65rem;
+    }
+    
+    .empty-state {
+        padding: 30px 16px;
+    }
+    
+    .empty-state h2 {
+        font-size: 1.1rem;
+    }
+}
+</style>
 {% endblock %}
