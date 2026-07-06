@@ -192,53 +192,6 @@ Before creating resources, you need to create categories:
 3. Create categories like "Meeting Rooms", "Equipment", "Services"
 
 
-
-
-Project Structure
-
-```
-booking-engine/
-├── booking_engine/              # Project settings
-│   ├── settings.py              # Configuration
-│   └── urls.py                  # Main URLs
-├── bookings/                    # Main application
-│   ├── migrations/              # Database migrations
-│   ├── templates/               # HTML templates
-│   │   ├── bookings/            # Main templates
-│   │   │   ├── base.html        # Base template with navigation
-│   │   │   ├── resource_list.html
-│   │   │   ├── resource_detail.html
-│   │   │   ├── resource_form.html
-│   │   │   ├── my_resources.html
-│   │   │   ├── my_bookings.html
-│   │   │   ├── profile.html
-│   │   │   ├── edit_profile.html
-│   │   │   ├── booking_history.html
-│   │   │   ├── admin_manage_resources.html
-│   │   │   └── manage_categories.html
-│   │   └── registration/        # Auth templates
-│   │       ├── login.html
-│   │       ├── signup.html
-│   │       └── password_reset_*.html
-│   ├── static/                  # Static files
-│   │   └── bookings/
-│   │       ├── fonts/           # Mona Sans font
-│   │       └── images/          # Default images
-│   ├── admin.py                 # Admin interface
-│   ├── models.py                # Database models
-│   ├── views.py                 # View functions
-│   ├── services.py              # Business logic
-│   ├── forms.py                 # Forms
-│   └── urls.py                  # App URLs
-├── media/                       # User uploaded files
-├── manage.py                    # Django management script
-├── requirements.txt             # Dependencies
-├── README.md                    # This file
-└── LICENSE                      # MIT License
-```
-
-
-
 Core Models
 
 Category
@@ -336,32 +289,6 @@ Tools
 - **Git** - Version control
 - **GitHub** - Repository hosting
 
-Screenshots
-
-Homepage with Category Filters
-```
-[Add screenshot: resource_list.png]
-```
-
-Resource Detail with Availability
-```
-[Add screenshot: resource_detail.png]
-```
-
-Booking History with Filters
-```
-[Add screenshot: booking_history.png]
-```
-
-User Profile
-```
-[Add screenshot: profile.png]
-```
-
-Admin Dashboard
-```
-[Add screenshot: admin_dashboard.png]
-```
 
 Future Enhancements
 
@@ -381,17 +308,14 @@ Future Enhancements
 Contributing
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
+2. Create a feature branch (`git checkout -b featureamazingfeature`)
+3. Commit your changes (`git commit -m 'Add some amazingfeature'`)
+4. Push to the branch (`git push origin feature/amazingfeature`)
 5. Open a Pull Request
 
 License
 
 This project is open source and available under the MIT License.
-
-Project Author
-GitHub: https://github.com/Krusty300/Waystar-Booking-Engine
 
 
 Acknowledgments
@@ -401,4 +325,4 @@ Acknowledgments
 - All contributors and users of this project
 
 
-Built using Django
+Built on and using Django
