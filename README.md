@@ -196,7 +196,6 @@ Before creating resources, you need to create categories:
 
 Project Structure
 
-```
 booking-engine/
 ├── booking_engine/              # Project settings
 │   ├── settings.py              # Configuration
@@ -235,7 +234,7 @@ booking-engine/
 ├── requirements.txt             # Dependencies
 ├── README.md                    # This file
 └── LICENSE                      # MIT License
-```
+
 
 
 
@@ -336,32 +335,6 @@ Tools
 - **Git** - Version control
 - **GitHub** - Repository hosting
 
-Screenshots
-
-Homepage with Category Filters
-```
-[Add screenshot: resource_list.png]
-```
-
-Resource Detail with Availability
-```
-[Add screenshot: resource_detail.png]
-```
-
-Booking History with Filters
-```
-[Add screenshot: booking_history.png]
-```
-
-User Profile
-```
-[Add screenshot: profile.png]
-```
-
-Admin Dashboard
-```
-[Add screenshot: admin_dashboard.png]
-```
 
 Future Enhancements
 
@@ -381,17 +354,14 @@ Future Enhancements
 Contributing
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
+2. Create a feature branch (`git checkout -b featureamazingfeature`)
+3. Commit your changes (`git commit -m 'Add some amazingfeature'`)
+4. Push to the branch (`git push origin feature/amazingfeature`)
 5. Open a Pull Request
 
 License
 
 This project is open source and available under the MIT License.
-
-Project Author
-GitHub: https://github.com/Krusty300/Waystar-Booking-Engine
 
 
 Acknowledgments
@@ -401,4 +371,4 @@ Acknowledgments
 - All contributors and users of this project
 
 
-Built using Django
+Built on and using Django
