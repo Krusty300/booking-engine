@@ -1,5 +1,5 @@
 
-Waystack - Django Booking Engine
+booking engine
 
 A comprehensive, production-ready booking engine built with Django. This application allows users to book resources (rooms, equipment, services) with real-time availability checking, double-booking prevention, and a full-featured user management system. The platform includes a complete Equipment Rental System with reservations, maintenance tracking, and owner-based access control.
 
@@ -191,6 +191,9 @@ Before creating resources, you need to create categories:
 2. Go to Admin Dashboard → Categories
 3. Create categories like "Meeting Rooms", "Equipment", "Services"
 
+
+
+
 Project Structure
 
 ```
@@ -233,6 +236,8 @@ booking-engine/
 ├── README.md                    # This file
 └── LICENSE                      # MIT License
 ```
+
+
 
 Core Models
 
@@ -277,6 +282,8 @@ UserProfile
 - `email_notifications` - Email preference
 - `booking_reminders` - Reminder preference
 
+
+
 Pages Overview
 
 | Page | URL | Description |
@@ -293,6 +300,8 @@ Pages Overview
 | Admin Resources | `/manage-resources/` | Admin: Manage all resources |
 | Categories | `/categories/` | Admin: Manage categories |
 
+
+
 Admin Features
 
 Access Admin Panel
@@ -307,6 +316,8 @@ Admin Capabilities
 - Create/Edit/Delete categories
 - View all resources and bookings
 - Manage users
+
+
 
 Technologies Used
 
