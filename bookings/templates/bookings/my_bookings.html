@@ -1,36 +1,26 @@
 {% extends 'bookings/base.html' %}
+{% load static %}
 
 {% block content %}
 <div class="my-bookings-container">
     <!-- Page Header -->
     <div class="page-header">
         <div>
-            <h1>My Bookings</h1>
+            <h1><i class="fas fa-calendar-check"></i> My Bookings</h1>
             <p class="subtitle">Manage your resource bookings and reservations</p>
         </div>
         <div class="header-actions">
             <button onclick="printPage()" class="btn-print">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="6 9 6 2 18 2 18 9"/>
-                    <path d="M18 9H6v10h12V9z"/>
-                    <rect x="8" y="13" width="8" height="2"/>
-                    <rect x="8" y="16" width="6" height="2"/>
-                </svg>
-                Print
+                <i class="fas fa-print"></i> Print
             </button>
             <div class="export-dropdown">
                 <button onclick="toggleExportMenu()" class="btn-export">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                        <polyline points="7 10 12 15 17 10"/>
-                        <line x1="12" y1="15" x2="12" y2="3"/>
-                    </svg>
-                    Export
+                    <i class="fas fa-download"></i> Export ▾
                 </button>
                 <div id="exportMenu" class="export-menu" style="display: none;">
-                    <a href="#" onclick="exportBookings('csv')">CSV</a>
-                    <a href="#" onclick="exportBookings('json')">JSON</a>
-                    <a href="#" onclick="exportBookings('pdf')">PDF</a>
+                    <a href="#" onclick="exportBookings('csv')"><i class="fas fa-file-csv"></i> CSV</a>
+                    <a href="#" onclick="exportBookings('json')"><i class="fas fa-file-code"></i> JSON</a>
+                    <a href="#" onclick="exportBookings('pdf')"><i class="fas fa-file-pdf"></i> PDF</a>
                 </div>
             </div>
         </div>
@@ -39,50 +29,93 @@
     <!-- Statistics -->
     <div class="stats-grid">
         <div class="stat-card">
-            <div class="stat-number">{{ total }}</div>
-            <div class="stat-label">Total Bookings</div>
+            <div class="stat-icon"><i class="fas fa-list"></i></div>
+            <div class="stat-content">
+                <span class="stat-number">{{ total }}</span>
+                <span class="stat-label">Total Bookings</span>
+            </div>
         </div>
         <div class="stat-card stat-upcoming">
-            <div class="stat-number">{{ upcoming }}</div>
-            <div class="stat-label">Upcoming</div>
+            <div class="stat-icon"><i class="fas fa-calendar-day"></i></div>
+            <div class="stat-content">
+                <span class="stat-number">{{ upcoming }}</span>
+                <span class="stat-label">Upcoming</span>
+            </div>
         </div>
         <div class="stat-card stat-past">
-            <div class="stat-number">{{ past }}</div>
-            <div class="stat-label">Past</div>
+            <div class="stat-icon"><i class="fas fa-history"></i></div>
+            <div class="stat-content">
+                <span class="stat-number">{{ past }}</span>
+                <span class="stat-label">Past</span>
+            </div>
         </div>
         <div class="stat-card stat-cancelled">
-            <div class="stat-number">{{ cancelled }}</div>
-            <div class="stat-label">Cancelled</div>
+            <div class="stat-icon"><i class="fas fa-times-circle"></i></div>
+            <div class="stat-content">
+                <span class="stat-number">{{ cancelled }}</span>
+                <span class="stat-label">Cancelled</span>
+            </div>
         </div>
     </div>
 
     <!-- Filters -->
     <div class="filter-section">
-        <div class="filter-actions">
-            <a href="?status=all" class="filter-btn {% if current_filter == 'all' %}active{% endif %}">All</a>
-            <a href="?status=upcoming" class="filter-btn {% if current_filter == 'upcoming' %}active{% endif %}">Upcoming</a>
-            <a href="?status=past" class="filter-btn {% if current_filter == 'past' %}active{% endif %}">Past</a>
-            <a href="?status=pending" class="filter-btn {% if current_filter == 'pending' %}active{% endif %}">Pending</a>
-            <a href="?status=confirmed" class="filter-btn {% if current_filter == 'confirmed' %}active{% endif %}">Confirmed</a>
-            <a href="?status=cancelled" class="filter-btn {% if current_filter == 'cancelled' %}active{% endif %}">Cancelled</a>
+        <div class="filter-left">
+            <span class="filter-label"><i class="fas fa-filter"></i> Filter:</span>
+            <div class="filter-actions">
+                <a href="?status=all" class="filter-btn {% if current_filter == 'all' %}active{% endif %}">
+                    All
+                    <span class="filter-count">{{ total }}</span>
+                </a>
+                <a href="?status=upcoming" class="filter-btn {% if current_filter == 'upcoming' %}active{% endif %}">
+                    Upcoming
+                    <span class="filter-count">{{ upcoming }}</span>
+                </a>
+                <a href="?status=past" class="filter-btn {% if current_filter == 'past' %}active{% endif %}">
+                    Past
+                    <span class="filter-count">{{ past }}</span>
+                </a>
+                <a href="?status=pending" class="filter-btn {% if current_filter == 'pending' %}active{% endif %}">
+                    Pending
+                    <span class="filter-count">{{ pending }}</span>
+                </a>
+                <a href="?status=confirmed" class="filter-btn {% if current_filter == 'confirmed' %}active{% endif %}">
+                    Confirmed
+                    <span class="filter-count">{{ confirmed }}</span>
+                </a>
+                <a href="?status=cancelled" class="filter-btn {% if current_filter == 'cancelled' %}active{% endif %}">
+                    Cancelled
+                    <span class="filter-count">{{ cancelled }}</span>
+                </a>
+            </div>
+        </div>
+        <div class="filter-right">
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="searchBookings" placeholder="Search bookings..." oninput="filterBookings()">
+            </div>
         </div>
     </div>
 
     <!-- Bookings List -->
     {% if bookings %}
-        <div class="bookings-list">
+        <div class="bookings-list" id="bookingsList">
             {% for booking_item in booking_data %}
-                <div class="booking-card" id="booking-{{ booking_item.booking.id }}">
+                <div class="booking-card" id="booking-{{ booking_item.booking.id }}" data-search="{{ booking_item.resource.name }} {{ booking_item.booking.notes|default:'' }}">
                     <!-- Card Header -->
                     <div class="booking-card-header">
                         <div class="booking-title">
-                            <h3>{{ booking_item.resource.name }}</h3>
+                            <h3>
+                                <a href="{% url 'bookings:booking_detail' booking_item.booking.id %}" class="booking-link">
+                                    {{ booking_item.resource.name }}
+                                </a>
+                            </h3>
                             <span class="status-badge status-{{ booking_item.booking.status|lower }}">
                                 {{ booking_item.booking.get_status_display }}
                             </span>
                         </div>
                         <div class="booking-date">
-                            {{ booking_item.booking.start_time|date:"M d, Y" }}
+                            <span class="date-main">{{ booking_item.booking.start_time|date:"M d, Y" }}</span>
                             <span class="booking-time">{{ booking_item.booking.start_time|date:"H:i" }} - {{ booking_item.booking.end_time|date:"H:i" }}</span>
                         </div>
                     </div>
@@ -95,7 +128,7 @@
                                 {% if booking_item.has_image %}
                                     <div class="resource-thumb">
                                         <img src="{{ booking_item.image_url }}" alt="{{ booking_item.resource.name }}" 
-                                             onerror="this.src='/static/bookings/images/default-resource.png'">
+                                             onerror="this.src='{% static 'bookings/images/default-resource.png' %}'">
                                     </div>
                                 {% endif %}
                                 <div class="resource-details">
@@ -104,13 +137,14 @@
                                     <p><span class="label">Capacity:</span> {{ booking_item.resource.max_capacity }} people</p>
                                     <p><span class="label">Price:</span> {% if booking_item.resource.price_per_hour %}${{ booking_item.resource.price_per_hour }}/hour{% else %}Free{% endif %}</p>
                                     <p><span class="label">Owner:</span> {{ booking_item.resource.owner.username|default:"No owner" }}</p>
+                                    <p><span class="label">Duration:</span> {{ booking_item.booking.get_duration }} hours</p>
                                 </div>
                             </div>
                             
                             <!-- Middle Column: Meeting Room Details -->
                             {% if booking_item.meeting_room %}
                                 <div class="booking-room-details">
-                                    <h4>Meeting Room Details</h4>
+                                    <h4><i class="fas fa-door-open"></i> Meeting Room Details</h4>
                                     <p><span class="label">Room:</span> {{ booking_item.meeting_room.room_number|default:"N/A" }}</p>
                                     <p><span class="label">Building:</span> {{ booking_item.meeting_room.building_name|default:"N/A" }}</p>
                                     <p><span class="label">Floor:</span> {{ booking_item.meeting_room.floor_number }}</p>
@@ -123,30 +157,43 @@
                                             <span class="no-features">No features listed</span>
                                         {% endfor %}
                                     </div>
+                                    {% if booking_item.amenities %}
+                                        <div class="amenities-list">
+                                            <span class="label">Amenities:</span>
+                                            {% for amenity in booking_item.amenities %}
+                                                <span class="amenity-tag">{{ amenity.name }}</span>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
                                 </div>
                             {% endif %}
                             
                             <!-- Right Column: Booking Actions -->
                             <div class="booking-actions">
                                 <div class="action-group">
-                                    <button onclick="viewBookingDetail({{ booking_item.booking.id }})" class="btn-detail">
-                                        View Full Details
-                                    </button>
+                                    <a href="{% url 'bookings:booking_detail' booking_item.booking.id %}" class="btn-detail">
+                                        <i class="fas fa-eye"></i> View Details
+                                    </a>
                                     <div class="export-buttons">
                                         <button onclick="exportBookingPDF({{ booking_item.booking.id }})" class="btn-export-pdf" title="Export as PDF">
-                                            PDF
+                                            <i class="fas fa-file-pdf"></i> PDF
                                         </button>
                                         <button onclick="exportBookingHTML({{ booking_item.booking.id }})" class="btn-export-html" title="Export as HTML">
-                                            HTML
+                                            <i class="fas fa-file-code"></i> HTML
                                         </button>
                                     </div>
                                 </div>
                                 {% if booking_item.booking.can_cancel %}
                                     <a href="{% url 'bookings:cancel_booking' booking_item.booking.id %}" 
                                        class="btn-cancel" 
-                                       onclick="return confirm('Are you sure you want to cancel this booking?')">
-                                        Cancel Booking
+                                       onclick="return confirm('⚠️ Are you sure you want to cancel this booking?')">
+                                        <i class="fas fa-times"></i> Cancel Booking
                                     </a>
+                                {% endif %}
+                                {% if booking_item.booking.is_past and booking_item.booking.status != 'CANCELLED' and booking_item.booking.status != 'COMPLETED' %}
+                                    <div class="booking-completed">
+                                        <i class="fas fa-check-circle"></i> This booking has passed
+                                    </div>
                                 {% endif %}
                             </div>
                         </div>
@@ -157,22 +204,60 @@
 
         <!-- Pagination -->
         {% if bookings.has_other_pages %}
-            <div class="pagination">
-                {% if bookings.has_previous %}
-                    <a href="?page={{ bookings.previous_page_number }}" class="page-link">Previous</a>
-                {% endif %}
-                <span class="page-info">Page {{ bookings.number }} of {{ bookings.paginator.num_pages }}</span>
-                {% if bookings.has_next %}
-                    <a href="?page={{ bookings.next_page_number }}" class="page-link">Next</a>
-                {% endif %}
+            <div class="pagination-section">
+                <div class="pagination-info">
+                    <span>Showing page {{ bookings.number }} of {{ bookings.paginator.num_pages }}</span>
+                    <span class="total-items">{{ bookings.paginator.count }} total bookings</span>
+                </div>
+                <div class="pagination-controls">
+                    {% if bookings.has_previous %}
+                        <a href="?page=1&status={{ current_filter }}" class="page-btn" title="First">
+                            <i class="fas fa-angle-double-left"></i>
+                        </a>
+                        <a href="?page={{ bookings.previous_page_number }}&status={{ current_filter }}" class="page-btn" title="Previous">
+                            <i class="fas fa-angle-left"></i>
+                        </a>
+                    {% else %}
+                        <span class="page-btn disabled"><i class="fas fa-angle-double-left"></i></span>
+                        <span class="page-btn disabled"><i class="fas fa-angle-left"></i></span>
+                    {% endif %}
+                    
+                    <span class="page-current">{{ bookings.number }}</span>
+                    
+                    {% if bookings.has_next %}
+                        <a href="?page={{ bookings.next_page_number }}&status={{ current_filter }}" class="page-btn" title="Next">
+                            <i class="fas fa-angle-right"></i>
+                        </a>
+                        <a href="?page={{ bookings.paginator.num_pages }}&status={{ current_filter }}" class="page-btn" title="Last">
+                            <i class="fas fa-angle-double-right"></i>
+                        </a>
+                    {% else %}
+                        <span class="page-btn disabled"><i class="fas fa-angle-right"></i></span>
+                        <span class="page-btn disabled"><i class="fas fa-angle-double-right"></i></span>
+                    {% endif %}
+                </div>
             </div>
         {% endif %}
     {% else %}
+        <!-- Empty State -->
         <div class="empty-state">
+            <div class="empty-icon">
+                <i class="fas fa-calendar-plus"></i>
+            </div>
             <h2>No Bookings Found</h2>
             <p>You don't have any bookings yet. Start exploring available resources!</p>
             <div class="empty-actions">
-                <a href="{% url 'bookings:resource_list' %}" class="btn-primary">Browse Resources</a>
+                <a href="{% url 'bookings:resource_list' %}" class="btn-primary">
+                    <i class="fas fa-search"></i> Browse Resources
+                </a>
+                <a href="{% url 'bookings:equipment_list' %}" class="btn-secondary">
+                    <i class="fas fa-tools"></i> Browse Equipment
+                </a>
+            </div>
+            <div class="empty-tips">
+                <span class="tip-badge"><i class="fas fa-lightbulb"></i> Book a resource to get started</span>
+                <span class="tip-badge"><i class="fas fa-check-circle"></i> Confirmed bookings appear here</span>
+                <span class="tip-badge"><i class="fas fa-clock"></i> Upcoming bookings are shown first</span>
             </div>
         </div>
     {% endif %}
@@ -196,33 +281,43 @@ function getCookie(name) {
 }
 const csrftoken = getCookie('csrftoken');
 
-// Print Page
+// ============ SEARCH FUNCTIONALITY ============
+function filterBookings() {
+    const searchInput = document.getElementById('searchBookings');
+    const query = searchInput.value.toLowerCase().trim();
+    const bookingCards = document.querySelectorAll('.booking-card');
+    
+    bookingCards.forEach(card => {
+        const searchData = card.dataset.search || '';
+        if (searchData.toLowerCase().includes(query)) {
+            card.style.display = '';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+}
+
+// ============ PRINT PAGE ============
 function printPage() {
     window.print();
 }
 
-// Export Bookings (Bulk)
+// ============ EXPORT BOOKINGS (BULK) ============
 function exportBookings(format) {
     const url = `/my-bookings/export/?format=${format}`;
     window.location.href = url;
 }
 
-// ✅ FIXED: Export Single Booking as PDF
+// ============ EXPORT SINGLE BOOKING ============
 function exportBookingPDF(bookingId) {
     window.location.href = `/bookings/${bookingId}/export-pdf/`;
 }
 
-// ✅ FIXED: Export Single Booking as HTML
 function exportBookingHTML(bookingId) {
     window.location.href = `/bookings/${bookingId}/export-html/`;
 }
 
-// ✅ FIXED: View Booking Detail
-function viewBookingDetail(bookingId) {
-    window.location.href = `/bookings/${bookingId}/`;
-}
-
-// Toggle Export Menu
+// ============ TOGGLE EXPORT MENU ============
 function toggleExportMenu() {
     const menu = document.getElementById('exportMenu');
     if (menu.style.display === 'none' || menu.style.display === '') {
@@ -241,17 +336,29 @@ document.addEventListener('click', function(e) {
         }
     }
 });
+
+// ============ KEYBOARD SHORTCUTS ============
+document.addEventListener('keydown', function(e) {
+    // Ctrl+F to focus search
+    if (e.ctrlKey && e.key === 'f') {
+        e.preventDefault();
+        const searchInput = document.getElementById('searchBookings');
+        if (searchInput) {
+            searchInput.focus();
+        }
+    }
+});
 </script>
 
 <style>
-/* Container */
+/* ============ CONTAINER ============ */
 .my-bookings-container {
     max-width: 1200px;
     margin: 0 auto;
     padding: 0 16px;
 }
 
-/* Page Header */
+/* ============ PAGE HEADER ============ */
 .page-header {
     display: flex;
     justify-content: space-between;
@@ -259,6 +366,8 @@ document.addEventListener('click', function(e) {
     margin-bottom: 24px;
     padding-bottom: 16px;
     border-bottom: 2px solid #e9ecef;
+    flex-wrap: wrap;
+    gap: 16px;
 }
 
 .page-header h1 {
@@ -266,6 +375,11 @@ document.addEventListener('click', function(e) {
     font-size: 1.6rem;
     font-weight: 700;
     color: #1a1a2e;
+}
+
+.page-header h1 i {
+    color: #007bff;
+    margin-right: 10px;
 }
 
 .page-header .subtitle {
@@ -278,9 +392,10 @@ document.addEventListener('click', function(e) {
     display: flex;
     gap: 10px;
     align-items: center;
+    flex-wrap: wrap;
 }
 
-/* Print & Export Buttons */
+/* ============ PRINT & EXPORT BUTTONS ============ */
 .btn-print,
 .btn-export {
     display: inline-flex;
@@ -290,11 +405,11 @@ document.addEventListener('click', function(e) {
     background: white;
     border: 1px solid #dee2e6;
     cursor: pointer;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     font-weight: 500;
     transition: all 0.2s ease;
     color: #495057;
-    border-radius: 4px;
+    border-radius: 6px;
 }
 
 .btn-print:hover,
@@ -303,7 +418,12 @@ document.addEventListener('click', function(e) {
     border-color: #adb5bd;
 }
 
-/* Statistics */
+.btn-print i,
+.btn-export i {
+    font-size: 0.8rem;
+}
+
+/* ============ STATISTICS ============ */
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -313,57 +433,108 @@ document.addEventListener('click', function(e) {
 
 .stat-card {
     background: white;
-    padding: 14px 18px;
+    padding: 16px 20px;
     border: 1px solid #e9ecef;
-    text-align: center;
-    border-radius: 6px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: all 0.2s;
 }
 
-.stat-card .stat-number {
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.stat-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+.stat-card .stat-icon { background: #e3f2fd; color: #007bff; }
+.stat-upcoming .stat-icon { background: #d4edda; color: #28a745; }
+.stat-past .stat-icon { background: #e9ecef; color: #6c757d; }
+.stat-cancelled .stat-icon { background: #fce4ec; color: #dc3545; }
+
+.stat-content {
+    flex: 1;
+}
+
+.stat-number {
     display: block;
-    font-size: 1.6rem;
+    font-size: 1.4rem;
     font-weight: 700;
     color: #1a1a2e;
     line-height: 1.2;
 }
 
-.stat-card .stat-label {
-    font-size: 0.75rem;
+.stat-label {
+    font-size: 0.7rem;
     color: #6c757d;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-top: 2px;
+    letter-spacing: 0.3px;
 }
 
-.stat-upcoming .stat-number { color: #28a745; }
-.stat-past .stat-number { color: #6c757d; }
-.stat-cancelled .stat-number { color: #dc3545; }
-
-/* Filters */
+/* ============ FILTER SECTION ============ */
 .filter-section {
-    margin-bottom: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     background: #f8f9fa;
-    padding: 12px 16px;
     border: 1px solid #e9ecef;
-    border-radius: 6px;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.filter-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.filter-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #495057;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.filter-label i {
+    color: #007bff;
+    margin-right: 4px;
 }
 
 .filter-actions {
     display: flex;
-    gap: 6px;
+    gap: 4px;
     flex-wrap: wrap;
 }
 
 .filter-btn {
-    padding: 5px 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
     background: white;
     border: 1px solid #dee2e6;
+    border-radius: 6px;
     text-decoration: none;
-    color: #495057;
     font-size: 0.75rem;
     font-weight: 500;
-    transition: all 0.2s ease;
-    border-radius: 4px;
+    color: #495057;
+    transition: all 0.2s;
 }
 
 .filter-btn:hover {
@@ -376,7 +547,53 @@ document.addEventListener('click', function(e) {
     border-color: #007bff;
 }
 
-/* Booking Cards */
+.filter-btn .filter-count {
+    padding: 0 6px;
+    background: rgba(0,0,0,0.1);
+    border-radius: 10px;
+    font-size: 0.6rem;
+    font-weight: 600;
+}
+
+.filter-btn.active .filter-count {
+    background: rgba(255,255,255,0.2);
+    color: white;
+}
+
+.filter-right {
+    flex-shrink: 0;
+}
+
+.search-box {
+    display: flex;
+    align-items: center;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 4px 12px;
+    transition: all 0.2s;
+}
+
+.search-box:focus-within {
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.search-box i {
+    color: #6c757d;
+    font-size: 0.8rem;
+}
+
+.search-box input {
+    border: none;
+    padding: 4px 10px;
+    font-size: 0.85rem;
+    outline: none;
+    background: transparent;
+    min-width: 150px;
+}
+
+/* ============ BOOKING CARDS ============ */
 .bookings-list {
     display: flex;
     flex-direction: column;
@@ -386,8 +603,13 @@ document.addEventListener('click', function(e) {
 .booking-card {
     background: white;
     border: 1px solid #e9ecef;
+    border-radius: 8px;
     overflow: hidden;
-    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.booking-card:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
 }
 
 .booking-card-header {
@@ -405,6 +627,7 @@ document.addEventListener('click', function(e) {
     display: flex;
     align-items: center;
     gap: 12px;
+    flex-wrap: wrap;
 }
 
 .booking-title h3 {
@@ -413,24 +636,42 @@ document.addEventListener('click', function(e) {
     font-weight: 600;
 }
 
+.booking-link {
+    color: #1a1a2e;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.booking-link:hover {
+    color: #007bff;
+}
+
 .booking-date {
-    text-align: right;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
     font-size: 0.85rem;
     color: #495057;
 }
 
+.date-main {
+    font-weight: 500;
+}
+
 .booking-time {
-    display: block;
     font-size: 0.75rem;
     color: #6c757d;
 }
 
+/* ============ STATUS BADGE ============ */
 .status-badge {
     display: inline-block;
     padding: 3px 12px;
-    font-size: 0.7rem;
-    font-weight: 600;
     border-radius: 20px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
 }
 
 .status-pending { background: #fff3cd; color: #856404; }
@@ -438,7 +679,7 @@ document.addEventListener('click', function(e) {
 .status-cancelled { background: #f8d7da; color: #721c24; }
 .status-completed { background: #d1ecf1; color: #0c5460; }
 
-/* Booking Card Body */
+/* ============ BOOKING CARD BODY ============ */
 .booking-card-body {
     padding: 20px;
 }
@@ -449,7 +690,7 @@ document.addEventListener('click', function(e) {
     gap: 20px;
 }
 
-/* Resource Info */
+/* ============ RESOURCE INFO ============ */
 .booking-resource-info {
     display: flex;
     gap: 16px;
@@ -461,8 +702,8 @@ document.addEventListener('click', function(e) {
     flex-shrink: 0;
     background: #f8f9fa;
     border: 1px solid #e9ecef;
+    border-radius: 6px;
     overflow: hidden;
-    border-radius: 4px;
 }
 
 .resource-thumb img {
@@ -483,11 +724,21 @@ document.addEventListener('click', function(e) {
     font-size: 0.7rem;
 }
 
-/* Room Details */
+/* ============ ROOM DETAILS ============ */
+.booking-room-details {
+    padding: 0 4px;
+}
+
 .booking-room-details h4 {
     margin: 0 0 8px 0;
     font-size: 0.9rem;
     font-weight: 600;
+    color: #1a1a2e;
+}
+
+.booking-room-details h4 i {
+    color: #007bff;
+    margin-right: 4px;
 }
 
 .booking-room-details p {
@@ -502,7 +753,8 @@ document.addEventListener('click', function(e) {
     font-size: 0.7rem;
 }
 
-.features-list {
+.features-list,
+.amenities-list {
     margin-top: 4px;
     display: flex;
     flex-wrap: wrap;
@@ -514,8 +766,18 @@ document.addEventListener('click', function(e) {
     display: inline-block;
     padding: 1px 8px;
     background: #e9ecef;
-    font-size: 0.65rem;
-    border-radius: 3px;
+    font-size: 0.6rem;
+    border-radius: 4px;
+    color: #495057;
+}
+
+.amenity-tag {
+    display: inline-block;
+    padding: 1px 8px;
+    background: #e3f2fd;
+    font-size: 0.6rem;
+    border-radius: 4px;
+    color: #004085;
 }
 
 .no-features {
@@ -524,7 +786,7 @@ document.addEventListener('click', function(e) {
     font-style: italic;
 }
 
-/* Booking Actions */
+/* ============ BOOKING ACTIONS ============ */
 .booking-actions {
     display: flex;
     flex-direction: column;
@@ -544,28 +806,38 @@ document.addEventListener('click', function(e) {
 }
 
 .btn-detail {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     padding: 6px 14px;
     background: #17a2b8;
     color: white;
     border: none;
-    border-radius: 4px;
+    border-radius: 6px;
     cursor: pointer;
     font-size: 0.8rem;
     font-weight: 500;
-    transition: background 0.2s;
+    text-decoration: none;
+    transition: all 0.2s;
 }
 
 .btn-detail:hover {
     background: #138496;
+    color: white;
 }
 
 .btn-export-pdf,
 .btn-export-html {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
     padding: 6px 12px;
     border: none;
-    border-radius: 4px;
+    border-radius: 6px;
     cursor: pointer;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     font-weight: 500;
     transition: all 0.2s;
     flex: 1;
@@ -590,15 +862,18 @@ document.addEventListener('click', function(e) {
 }
 
 .btn-cancel {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     padding: 6px 14px;
     background: #dc3545;
     color: white;
     text-decoration: none;
-    border-radius: 4px;
+    border-radius: 6px;
     font-size: 0.8rem;
     font-weight: 500;
-    text-align: center;
-    transition: background 0.2s;
+    transition: all 0.2s;
 }
 
 .btn-cancel:hover {
@@ -606,7 +881,22 @@ document.addEventListener('click', function(e) {
     color: white;
 }
 
-/* Export Dropdown */
+.booking-completed {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    background: #e9ecef;
+    color: #6c757d;
+    border-radius: 6px;
+    font-size: 0.75rem;
+}
+
+.booking-completed i {
+    color: #28a745;
+}
+
+/* ============ EXPORT DROPDOWN ============ */
 .export-dropdown {
     position: relative;
     display: inline-block;
@@ -618,19 +908,22 @@ document.addEventListener('click', function(e) {
     top: 100%;
     background: white;
     border: 1px solid #dee2e6;
+    border-radius: 8px;
     min-width: 150px;
     z-index: 1000;
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    border-radius: 4px;
+    overflow: hidden;
     margin-top: 4px;
 }
 
 .export-menu a {
-    display: block;
-    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
     text-decoration: none;
     color: #1a1a2e;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     transition: background 0.2s;
 }
 
@@ -638,80 +931,183 @@ document.addEventListener('click', function(e) {
     background: #f8f9fa;
 }
 
-/* Pagination */
-.pagination {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 16px;
-    margin-top: 20px;
-    padding: 16px;
-    background: #f8f9fa;
-    border-radius: 6px;
+.export-menu a i {
+    font-size: 0.9rem;
+    width: 18px;
 }
 
-.page-link {
-    padding: 8px 16px;
+.export-menu a i.fa-file-csv { color: #28a745; }
+.export-menu a i.fa-file-code { color: #6f42c1; }
+.export-menu a i.fa-file-pdf { color: #dc3545; }
+
+/* ============ PAGINATION ============ */
+.pagination-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 24px;
+    padding: 12px 16px;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.pagination-info {
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+
+.total-items {
+    margin-left: 8px;
+    padding: 2px 8px;
+    background: white;
+    border-radius: 4px;
+    border: 1px solid #e9ecef;
+}
+
+.pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.page-btn {
+    padding: 4px 10px;
     background: white;
     border: 1px solid #dee2e6;
+    border-radius: 4px;
     text-decoration: none;
     color: #007bff;
     transition: all 0.2s;
-    border-radius: 4px;
+    font-size: 0.8rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
 }
 
-.page-link:hover {
+.page-btn:hover:not(.disabled) {
     background: #007bff;
     color: white;
     border-color: #007bff;
 }
 
-.page-info {
-    font-weight: 600;
-    color: #495057;
+.page-btn.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
 }
 
-/* Empty State */
+.page-current {
+    padding: 4px 12px;
+    background: #007bff;
+    color: white;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 0.8rem;
+    min-width: 32px;
+    text-align: center;
+}
+
+/* ============ EMPTY STATE ============ */
 .empty-state {
     text-align: center;
     padding: 60px 20px;
-    background: #f8f9fa;
+    background: white;
     border: 1px solid #e9ecef;
-    border-radius: 6px;
+    border-radius: 8px;
 }
 
 .empty-icon {
     font-size: 4rem;
+    color: #adb5bd;
     margin-bottom: 16px;
 }
 
 .empty-state h2 {
     margin: 0 0 8px;
     font-size: 1.3rem;
+    color: #1a1a2e;
 }
 
 .empty-state p {
     color: #6c757d;
+    font-size: 0.9rem;
     margin-bottom: 20px;
 }
 
-.btn-primary {
-    display: inline-block;
-    padding: 10px 24px;
-    background: #007bff;
+.empty-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.empty-actions .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 20px;
+    background: #28a745;
     color: white;
     text-decoration: none;
+    border-radius: 6px;
     font-weight: 600;
-    transition: background 0.2s;
-    border-radius: 4px;
+    font-size: 0.85rem;
+    transition: all 0.2s;
 }
 
-.btn-primary:hover {
-    background: #0056b3;
+.empty-actions .btn-primary:hover {
+    background: #218838;
+    transform: translateY(-1px);
+}
+
+.empty-actions .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 20px;
+    background: #6c757d;
     color: white;
+    text-decoration: none;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: all 0.2s;
 }
 
-/* Responsive */
+.empty-actions .btn-secondary:hover {
+    background: #5a6268;
+}
+
+.empty-tips {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid #e9ecef;
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.tip-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    color: #495057;
+}
+
+.tip-badge i {
+    color: #ffc107;
+}
+
+/* ============ RESPONSIVE ============ */
 @media (max-width: 992px) {
     .booking-details-grid {
         grid-template-columns: 1fr 1fr;
@@ -722,7 +1118,6 @@ document.addEventListener('click', function(e) {
     .page-header {
         flex-direction: column;
         align-items: flex-start;
-        gap: 12px;
     }
     
     .header-actions {
@@ -739,6 +1134,38 @@ document.addEventListener('click', function(e) {
         grid-template-columns: repeat(2, 1fr);
     }
     
+    .filter-section {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .filter-left {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .filter-actions {
+        width: 100%;
+    }
+    
+    .filter-btn {
+        flex: 1;
+        justify-content: center;
+    }
+    
+    .filter-right {
+        width: 100%;
+    }
+    
+    .search-box {
+        width: 100%;
+    }
+    
+    .search-box input {
+        width: 100%;
+        min-width: unset;
+    }
+    
     .booking-details-grid {
         grid-template-columns: 1fr;
     }
@@ -750,6 +1177,7 @@ document.addEventListener('click', function(e) {
     
     .booking-date {
         text-align: left;
+        align-items: flex-start;
     }
     
     .booking-resource-info {
@@ -771,8 +1199,14 @@ document.addEventListener('click', function(e) {
         flex-direction: column;
     }
     
-    .export-menu {
-        position: static;
+    .pagination-section {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .pagination-controls {
+        flex-wrap: wrap;
+        justify-content: center;
     }
 }
 
@@ -790,29 +1224,25 @@ document.addEventListener('click', function(e) {
         padding: 10px 12px;
     }
     
-    .stat-card .stat-number {
-        font-size: 1.2rem;
-    }
-    
-    .filter-actions {
-        flex-wrap: wrap;
+    .stat-number {
+        font-size: 1.1rem;
     }
     
     .filter-btn {
-        font-size: 0.7rem;
-        padding: 4px 10px;
+        font-size: 0.65rem;
+        padding: 3px 8px;
     }
     
     .booking-card {
-        padding: 12px;
+        padding: 0;
     }
     
     .booking-card-header {
-        padding: 12px 16px;
+        padding: 12px 14px;
     }
     
     .booking-card-body {
-        padding: 12px;
+        padding: 12px 14px;
     }
     
     .btn-detail,
@@ -820,7 +1250,7 @@ document.addEventListener('click', function(e) {
     .btn-export-html,
     .btn-cancel {
         width: 100%;
-        text-align: center;
+        justify-content: center;
     }
 
     .booking-title {
@@ -828,12 +1258,17 @@ document.addEventListener('click', function(e) {
         align-items: flex-start;
         gap: 6px;
     }
+    
+    .empty-tips {
+        flex-direction: column;
+        align-items: center;
+    }
 }
 
-/* Print Styles */
+/* ============ PRINT STYLES ============ */
 @media print {
     .filter-section,
-    .pagination,
+    .pagination-section,
     .header-actions,
     .btn-print,
     .btn-export,
@@ -841,13 +1276,15 @@ document.addEventListener('click', function(e) {
     .btn-cancel,
     .btn-detail,
     .btn-export-pdf,
-    .btn-export-html {
+    .btn-export-html,
+    .search-box {
         display: none !important;
     }
     
     .booking-card {
         border: 1px solid #000;
         page-break-inside: avoid;
+        box-shadow: none !important;
     }
     
     .booking-card-header {

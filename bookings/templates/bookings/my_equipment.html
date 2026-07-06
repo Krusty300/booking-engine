@@ -147,7 +147,6 @@
         <!-- Enhanced Empty States -->
         <div class="empty-state">
             {% if current_filter == 'all' %}
-                <img src="{% static 'bookings/images/no-equipment.svg' %}" alt="No equipment" style="max-width: 150px;">
                 <h2>No Equipment Added Yet</h2>
                 <p>You haven't added any equipment to your inventory.</p>
                 <div class="empty-actions">
@@ -164,7 +163,6 @@
                     </ul>
                 </div>
             {% elif current_filter == 'AVAILABLE' %}
-                <img src="{% static 'bookings/images/no-equipment.svg' %}" alt="No available equipment" style="max-width: 150px;">
                 <h2>No Available Equipment</h2>
                 <p>You don't have any equipment marked as available.</p>
                 <div class="empty-actions">
@@ -182,7 +180,7 @@
                     </ul>
                 </div>
             {% elif current_filter == 'RENTED' %}
-                <img src="{% static 'bookings/images/no-rented.svg' %}" alt="No rented equipment" style="max-width: 150px;">
+
                 <h2>No Rented Equipment</h2>
                 <p>None of your equipment is currently rented out.</p>
                 <div class="empty-actions">
@@ -199,7 +197,7 @@
                     </ul>
                 </div>
             {% elif current_filter == 'MAINTENANCE' %}
-                <img src="{% static 'bookings/images/no-maintenance.svg' %}" alt="No maintenance" style="max-width: 150px;">
+
                 <h2>No Equipment Under Maintenance</h2>
                 <p>All your equipment is currently in good working order.</p>
                 <div class="empty-actions">
@@ -213,7 +211,7 @@
                     </ul>
                 </div>
             {% elif current_filter == 'RETIRED' %}
-                <img src="{% static 'bookings/images/no-retired.svg' %}" alt="No retired equipment" style="max-width: 150px;">
+
                 <h2>No Retired Equipment</h2>
                 <p>You haven't retired any equipment from your inventory.</p>
                 <div class="empty-actions">
@@ -228,7 +226,7 @@
                     </ul>
                 </div>
             {% elif current_filter == 'LOST' %}
-                <img src="{% static 'bookings/images/no-lost.svg' %}" alt="No lost equipment" style="max-width: 150px;">
+
                 <h2>No Lost Equipment</h2>
                 <p>All your equipment is accounted for.</p>
                 <div class="empty-actions">
@@ -243,7 +241,7 @@
                     </ul>
                 </div>
             {% else %}
-                <img src="{% static 'bookings/images/no-equipment.svg' %}" alt="No equipment" style="max-width: 150px;">
+
                 <h2>No Equipment Found</h2>
                 <p>No equipment matches your current filter.</p>
                 <div class="empty-actions">

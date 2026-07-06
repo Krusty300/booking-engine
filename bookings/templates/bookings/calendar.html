@@ -1,280 +1,251 @@
 {% extends 'bookings/base.html' %}
+{% load static %}
 
 {% block content %}
-<!-- Header -->
-<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 20px; gap: 10px;">
-    <h1 style="font-size: 1.6rem; font-weight: 800; margin: 0; flex: 1; min-width: 150px;">Booking Calendar</h1>
-    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-        <a href="{% url 'bookings:resource_list' %}" style="background: #6c757d; color: white; padding: 8px 16px; text-decoration: none; font-size: 0.85rem; font-weight: 600; transition: all 0.2s ease; display: inline-block;"
-           onmouseover="this.style.background='#5a6268'"
-           onmouseout="this.style.background='#6c757d'">
-            ← Back
-        </a>
-    </div>
-</div>
-
-<!-- Resource Filter -->
-<div style="margin: 15px 0 20px 0; padding: 15px; background: #f8f9fa; overflow-x: auto;">
-    <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
-        <span style="font-size: 0.85rem; font-weight: 600; white-space: nowrap;">Filter:</span>
-        <a href="{% url 'bookings:calendar_view' %}" 
-           style="padding: 4px 12px; background: {% if not selected_resource %}#007bff; color: white;{% else %}#e9ecef; color: #333;{% endif %} text-decoration: none; font-size: 0.75rem; font-weight: 600; transition: all 0.2s ease; white-space: nowrap;">
-            All
-        </a>
-        {% for resource in resources %}
-            <a href="{% url 'bookings:calendar_view' %}?resource={{ resource.id }}&year={{ year }}&month={{ month }}" 
-               style="padding: 4px 12px; background: {% if selected_resource.id == resource.id %}{{ resource.category.color|default:'#007bff' }}; color: white;{% else %}#e9ecef; color: #333;{% endif %} text-decoration: none; font-size: 0.7rem; font-weight: 600; transition: all 0.2s ease; white-space: nowrap;"
-               onmouseover="this.style.opacity='0.8'"
-               onmouseout="this.style.opacity='1'">
-                {{ resource.name|truncatechars:15 }}
+<div class="calendar-container">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div>
+            <h1>Resource Calendar</h1>
+            <p class="subtitle">View availability and book resources</p>
+        </div>
+        <div class="header-actions">
+            <a href="{% url 'bookings:resource_list' %}" class="btn-back">
+                <i class="fas fa-arrow-left"></i> Back to Resources
             </a>
-        {% endfor %}
-    </div>
-</div>
-
-<!-- Calendar and Time Slots Layout - Side by Side -->
-<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
-    
-    <!-- Calendar -->
-    <div style="background: white; padding: 15px; overflow: hidden; min-width: 0; border: 1px solid #e9ecef;">
-        
-        <!-- Month Navigation -->
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-            <a href="{% url 'bookings:calendar_view' %}?resource={{ selected_resource.id|default:'' }}&year={{ prev_year }}&month={{ prev_month }}" 
-               style="font-size: 1.2rem; text-decoration: none; color: #1a1a2e; padding: 8px 12px; transition: all 0.2s ease;"
-               onmouseover="this.style.background='#f1f3f5'"
-               onmouseout="this.style.background='none'">
-                ◀
-            </a>
-            <h2 style="font-size: 1.1rem; font-weight: 700; margin: 0;">{{ month_name }} {{ year }}</h2>
-            <a href="{% url 'bookings:calendar_view' %}?resource={{ selected_resource.id|default:'' }}&year={{ next_year }}&month={{ next_month }}" 
-               style="font-size: 1.2rem; text-decoration: none; color: #1a1a2e; padding: 8px 12px; transition: all 0.2s ease;"
-               onmouseover="this.style.background='#f1f3f5'"
-               onmouseout="this.style.background='none'">
-                ▶
+            <a href="{% url 'bookings:my_bookings' %}" class="btn-bookings">
+                <i class="fas fa-list"></i> My Bookings
             </a>
         </div>
-        
-        <!-- Weekday Headers -->
-        <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin-bottom: 2px;">
-            <div style="text-align: center; font-weight: 700; font-size: 0.65rem; color: #6c757d; padding: 6px 2px; text-transform: uppercase;">Sun</div>
-            <div style="text-align: center; font-weight: 700; font-size: 0.65rem; color: #6c757d; padding: 6px 2px; text-transform: uppercase;">Mon</div>
-            <div style="text-align: center; font-weight: 700; font-size: 0.65rem; color: #6c757d; padding: 6px 2px; text-transform: uppercase;">Tue</div>
-            <div style="text-align: center; font-weight: 700; font-size: 0.65rem; color: #6c757d; padding: 6px 2px; text-transform: uppercase;">Wed</div>
-            <div style="text-align: center; font-weight: 700; font-size: 0.65rem; color: #6c757d; padding: 6px 2px; text-transform: uppercase;">Thu</div>
-            <div style="text-align: center; font-weight: 700; font-size: 0.65rem; color: #6c757d; padding: 6px 2px; text-transform: uppercase;">Fri</div>
-            <div style="text-align: center; font-weight: 700; font-size: 0.65rem; color: #6c757d; padding: 6px 2px; text-transform: uppercase;">Sat</div>
+    </div>
+
+    <!-- Resource Filter -->
+    <div class="filter-section">
+        <div class="filter-header">
+            <span class="filter-label"><i class="fas fa-filter"></i> Filter by Resource:</span>
         </div>
-        
-        <!-- Calendar Days -->
-        {% for week in calendar_data %}
-            <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin-bottom: 2px;">
-                {% for day in week %}
-                    {% if day %}
-                        <a href="{% url 'bookings:calendar_view' %}?{% if selected_resource %}resource={{ selected_resource.id }}&{% endif %}date={{ day.date|date:'Y-m-d' }}&year={{ year }}&month={{ month }}"
-                           style="min-height: 70px; padding: 4px 6px; 
-                                  background: 
-                                      {% if day.is_today %}#007bff;
-                                      {% elif day.is_past %}#e9ecef;
-                                      {% elif day.is_fully_booked %}#f8d7da;
-                                      {% else %}#d4edda;
-                                      {% endif %};
-                                  cursor: pointer;
-                                  transition: all 0.2s ease;
-                                  text-decoration: none;
-                                  color: 
-                                      {% if day.is_today %}#ffffff;
-                                      {% elif day.is_past %}#6c757d;
-                                      {% else %}#1a1a2e;
-                                      {% endif %};
-                                  display: block;
-                                  {% if day.date|date:'Y-m-d' == selected_date|date:'Y-m-d' %}border: 2px solid #007bff;{% endif %}
-                                  position: relative;"
-                           onmouseover="this.style.transform='scale(1.02)'"
-                           onmouseout="this.style.transform='scale(1)'">
-                            
-                            <div style="font-weight: {% if day.is_today %}700{% else %}500{% endif %}; font-size: 0.8rem;">
-                                {{ day.day }}
-                                {% if day.is_today %}
-                                    <span style="font-size: 0.5rem; background: rgba(255,255,255,0.3); padding: 1px 4px; margin-left: 2px;">Today</span>
-                                {% endif %}
-                            </div>
-                            
-                            <!-- Availability Indicator -->
-                            {% if not day.is_past and day.total_slots > 0 %}
-                                <div style="margin-top: 2px; font-size: 0.55rem; color: 
-                                    {% if day.is_today %}#ffffff;
-                                    {% elif day.is_fully_booked %}#dc3545;
-                                    {% else %}#28a745;
-                                    {% endif %}; opacity: 0.8; line-height: 1.2;">
-                                    {% if day.is_fully_booked %}
-                                        Fully Booked
-                                    {% else %}
-                                        Available {{ day.available_count }}/{{ day.total_slots }}
+        <div class="filter-resources">
+            <a href="{% url 'bookings:calendar_view' %}" 
+               class="filter-btn {% if not selected_resource %}active{% endif %}">
+                <i class="fas fa-th-large"></i> All Resources
+            </a>
+            {% for resource in resources %}
+                <a href="{% url 'bookings:calendar_view' %}?resource={{ resource.id }}&year={{ year }}&month={{ month }}" 
+                   class="filter-btn {% if selected_resource.id == resource.id %}active{% endif %}"
+                   style="{% if selected_resource.id == resource.id %}background: {{ resource.category.color|default:'#007bff' }}; border-color: {{ resource.category.color|default:'#007bff' }};{% endif %}">
+                    {% if resource.category.icon %}<i class="{{ resource.category.icon }}"></i> {% endif %}
+                    {{ resource.name|truncatechars:15 }}
+                </a>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Calendar and Time Slots -->
+    <div class="calendar-grid">
+        <!-- Calendar -->
+        <div class="calendar-card">
+            <!-- Month Navigation -->
+            <div class="calendar-nav">
+                <a href="{% url 'bookings:calendar_view' %}?resource={{ selected_resource.id|default:'' }}&year={{ prev_year }}&month={{ prev_month }}" 
+                   class="nav-btn">
+                    <i class="fas fa-chevron-left"></i>
+                </a>
+                <h2 class="calendar-title">{{ month_name }} {{ year }}</h2>
+                <a href="{% url 'bookings:calendar_view' %}?resource={{ selected_resource.id|default:'' }}&year={{ next_year }}&month={{ next_month }}" 
+                   class="nav-btn">
+                    <i class="fas fa-chevron-right"></i>
+                </a>
+            </div>
+            
+            <!-- Weekday Headers -->
+            <div class="weekday-grid">
+                <div class="weekday-header">Sun</div>
+                <div class="weekday-header">Mon</div>
+                <div class="weekday-header">Tue</div>
+                <div class="weekday-header">Wed</div>
+                <div class="weekday-header">Thu</div>
+                <div class="weekday-header">Fri</div>
+                <div class="weekday-header">Sat</div>
+            </div>
+            
+            <!-- Calendar Days -->
+            {% for week in calendar_data %}
+                <div class="day-grid">
+                    {% for day in week %}
+                        {% if day %}
+                            <a href="{% url 'bookings:calendar_view' %}?{% if selected_resource %}resource={{ selected_resource.id }}&{% endif %}date={{ day.date|date:'Y-m-d' }}&year={{ year }}&month={{ month }}"
+                               class="day-cell {% if day.is_today %}today{% endif %} {% if day.is_past %}past{% endif %} {% if day.is_fully_booked %}fully-booked{% endif %} {% if day.has_availability %}has-availability{% endif %} {% if day.date|date:'Y-m-d' == selected_date|date:'Y-m-d' %}selected{% endif %}"
+                               {% if not day.is_past and day.has_availability %}title="Click to view available slots"{% endif %}>
+                                
+                                <div class="day-number">
+                                    {{ day.day }}
+                                    {% if day.is_today %}
+                                        <span class="today-badge">Today</span>
                                     {% endif %}
                                 </div>
-                                <!-- Progress Bar -->
-                                {% if not day.is_fully_booked %}
-                                    <div style="width: 100%; height: 3px; background: rgba(0,0,0,0.1); margin-top: 2px; overflow: hidden;">
-                                        <div style="width: {{ day.available_percentage|floatformat:0 }}%; height: 100%; background: 
-                                            {% if day.available_percentage > 50 %}#28a745;
-                                            {% elif day.available_percentage > 25 %}#ffc107;
-                                            {% else %}#dc3545;
-                                            {% endif %};">
-                                        </div>
+                                
+                                <!-- Availability Indicator -->
+                                {% if not day.is_past and day.total_slots > 0 %}
+                                    <div class="availability-indicator">
+                                        <span class="availability-text">
+                                            {% if day.is_fully_booked %}
+                                                <i class="fas fa-times-circle"></i> Fully Booked
+                                            {% else %}
+                                                <i class="fas fa-check-circle"></i> {{ day.available_count }}/{{ day.total_slots }} available
+                                            {% endif %}
+                                        </span>
+                                        <!-- Progress Bar -->
+                                        {% if not day.is_fully_booked %}
+                                            <div class="availability-bar">
+                                                <div class="availability-progress {% if day.available_percentage > 50 %}high{% elif day.available_percentage > 25 %}medium{% else %}low{% endif %}" 
+                                                     style="width: {{ day.available_percentage|floatformat:0 }}%;">
+                                                </div>
+                                            </div>
+                                        {% endif %}
                                     </div>
                                 {% endif %}
-                            {% endif %}
-                            
-                            {% if day.is_past %}
-                                <div style="font-size: 0.5rem; color: #6c757d; margin-top: 2px; opacity: 0.6;">Past</div>
-                            {% endif %}
-                        </a>
-                    {% else %}
-                        <div style="min-height: 70px; background: #f1f3f5;"></div>
-                    {% endif %}
-                {% endfor %}
-            </div>
-        {% endfor %}
-    </div>
-    
-    <!-- Time Slots Panel - Side by Side -->
-    <div id="time-slots-panel" style="{% if not selected_date %}display: none;{% endif %} background: white; padding: 15px; max-height: 500px; overflow-y: auto; border: 1px solid #e9ecef;">
-        {% if selected_date %}
-            <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 12px; display: flex; flex-wrap: wrap; gap: 5px; align-items: center;">
-                <span>{{ selected_date|date:"l, F j, Y" }}</span>
-                {% if selected_resource %}
-                    <span style="font-size: 0.8rem; font-weight: 400; color: #6c757d;">
-                        - {{ selected_resource.name }}
-                    </span>
-                {% endif %}
-            </h3>
-            
-            {% if time_slots %}
-                <div style="display: flex; flex-direction: column; gap: 6px;">
-                    {% for slot in time_slots %}
-                        <div style="padding: 10px 12px; background: 
-                            {% if slot.is_available %}#f8f9fa{% else %}#f8d7da{% endif %}; 
-                            border-left: 3px solid 
-                            {% if slot.is_available %}#28a745{% else %}#dc3545{% endif %};
-                            {% if slot.is_available %}cursor: pointer;{% endif %}
-                            transition: all 0.2s ease;"
-                             {% if slot.is_available %}
-                                onclick="showBookingForm('{{ slot.start_time.isoformat }}', '{{ slot.end_time.isoformat }}', {{ slot.available_resources|safe }})"
-                                onmouseover="this.style.transform='translateX(4px)'"
-                                onmouseout="this.style.transform='translateX(0)'"
-                             {% endif %}>
-                            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 5px;">
-                                <div>
-                                    <strong style="font-size: 0.85rem;">{{ slot.start_display }} - {{ slot.end_display }}</strong>
-                                    {% if slot.is_past %}
-                                        <span style="color: #6c757d; font-size: 0.7rem;">(Past)</span>
-                                    {% endif %}
-                                </div>
-                                <div>
-                                    {% if slot.is_available %}
-                                        <span style="color: #28a745; font-size: 0.75rem;">Available {{ slot.resource_count }} avail</span>
-                                    {% elif slot.is_past %}
-                                        <span style="color: #6c757d; font-size: 0.75rem;">Past (Unavailable)</span>
-                                    {% else %}
-                                        <span style="color: #dc3545; font-size: 0.75rem;">Booked</span>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            {% if slot.is_available and slot.available_resources %}
-                                <div style="margin-top: 4px; display: flex; gap: 4px; flex-wrap: wrap;">
-                                    {% for res in slot.available_resources|slice:":3" %}
-                                        <span style="background: #007bff; color: white; padding: 1px 6px; font-size: 0.55rem;">
-                                            {{ res.name|truncatechars:12 }}
-                                        </span>
-                                    {% endfor %}
-                                    {% if slot.available_resources|length > 3 %}
-                                        <span style="background: #6c757d; color: white; padding: 1px 6px; font-size: 0.55rem;">
-                                            +{{ slot.available_resources|length|add:"-3" }} more
-                                        </span>
-                                    {% endif %}
-                                </div>
-                            {% endif %}
-                        </div>
+                                
+                                {% if day.is_past %}
+                                    <div class="past-label">Past</div>
+                                {% endif %}
+                            </a>
+                        {% else %}
+                            <div class="day-empty"></div>
+                        {% endif %}
                     {% endfor %}
                 </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Time Slots Panel -->
+        <div id="time-slots-panel" class="time-slots-card {% if not selected_date %}empty{% endif %}">
+            {% if selected_date %}
+                <div class="time-slots-header">
+                    <h3>Available Time Slots</h3>
+                    <span class="time-slots-date">{{ selected_date|date:"l, F j, Y" }}</span>
+                    {% if selected_resource %}
+                        <span class="time-slots-resource">{{ selected_resource.name }}</span>
+                    {% endif %}
+                </div>
+                
+                <div class="time-slots-list">
+                    {% if time_slots %}
+                        {% for slot in time_slots %}
+                            <div class="time-slot-item {% if slot.is_available %}available{% else %}booked{% endif %} {% if slot.is_past %}past{% endif %}"
+                                 {% if slot.is_available %}onclick="showBookingForm('{{ slot.start_time.isoformat }}', '{{ slot.end_time.isoformat }}', {{ slot.available_resources|safe }})"{% endif %}>
+                                
+                                <div class="time-slot-info">
+                                    <span class="time-slot-time">
+                                        <i class="far fa-clock"></i>
+                                        {{ slot.start_display }} - {{ slot.end_display }}
+                                    </span>
+                                    {% if slot.is_past %}
+                                        <span class="time-slot-status past-status">
+                                            <i class="fas fa-history"></i> Past
+                                        </span>
+                                    {% elif slot.is_available %}
+                                        <span class="time-slot-status available-status">
+                                            <i class="fas fa-check-circle"></i> Available
+                                            <span class="resource-count">{{ slot.resource_count }} resource{{ slot.resource_count|pluralize }}</span>
+                                        </span>
+                                    {% else %}
+                                        <span class="time-slot-status booked-status">
+                                            <i class="fas fa-times-circle"></i> Booked
+                                        </span>
+                                    {% endif %}
+                                </div>
+                                
+                                {% if slot.is_available and slot.available_resources %}
+                                    <div class="available-resources">
+                                        {% for res in slot.available_resources|slice:":4" %}
+                                            <span class="resource-tag">
+                                                <i class="fas fa-cube"></i> {{ res.name|truncatechars:15 }}
+                                            </span>
+                                        {% endfor %}
+                                        {% if slot.available_resources|length > 4 %}
+                                            <span class="resource-tag more">
+                                                +{{ slot.available_resources|length|add:"-4" }} more
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="no-slots">
+                            <i class="fas fa-calendar-times"></i>
+                            <p>No time slots available for this date.</p>
+                        </div>
+                    {% endif %}
+                </div>
             {% else %}
-                <p style="color: #6c757d; text-align: center; padding: 30px 0; font-size: 0.9rem;">No time slots available for this date.</p>
+                <div class="empty-slots">
+                    <i class="fas fa-calendar-plus"></i>
+                    <h4>Select a Date</h4>
+                    <p>Click on a date in the calendar to view available time slots.</p>
+                </div>
             {% endif %}
-        {% else %}
-            <div style="text-align: center; padding: 40px 20px; color: #6c757d; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%;">
-                <div style="font-size: 36px; margin-bottom: 10px;"></div>
-                <p style="font-size: 0.9rem; max-width: 200px;">Select a date on the calendar to see available time slots.</p>
-            </div>
-        {% endif %}
+        </div>
     </div>
-</div>
 
-<!-- Legend -->
-<div style="margin-top: 20px; padding: 12px 15px; background: #f8f9fa; border: 1px solid #e9ecef; display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
-    <span style="font-size: 0.75rem; font-weight: 600;">Legend:</span>
-    <div style="display: flex; align-items: center; gap: 4px;">
-        <div style="width: 16px; height: 16px; background: #d4edda; border: 1px solid #28a745;"></div>
-        <span style="font-size: 0.65rem;">Available</span>
-    </div>
-    <div style="display: flex; align-items: center; gap: 4px;">
-        <div style="width: 16px; height: 16px; background: #f8d7da; border: 1px solid #dc3545;"></div>
-        <span style="font-size: 0.65rem;">Booked</span>
-    </div>
-    <div style="display: flex; align-items: center; gap: 4px;">
-        <div style="width: 16px; height: 16px; background: #e9ecef; border: 1px solid #adb5bd;"></div>
-        <span style="font-size: 0.65rem;">Past</span>
-    </div>
-    <div style="display: flex; align-items: center; gap: 4px;">
-        <div style="width: 16px; height: 16px; background: #007bff; border: 1px solid #0056b3;"></div>
-        <span style="font-size: 0.65rem;">Today</span>
-    </div>
-    <div style="display: flex; align-items: center; gap: 4px; margin-left: auto;">
-        <span style="font-size: 0.65rem; color: #6c757d;">Tap a date to book</span>
+    <!-- Legend -->
+    <div class="legend-section">
+        <span class="legend-label"><i class="fas fa-info-circle"></i> Legend:</span>
+        <div class="legend-items">
+            <div class="legend-item">
+                <span class="legend-box available-box"></span>
+                <span class="legend-text">Available</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-box booked-box"></span>
+                <span class="legend-text">Fully Booked</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-box past-box"></span>
+                <span class="legend-text">Past</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-box today-box"></span>
+                <span class="legend-text">Today</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-box selected-box"></span>
+                <span class="legend-text">Selected</span>
+            </div>
+        </div>
     </div>
 </div>
 
 <!-- Booking Modal -->
-<div id="bookingModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(4px); padding: 15px;">
-    <div style="background: white; padding: 25px; max-width: 450px; width: 100%; max-height: 85vh; overflow-y: auto; position: relative; box-shadow: 0 20px 60px rgba(0,0,0,0.3); border: 1px solid #e9ecef;">
-        <button onclick="closeBookingModal()" style="position: sticky; top: 0; float: right; background: none; border: none; font-size: 22px; cursor: pointer; color: #6c757d; transition: color 0.2s ease; padding: 0 5px; z-index: 1;"
-                onmouseover="this.style.color='#1a1a2e'"
-                onmouseout="this.style.color='#6c757d'">
-            &times;
+<div id="bookingModal" class="modal-overlay">
+    <div class="modal-content">
+        <button onclick="closeBookingModal()" class="modal-close">
+            <i class="fas fa-times"></i>
         </button>
-        <h2 style="margin-top: 0; font-size: 1.2rem; font-weight: 700; color: #1a1a2e;">Confirm Booking</h2>
+        <h2><i class="fas fa-check-circle"></i> Confirm Booking</h2>
         <div id="bookingFormContainer">
-            <p id="bookingSlotInfo" style="font-size: 0.85rem; color: #6c757d; padding: 8px 12px; background: #f8f9fa; border-left: 3px solid #007bff; margin-bottom: 12px;">
-                Loading...
-            </p>
+            <div id="bookingSlotInfo" class="booking-slot-info">
+                <i class="fas fa-clock"></i> Loading...
+            </div>
             
-            <div style="margin: 12px 0;">
-                <label for="booking_resource" style="display: block; margin-bottom: 4px; font-weight: 600; font-size: 0.8rem; color: #1a1a2e;">
-                    Select Resource:
-                </label>
-                <select id="booking_resource" style="width: 100%; padding: 8px 12px; border: 2px solid #e9ecef; font-size: 0.85rem; background: white; color: #1a1a2e; transition: border-color 0.2s ease;"
-                        onfocus="this.style.borderColor='#007bff'"
-                        onblur="this.style.borderColor='#e9ecef'">
+            <div class="form-group">
+                <label for="booking_resource"><i class="fas fa-cube"></i> Select Resource:</label>
+                <select id="booking_resource" class="form-control">
+                    <option value="">Select a resource...</option>
                 </select>
             </div>
             
-            <div style="margin: 12px 0;">
-                <label for="booking_notes" style="display: block; margin-bottom: 4px; font-weight: 600; font-size: 0.8rem; color: #1a1a2e;">
-                    Notes (Optional):
-                </label>
-                <textarea id="booking_notes" style="width: 100%; padding: 8px 12px; border: 2px solid #e9ecef; font-size: 0.8rem; min-height: 50px; background: white; color: #1a1a2e; resize: vertical; transition: border-color 0.2s ease; font-family: 'Mona Sans', sans-serif;"
-                          placeholder="Add any special requests..."
-                          onfocus="this.style.borderColor='#007bff'"
-                          onblur="this.style.borderColor='#e9ecef'"></textarea>
+            <div class="form-group">
+                <label for="booking_notes"><i class="fas fa-comment"></i> Notes (Optional):</label>
+                <textarea id="booking_notes" class="form-control" rows="3" 
+                          placeholder="Add any special requests or additional information..."></textarea>
             </div>
             
-            <button onclick="confirmBooking()" style="width: 100%; padding: 10px; background: #28a745; color: white; border: none; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease;"
-                    onmouseover="this.style.background='#218838'"
-                    onmouseout="this.style.background='#28a745'">
-                Confirm Booking
+            <button onclick="confirmBooking()" class="btn-confirm-booking">
+                <i class="fas fa-check"></i> Confirm Booking
             </button>
             
-            <div id="bookingMessage" style="margin-top: 8px; padding: 8px; font-weight: 500; font-size: 0.85rem;"></div>
+            <div id="bookingMessage" class="booking-message"></div>
         </div>
     </div>
 </div>
@@ -302,8 +273,6 @@ const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
 
 // Show booking form modal
 function showBookingForm(startTime, endTime, availableResources) {
-    console.log('showBookingForm called:', { startTime, endTime, availableResources });
-    
     selectedSlot = { start: startTime, end: endTime };
     
     const modal = document.getElementById('bookingModal');
@@ -318,7 +287,6 @@ function showBookingForm(startTime, endTime, availableResources) {
         resources = availableResources || [];
     }
     
-    // Ensure resources is an array
     if (!Array.isArray(resources)) {
         resources = [];
     }
@@ -326,7 +294,11 @@ function showBookingForm(startTime, endTime, availableResources) {
     // Format date/time for display
     const start = new Date(startTime);
     const end = new Date(endTime);
-    slotInfo.textContent = ` ${start.toLocaleDateString()} | ${start.toLocaleTimeString()} - ${end.toLocaleTimeString()}`;
+    slotInfo.innerHTML = `
+        <i class="fas fa-clock"></i> 
+        <strong>${start.toLocaleDateString()}</strong> 
+        <span class="time-range">${start.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} - ${end.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+    `;
     
     // Populate resource select dropdown
     resourceSelect.innerHTML = '';
@@ -344,9 +316,9 @@ function showBookingForm(startTime, endTime, availableResources) {
         });
     }
     
-    // Show modal
     modal.style.display = 'flex';
     document.getElementById('bookingMessage').innerHTML = '';
+    document.getElementById('bookingMessage').className = 'booking-message';
 }
 
 // Close booking modal
@@ -362,19 +334,20 @@ function confirmBooking() {
     const messageDiv = document.getElementById('bookingMessage');
     
     if (!resourceId) {
-        messageDiv.innerHTML = '<p style="color: #dc3545;"> Please select a resource.</p>';
+        messageDiv.innerHTML = '⚠️ Please select a resource.';
+        messageDiv.className = 'booking-message error';
         return;
     }
     
     if (!selectedSlot) {
-        messageDiv.innerHTML = '<p style="color: #dc3545;"> No time slot selected.</p>';
+        messageDiv.innerHTML = '⚠️ No time slot selected.';
+        messageDiv.className = 'booking-message error';
         return;
     }
     
-    // Show loading state
-    messageDiv.innerHTML = '<p style="color: #007bff;"> Processing your booking...</p>';
+    messageDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing your booking...';
+    messageDiv.className = 'booking-message loading';
     
-    // Send booking request
     fetch('/calendar/', {
         method: 'POST',
         headers: {
@@ -388,16 +361,14 @@ function confirmBooking() {
             notes: notes
         })
     })
-    .then(response => {
-        console.log('Response status:', response.status);
-        return response.json();
-    })
+    .then(response => response.json())
     .then(data => {
-        console.log('Response data:', data);
         if (data.error) {
-            messageDiv.innerHTML = `<p style="color: #dc3545;">❌ ${data.error}</p>`;
+            messageDiv.innerHTML = `❌ ${data.error}`;
+            messageDiv.className = 'booking-message error';
         } else {
-            messageDiv.innerHTML = `<p style="color: #28a745;">✅ ${data.message}</p>`;
+            messageDiv.innerHTML = `✅ ${data.message}`;
+            messageDiv.className = 'booking-message success';
             setTimeout(() => {
                 closeBookingModal();
                 location.reload();
@@ -405,8 +376,8 @@ function confirmBooking() {
         }
     })
     .catch(error => {
-        console.error('Error:', error);
-        messageDiv.innerHTML = `<p style="color: #dc3545;">❌ Error: ${error.message}</p>`;
+        messageDiv.innerHTML = `❌ Error: ${error.message}`;
+        messageDiv.className = 'booking-message error';
     });
 }
 
@@ -426,105 +397,902 @@ document.addEventListener('keydown', function(e) {
 </script>
 
 <style>
-    /* Desktop: Side by side */
-    @media (min-width: 769px) {
-        .calendar-grid {
-            grid-template-columns: 1fr 1fr !important;
-        }
-    }
-    
-    /* Tablet: Still side by side but smaller */
-    @media (max-width: 1024px) and (min-width: 769px) {
-        .calendar-day {
-            min-height: 60px !important;
-            padding: 3px 4px !important;
-        }
-        .calendar-day div {
-            font-size: 0.7rem !important;
-        }
-        .calendar-day .availability-text {
-            font-size: 0.5rem !important;
-        }
-        #time-slots-panel {
-            padding: 10px !important;
-        }
-        .time-slot-item {
-            padding: 8px 10px !important;
-        }
-    }
-    
-    /* Mobile: Stack vertically */
-    @media (max-width: 768px) {
-        .calendar-grid {
-            grid-template-columns: 1fr !important;
-        }
-        .calendar-day {
-            min-height: 60px !important;
-            padding: 3px 4px !important;
-        }
-        .calendar-day div {
-            font-size: 0.65rem !important;
-        }
-        #time-slots-panel {
-            max-height: 350px !important;
-        }
-        .modal-content {
-            padding: 20px !important;
-        }
-        .filter-links a {
-            font-size: 0.65rem !important;
-            padding: 3px 8px !important;
-        }
-        .calendar-grid-container {
-            gap: 15px !important;
-        }
-    }
-    
-    @media (max-width: 480px) {
-        .calendar-day {
-            min-height: 50px !important;
-            padding: 2px 3px !important;
-        }
-        .calendar-day div {
-            font-size: 0.55rem !important;
-        }
-        .calendar-day .today-badge {
-            font-size: 0.45rem !important;
-        }
-        .weekday-header {
-            font-size: 0.55rem !important;
-            padding: 4px 2px !important;
-        }
-        #time-slots-panel {
-            max-height: 300px !important;
-            padding: 10px !important;
-        }
-        .time-slot-item {
-            padding: 8px 10px !important;
-        }
-        .time-slot-item strong {
-            font-size: 0.75rem !important;
-        }
-        .modal-content {
-            padding: 15px !important;
-        }
-        h1 {
-            font-size: 1.3rem !important;
-        }
-        .resource-filter {
-            padding: 10px !important;
-        }
-        .legend {
-            gap: 8px !important;
-        }
-        .legend-item {
-            font-size: 0.6rem !important;
-        }
-        .legend-box {
-            width: 14px !important;
-            height: 14px !important;
-        }
-    }
-</style>
+/* ============ CONTAINER ============ */
+.calendar-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 15px;
+}
 
+/* ============ PAGE HEADER ============ */
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #e9ecef;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.page-header h1 {
+    margin: 0;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #1a1a2e;
+}
+
+.page-header h1 i {
+    color: #007bff;
+    margin-right: 10px;
+}
+
+.page-header .subtitle {
+    margin: 4px 0 0;
+    color: #6c757d;
+    font-size: 0.85rem;
+}
+
+.header-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.btn-back,
+.btn-bookings {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+
+.btn-back {
+    background: #f8f9fa;
+    color: #495057;
+    border: 1px solid #dee2e6;
+}
+
+.btn-back:hover {
+    background: #e9ecef;
+    color: #212529;
+}
+
+.btn-bookings {
+    background: #007bff;
+    color: white;
+}
+
+.btn-bookings:hover {
+    background: #0056b3;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+}
+
+/* ============ FILTER SECTION ============ */
+.filter-section {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+}
+
+.filter-header {
+    margin-bottom: 10px;
+}
+
+.filter-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #495057;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.filter-label i {
+    color: #007bff;
+    margin-right: 6px;
+}
+
+.filter-resources {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.filter-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 14px;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #495057;
+    transition: all 0.2s;
+}
+
+.filter-btn:hover {
+    background: #e9ecef;
+    border-color: #adb5bd;
+}
+
+.filter-btn.active {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+.filter-btn i {
+    font-size: 0.7rem;
+}
+
+/* ============ CALENDAR GRID ============ */
+.calendar-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 24px;
+}
+
+/* ============ CALENDAR CARD ============ */
+.calendar-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 20px;
+}
+
+/* Month Navigation */
+.calendar-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.nav-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    text-decoration: none;
+    color: #1a1a2e;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+}
+
+.nav-btn:hover {
+    background: #f8f9fa;
+    border-color: #dee2e6;
+}
+
+.calendar-title {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1a1a2e;
+}
+
+/* Weekday Headers */
+.weekday-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    margin-bottom: 2px;
+}
+
+.weekday-header {
+    text-align: center;
+    font-weight: 700;
+    font-size: 0.65rem;
+    color: #6c757d;
+    padding: 6px 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Day Grid */
+.day-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    margin-bottom: 2px;
+}
+
+.day-cell {
+    min-height: 72px;
+    padding: 6px 8px;
+    border: 2px solid transparent;
+    border-radius: 6px;
+    text-decoration: none;
+    transition: all 0.2s;
+    position: relative;
+    cursor: pointer;
+}
+
+.day-cell:hover {
+    transform: scale(1.02);
+    z-index: 1;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.day-cell.today {
+    background: #007bff;
+    color: white;
+    border-color: #0056b3;
+}
+
+.day-cell.past {
+    background: #e9ecef;
+    color: #6c757d;
+    cursor: default;
+}
+
+.day-cell.has-availability {
+    background: #d4edda;
+    border-color: #28a745;
+}
+
+.day-cell.fully-booked {
+    background: #f8d7da;
+    border-color: #dc3545;
+}
+
+.day-cell.selected {
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.3);
+}
+
+.day-cell.past:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+.day-number {
+    font-weight: 500;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.today .day-number {
+    color: white;
+}
+
+.today-badge {
+    font-size: 0.5rem;
+    background: rgba(255,255,255,0.3);
+    padding: 1px 6px;
+    border-radius: 10px;
+}
+
+/* Availability Indicator */
+.availability-indicator {
+    margin-top: 4px;
+}
+
+.availability-text {
+    font-size: 0.55rem;
+    opacity: 0.8;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.today .availability-text {
+    color: rgba(255,255,255,0.9);
+}
+
+.day-cell.past .availability-text {
+    color: #6c757d;
+}
+
+.availability-bar {
+    width: 100%;
+    height: 3px;
+    background: rgba(0,0,0,0.1);
+    border-radius: 0px;
+    margin-top: 3px;
+    overflow: hidden;
+}
+
+.availability-progress {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.3s ease;
+}
+
+.availability-progress.high {
+    background: #28a745;
+}
+
+.availability-progress.medium {
+    background: #ffc107;
+}
+
+.availability-progress.low {
+    background: #dc3545;
+}
+
+.today .availability-progress {
+    background: rgba(255,255,255,0.7);
+}
+
+.past-label {
+    font-size: 0.5rem;
+    opacity: 0.6;
+    margin-top: 2px;
+}
+
+.day-empty {
+    min-height: 72px;
+    background: #f8f9fa;
+    border-radius: 6px;
+}
+
+/* ============ TIME SLOTS CARD ============ */
+.time-slots-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 20px;
+    max-height: 520px;
+    overflow-y: auto;
+}
+
+.time-slots-card.empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.time-slots-header {
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.time-slots-header h3 {
+    margin: 0 0 4px 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1a1a2e;
+}
+
+.time-slots-header h3 i {
+    color: #007bff;
+    margin-right: 6px;
+}
+
+.time-slots-date {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #495057;
+}
+
+.time-slots-resource {
+    font-size: 0.75rem;
+    color: #6c757d;
+    margin-left: 8px;
+}
+
+/* Time Slots List */
+.time-slots-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.time-slot-item {
+    padding: 12px 14px;
+    border-radius: 0px;
+    border-left: 4px solid #28a745;
+    transition: all 0.2s;
+    background: #f8f9fa;
+}
+
+.time-slot-item.available {
+    background: #f8f9fa;
+    border-left-color: #28a745;
+    cursor: pointer;
+}
+
+.time-slot-item.available:hover {
+    transform: translateX(4px);
+    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.15);
+    background: #f0faf0;
+}
+
+.time-slot-item.booked {
+    background: #fef2f2;
+    border-left-color: #dc3545;
+    opacity: 0.7;
+}
+
+.time-slot-item.past {
+    background: #e9ecef;
+    border-left-color: #6c757d;
+    opacity: 0.5;
+}
+
+.time-slot-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.time-slot-time {
+    font-weight: 500;
+    font-size: 0.85rem;
+    color: #1a1a2e;
+}
+
+.time-slot-time i {
+    color: #6c757d;
+    margin-right: 4px;
+}
+
+.time-slot-status {
+    font-size: 0.7rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.available-status {
+    color: #28a745;
+}
+
+.resource-count {
+    font-weight: 400;
+    color: #6c757d;
+    margin-left: 4px;
+}
+
+.booked-status {
+    color: #dc3545;
+}
+
+.past-status {
+    color: #6c757d;
+}
+
+.available-resources {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 6px;
+}
+
+.resource-tag {
+    font-size: 0.6rem;
+    background: #e3f2fd;
+    color: #0056b3;
+    padding: 2px 8px;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.resource-tag.more {
+    background: #6c757d;
+    color: white;
+}
+
+/* Empty Slots */
+.empty-slots {
+    text-align: center;
+    padding: 40px 20px;
+    color: #6c757d;
+}
+
+.empty-slots i {
+    font-size: 3rem;
+    color: #dee2e6;
+    margin-bottom: 12px;
+}
+
+.empty-slots h4 {
+    margin: 0 0 4px 0;
+    color: #495057;
+    font-size: 1rem;
+}
+
+.empty-slots p {
+    margin: 0;
+    font-size: 0.85rem;
+}
+
+.no-slots {
+    text-align: center;
+    padding: 30px 20px;
+    color: #6c757d;
+}
+
+.no-slots i {
+    font-size: 2rem;
+    color: #dee2e6;
+    margin-bottom: 8px;
+}
+
+.no-slots p {
+    margin: 0;
+    font-size: 0.85rem;
+}
+
+/* ============ LEGEND ============ */
+.legend-section {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 16px;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    flex-wrap: wrap;
+}
+
+.legend-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #495057;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.legend-label i {
+    color: #007bff;
+    margin-right: 4px;
+}
+
+.legend-items {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.legend-box {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    border: 1px solid #dee2e6;
+}
+
+.legend-box.available-box {
+    background: #d4edda;
+    border-color: #28a745;
+}
+
+.legend-box.booked-box {
+    background: #f8d7da;
+    border-color: #dc3545;
+}
+
+.legend-box.past-box {
+    background: #e9ecef;
+    border-color: #adb5bd;
+}
+
+.legend-box.today-box {
+    background: #007bff;
+    border-color: #0056b3;
+}
+
+.legend-box.selected-box {
+    background: white;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.3);
+}
+
+.legend-text {
+    font-size: 0.7rem;
+    color: #495057;
+}
+
+/* ============ MODAL ============ */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    backdrop-filter: blur(4px);
+}
+
+.modal-content {
+    background: white;
+    padding: 28px;
+    max-width: 480px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    border-radius: 0px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    position: relative;
+}
+
+.modal-close {
+    position: absolute;
+    top: 12px;
+    right: 16px;
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    color: #6c757d;
+    transition: all 0.2s;
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+.modal-close:hover {
+    color: #1a1a2e;
+    background: #f8f9fa;
+}
+
+.modal-content h2 {
+    margin: 0 0 16px 0;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #1a1a2e;
+}
+
+.modal-content h2 i {
+    color: #28a745;
+    margin-right: 8px;
+}
+
+.booking-slot-info {
+    padding: 10px 14px;
+    background: #f8f9fa;
+    border-left: 3px solid #007bff;
+    border-radius: 0px;
+    margin-bottom: 16px;
+    font-size: 0.85rem;
+    color: #495057;
+}
+
+.booking-slot-info i {
+    color: #007bff;
+    margin-right: 6px;
+}
+
+.booking-slot-info .time-range {
+    font-weight: 600;
+    color: #1a1a2e;
+}
+
+.form-group {
+    margin-bottom: 14px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 4px;
+    font-weight: 600;
+    font-size: 0.8rem;
+    color: #495057;
+}
+
+.form-group label i {
+    color: #007bff;
+    margin-right: 4px;
+}
+
+.form-control {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    font-family: inherit;
+}
+
+.form-control:focus {
+    border-color: #007bff;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+select.form-control {
+    appearance: auto;
+}
+
+textarea.form-control {
+    resize: vertical;
+    min-height: 60px;
+}
+
+.btn-confirm-booking {
+    width: 100%;
+    padding: 10px;
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btn-confirm-booking:hover {
+    background: #218838;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+}
+
+.booking-message {
+    margin-top: 10px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.booking-message.success {
+    background: #d4edda;
+    color: #155724;
+}
+
+.booking-message.error {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.booking-message.loading {
+    background: #e3f2fd;
+    color: #004085;
+}
+
+/* ============ RESPONSIVE ============ */
+@media (max-width: 1200px) {
+    .calendar-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .time-slots-card {
+        max-height: 400px;
+    }
+}
+
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .header-actions {
+        width: 100%;
+    }
+    
+    .header-actions a {
+        flex: 1;
+        justify-content: center;
+    }
+    
+    .filter-resources {
+        max-height: 150px;
+        overflow-y: auto;
+    }
+    
+    .day-cell {
+        min-height: 60px;
+        padding: 4px 6px;
+    }
+    
+    .day-number {
+        font-size: 0.7rem;
+    }
+    
+    .availability-text {
+        font-size: 0.5rem;
+    }
+    
+    .time-slots-card {
+        max-height: 350px;
+    }
+    
+    .modal-content {
+        padding: 20px;
+        margin: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .calendar-title {
+        font-size: 0.9rem;
+    }
+    
+    .day-cell {
+        min-height: 50px;
+        padding: 3px 4px;
+    }
+    
+    .day-number {
+        font-size: 0.6rem;
+    }
+    
+    .today-badge {
+        font-size: 0.4rem;
+        padding: 0 4px;
+    }
+    
+    .availability-text {
+        font-size: 0.45rem;
+    }
+    
+    .weekday-header {
+        font-size: 0.5rem;
+        padding: 4px 2px;
+    }
+    
+    .time-slots-card {
+        max-height: 300px;
+        padding: 12px;
+    }
+    
+    .time-slot-item {
+        padding: 8px 10px;
+    }
+    
+    .time-slot-time {
+        font-size: 0.75rem;
+    }
+    
+    .time-slot-status {
+        font-size: 0.6rem;
+    }
+    
+    .modal-content {
+        padding: 16px;
+    }
+    
+    .legend-section {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .legend-items {
+        gap: 6px;
+    }
+}
+</style>
 {% endblock %}

@@ -1,253 +1,1287 @@
 {% extends 'bookings/base.html' %}
+{% load static %}
 
 {% block content %}
-<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 20px;">
-    <h1 style="font-size: 1.6rem; font-weight: 800; margin: 0;">Review Moderation</h1>
-    <span style="font-size: 0.85rem; color: var(--text-secondary);">Manage user reviews</span>
-</div>
+<div class="admin-reviews-container">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div>
+            <h1>Review Moderation</h1>
+            <p class="subtitle">Manage and moderate user reviews across the platform</p>
+        </div>
+        <div class="header-actions">
+            <a href="{% url 'bookings:admin_dashboard' %}" class="btn-dashboard">
+                <i class="fas fa-chart-bar"></i> Dashboard
+            </a>
+            <a href="{% url 'bookings:admin_reviews' %}?status=PENDING" class="btn-pending">
+                <i class="fas fa-clock"></i> Pending ({{ pending }})
+            </a>
+        </div>
+    </div>
 
-<!-- Statistics Cards -->
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 20px;">
-    <div style="background: var(--bg-card); padding: 12px; text-align: center; border-left: 4px solid #007bff; border-radius: 0px;">
-        <div style="font-size: 1.3rem; font-weight: 700; color: #007bff;">{{ total }}</div>
-        <div style="font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;">Total</div>
+    <!-- Statistics Cards -->
+    <div class="stats-grid">
+        <div class="stat-card stat-total">
+            <div class="stat-icon"><i class="fas fa-list"></i></div>
+            <div class="stat-content">
+                <span class="stat-number">{{ total }}</span>
+                <span class="stat-label">Total Reviews</span>
+            </div>
+            <div class="stat-hover">View all</div>
+        </div>
+        <div class="stat-card stat-pending" onclick="location.href='?status=PENDING'">
+            <div class="stat-icon"><i class="fas fa-clock"></i></div>
+            <div class="stat-content">
+                <span class="stat-number">{{ pending }}</span>
+                <span class="stat-label">Pending</span>
+            </div>
+            <div class="stat-hover">Review pending</div>
+        </div>
+        <div class="stat-card stat-approved" onclick="location.href='?status=APPROVED'">
+            <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+            <div class="stat-content">
+                <span class="stat-number">{{ approved }}</span>
+                <span class="stat-label">Approved</span>
+            </div>
+            <div class="stat-hover">View approved</div>
+        </div>
+        <div class="stat-card stat-rejected" onclick="location.href='?status=REJECTED'">
+            <div class="stat-icon"><i class="fas fa-times-circle"></i></div>
+            <div class="stat-content">
+                <span class="stat-number">{{ rejected }}</span>
+                <span class="stat-label">Rejected</span>
+            </div>
+            <div class="stat-hover">View rejected</div>
+        </div>
     </div>
-    <div style="background: var(--bg-card); padding: 12px; text-align: center; border-left: 4px solid #ffc107; border-radius: 0px; cursor: pointer;" onclick="location.href='?status=PENDING'">
-        <div style="font-size: 1.3rem; font-weight: 700; color: #ffc107;">{{ pending }}</div>
-        <div style="font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;">Pending</div>
-    </div>
-    <div style="background: var(--bg-card); padding: 12px; text-align: center; border-left: 4px solid #28a745; border-radius: 0px; cursor: pointer;" onclick="location.href='?status=APPROVED'">
-        <div style="font-size: 1.3rem; font-weight: 700; color: #28a745;">{{ approved }}</div>
-        <div style="font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;">Approved</div>
-    </div>
-    <div style="background: var(--bg-card); padding: 12px; text-align: center; border-left: 4px solid #dc3545; border-radius: 0px; cursor: pointer;" onclick="location.href='?status=REJECTED'">
-        <div style="font-size: 1.3rem; font-weight: 700; color: #dc3545;">{{ rejected }}</div>
-        <div style="font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;">Rejected</div>
-    </div>
-</div>
 
-<!-- Filters -->
-<div style="margin: 15px 0 20px 0; padding: 15px; background: var(--bg-card); border-radius: 0px;">
-    <form method="get" style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
-        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-            <span style="font-size: 0.75rem; font-weight: 600;">Status:</span>
-            <select name="status" style="padding: 4px 8px; border: 2px solid var(--input-border); border-radius: 0px; font-size: 0.75rem; background: var(--bg-input); color: var(--text-primary);">
-                <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All</option>
-                {% for value, label in status_choices %}
-                    <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
-                {% endfor %}
-            </select>
+    <!-- Filters Section -->
+    <div class="filter-section">
+        <form method="get" class="filter-form">
+            <div class="filter-group">
+                <label for="status"><i class="fas fa-filter"></i> Status</label>
+                <select name="status" id="status">
+                    <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All Statuses</option>
+                    {% for value, label in status_choices %}
+                        <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label for="rating"><i class="fas fa-star"></i> Rating</label>
+                <select name="rating" id="rating">
+                    <option value="all" {% if rating_filter == 'all' %}selected{% endif %}>All Ratings</option>
+                    {% for value, label in rating_choices %}
+                        <option value="{{ value }}" {% if rating_filter == value|stringformat:"s" %}selected{% endif %}>⭐ {{ value }} Stars</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="filter-group filter-search">
+                <label for="search"><i class="fas fa-search"></i> Search</label>
+                <div class="search-wrapper">
+                    <input type="text" name="search" id="search" placeholder="Search by user, resource, or comment..." value="{{ search_query }}">
+                    <button type="submit" class="btn-search"><i class="fas fa-search"></i></button>
+                </div>
+            </div>
+            
+            <div class="filter-actions">
+                <button type="submit" class="btn-apply">
+                    <i class="fas fa-check"></i> Apply Filters
+                </button>
+                <a href="?" class="btn-clear">
+                    <i class="fas fa-undo"></i> Clear All
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Bulk Actions -->
+    {% if reviews %}
+    <form method="post" action="{% url 'bookings:admin_bulk_action_reviews' %}" id="bulk-action-form">
+        {% csrf_token %}
+        <div class="bulk-actions-bar">
+            <div class="bulk-left">
+                <span class="bulk-label"><i class="fas fa-tasks"></i> Bulk Actions:</span>
+                <select name="action" class="bulk-select">
+                    <option value="">Select action...</option>
+                    <option value="approve">Approve Selected</option>
+                    <option value="reject">Reject Selected</option>
+                    <option value="delete">Delete Selected</option>
+                </select>
+                <button type="submit" class="btn-bulk-apply">
+                    <i class="fas fa-play"></i> Apply
+                </button>
+            </div>
+            <div class="bulk-right">
+                <span class="results-count">
+                    <i class="fas fa-list"></i> {{ reviews|length }} review{{ reviews|pluralize }}
+                </span>
+                <span class="bulk-info">Select reviews to perform bulk actions</span>
+            </div>
         </div>
-        
-        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-            <span style="font-size: 0.75rem; font-weight: 600;">Rating:</span>
-            <select name="rating" style="padding: 4px 8px; border: 2px solid var(--input-border); border-radius: 0px; font-size: 0.75rem; background: var(--bg-input); color: var(--text-primary);">
-                <option value="all" {% if rating_filter == 'all' %}selected{% endif %}>All</option>
-                {% for value, label in rating_choices %}
-                    <option value="{{ value }}" {% if rating_filter == value|stringformat:"s" %}selected{% endif %}>{{ label }}</option>
-                {% endfor %}
-            </select>
+
+        <!-- Reviews Table -->
+        <div class="table-container">
+            <div class="table-responsive">
+                <table class="reviews-table">
+                    <thead>
+                        <tr>
+                            <th class="select-col">
+                                <input type="checkbox" id="select-all" onchange="toggleAll(this)">
+                            </th>
+                            <th class="resource-col">Resource</th>
+                            <th class="user-col">User</th>
+                            <th class="rating-col">Rating</th>
+                            <th class="review-col">Review</th>
+                            <th class="status-col">Status</th>
+                            <th class="actions-col">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for review in reviews %}
+                            <tr class="review-row status-{{ review.status|lower }}">
+                                <td class="select-col">
+                                    <input type="checkbox" name="review_ids" value="{{ review.id }}" class="review-checkbox">
+                                </td>
+                                <td class="resource-col">
+                                    <a href="{% url 'bookings:resource_detail' review.resource.id %}" class="resource-link">
+                                        {{ review.resource.name }}
+                                    </a>
+                                </td>
+                                <td class="user-col">
+                                    <span class="user-name">{{ review.user.username }}</span>
+                                    <span class="user-email">{{ review.user.email }}</span>
+                                </td>
+                                <td class="rating-col">
+                                    <div class="rating-stars">
+                                        {% for i in "12345"|make_list %}
+                                            {% if forloop.counter <= review.rating %}
+                                                <span class="star filled">⭐</span>
+                                            {% else %}
+                                                <span class="star empty">☆</span>
+                                            {% endif %}
+                                        {% endfor %}
+                                        <span class="rating-number">({{ review.rating }})</span>
+                                    </div>
+                                </td>
+                                <td class="review-col">
+                                    {% if review.title %}
+                                        <div class="review-title">{{ review.title }}</div>
+                                    {% endif %}
+                                    <div class="review-comment">{{ review.comment|truncatewords:12 }}</div>
+                                    <div class="review-meta">
+                                        <span class="review-date"><i class="far fa-calendar-alt"></i> {{ review.created_at|date:"M d, Y" }}</span>
+                                        {% if review.is_verified %}
+                                            <span class="badge-verified"><i class="fas fa-check-circle"></i> Verified</span>
+                                        {% endif %}
+                                        {% if review.helpful_count > 0 %}
+                                            <span class="badge-helpful"><i class="fas fa-thumbs-up"></i> {{ review.helpful_count }}</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td class="status-col">
+                                    <span class="status-badge status-{{ review.status|lower }}">
+                                        {{ review.get_status_display }}
+                                    </span>
+                                </td>
+                                <td class="actions-col">
+                                    <div class="action-buttons">
+                                        <a href="{% url 'bookings:admin_review_detail' review.id %}" class="btn-action btn-view" title="View Details">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        {% if review.status == 'PENDING' %}
+                                            <button type="button" class="btn-action btn-approve" title="Quick Approve" onclick="quickApprove({{ review.id }})">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                            <button type="button" class="btn-action btn-reject" title="Quick Reject" onclick="quickReject({{ review.id }})">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
-        
-        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; flex: 1;">
-            <span style="font-size: 0.75rem; font-weight: 600;">Search:</span>
-            <input type="text" name="search" placeholder="Search reviews..." value="{{ search_query }}" style="flex: 1; min-width: 150px; padding: 4px 8px; border: 2px solid var(--input-border); border-radius: 0px; font-size: 0.75rem; background: var(--bg-input); color: var(--text-primary);">
-        </div>
-        
-        <button type="submit" style="padding: 4px 16px; background: #007bff; color: white; border: none; border-radius: 0px; font-size: 0.75rem; font-weight: 600; cursor: pointer;">
-            Filter
-        </button>
-        <a href="?" style="padding: 4px 16px; background: #6c757d; color: white; text-decoration: none; border-radius: 0px; font-size: 0.75rem; font-weight: 600;">
-            Clear
-        </a>
     </form>
+
+    <!-- Pagination -->
+    {% if reviews.paginator.num_pages > 1 %}
+        <div class="pagination-section">
+            <div class="pagination-info">
+                <span>Showing page {{ reviews.number }} of {{ reviews.paginator.num_pages }}</span>
+                <span class="total-items">{{ reviews.paginator.count }} total reviews</span>
+            </div>
+            <div class="pagination-controls">
+                {% if reviews.has_previous %}
+                    <a href="?page=1&status={{ status_filter }}&rating={{ rating_filter }}&search={{ search_query }}" class="page-btn" title="First">
+                        <i class="fas fa-angle-double-left"></i>
+                    </a>
+                    <a href="?page={{ reviews.previous_page_number }}&status={{ status_filter }}&rating={{ rating_filter }}&search={{ search_query }}" class="page-btn" title="Previous">
+                        <i class="fas fa-angle-left"></i>
+                    </a>
+                {% else %}
+                    <span class="page-btn disabled"><i class="fas fa-angle-double-left"></i></span>
+                    <span class="page-btn disabled"><i class="fas fa-angle-left"></i></span>
+                {% endif %}
+                
+                <span class="page-current">{{ reviews.number }}</span>
+                
+                {% if reviews.has_next %}
+                    <a href="?page={{ reviews.next_page_number }}&status={{ status_filter }}&rating={{ rating_filter }}&search={{ search_query }}" class="page-btn" title="Next">
+                        <i class="fas fa-angle-right"></i>
+                    </a>
+                    <a href="?page={{ reviews.paginator.num_pages }}&status={{ status_filter }}&rating={{ rating_filter }}&search={{ search_query }}" class="page-btn" title="Last">
+                        <i class="fas fa-angle-double-right"></i>
+                    </a>
+                {% else %}
+                    <span class="page-btn disabled"><i class="fas fa-angle-right"></i></span>
+                    <span class="page-btn disabled"><i class="fas fa-angle-double-right"></i></span>
+                {% endif %}
+            </div>
+        </div>
+    {% endif %}
+
+    {% else %}
+        <!-- Empty State -->
+        <div class="empty-state">
+            <div class="empty-icon">
+                <i class="fas fa-comment-slash"></i>
+            </div>
+            <h2>No Reviews Found</h2>
+            <p>
+                {% if status_filter != 'all' %}
+                    No {{ status_filter|lower }} reviews found matching your criteria.
+                {% else %}
+                    There are no reviews available yet. Reviews will appear here once users submit them.
+                {% endif %}
+            </p>
+            <div class="empty-actions">
+                <a href="?" class="btn-primary">
+                    <i class="fas fa-undo"></i> Clear All Filters
+                </a>
+                <a href="{% url 'bookings:admin_dashboard' %}" class="btn-secondary">
+                    <i class="fas fa-chart-bar"></i> Go to Dashboard
+                </a>
+            </div>
+            <div class="empty-tips">
+                <span class="tip-badge"><i class="fas fa-lightbulb"></i> Reviews with pending status need moderation</span>
+                <span class="tip-badge"><i class="fas fa-star"></i> Use filters to find specific reviews</span>
+                <span class="tip-badge"><i class="fas fa-tasks"></i> Bulk actions save time</span>
+            </div>
+        </div>
+    {% endif %}
 </div>
-
-<!-- Bulk Actions -->
-{% if reviews %}
-<form method="post" action="{% url 'bookings:admin_bulk_action_reviews' %}" id="bulk-action-form">
-    {% csrf_token %}
-    <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 15px; flex-wrap: wrap;">
-        <span style="font-size: 0.75rem; font-weight: 600;">Bulk Actions:</span>
-        <select name="action" style="padding: 4px 8px; border: 2px solid var(--input-border); border-radius: 0px; font-size: 0.75rem; background: var(--bg-input); color: var(--text-primary);">
-            <option value="">Select action...</option>
-            <option value="approve">Approve Selected</option>
-            <option value="reject">Reject Selected</option>
-            <option value="delete">Delete Selected</option>
-        </select>
-        <button type="submit" style="padding: 4px 16px; background: #007bff; color: white; border: none; border-radius: 0px; font-size: 0.75rem; font-weight: 600; cursor: pointer;">
-            Apply
-        </button>
-        <span style="font-size: 0.7rem; color: var(--text-secondary);">{{ reviews|length }} reviews</span>
-    </div>
-
-    <!-- Reviews Table -->
-    <div style="overflow-x: auto;">
-        <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem;">
-            <thead>
-                <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">
-                    <th style="padding: 8px 10px; text-align: center; width: 30px;">
-                        <input type="checkbox" id="select-all" onchange="toggleAll(this)">
-                    </th>
-                    <th style="padding: 8px 10px; text-align: left;">Resource</th>
-                    <th style="padding: 8px 10px; text-align: left;">User</th>
-                    <th style="padding: 8px 10px; text-align: center;">Rating</th>
-                    <th style="padding: 8px 10px; text-align: left;">Review</th>
-                    <th style="padding: 8px 10px; text-align: center;">Status</th>
-                    <th style="padding: 8px 10px; text-align: center;">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for review in reviews %}
-                    <tr style="border-bottom: 1px solid #dee2e6; 
-                               {% if review.status == 'PENDING' %}background: #fff8e1;{% endif %}
-                               {% if review.status == 'REJECTED' %}background: #fce4ec;{% endif %}">
-                        <td style="padding: 8px 10px; text-align: center;">
-                            <input type="checkbox" name="review_ids" value="{{ review.id }}" class="review-checkbox">
-                        </td>
-                        <td style="padding: 8px 10px;">
-                            <strong>{{ review.resource.name }}</strong>
-                        </td>
-                        <td style="padding: 8px 10px;">
-                            {{ review.user.username }}
-                            <span style="display: block; font-size: 0.65rem; color: var(--text-secondary);">{{ review.user.email }}</span>
-                        </td>
-                        <td style="padding: 8px 10px; text-align: center; font-size: 0.9rem;">
-                            {% for i in "12345"|make_list %}
-                                {% if forloop.counter <= review.rating %}
-                                    ⭐
-                                {% else %}
-                                    ☆
-                                {% endif %}
-                            {% endfor %}
-                            <span style="font-size: 0.65rem; color: var(--text-secondary);">({{ review.rating }})</span>
-                        </td>
-                        <td style="padding: 8px 10px;">
-                            {% if review.title %}
-                                <strong>{{ review.title|truncatewords:5 }}</strong>
-                            {% endif %}
-                            <div style="font-size: 0.75rem; color: var(--text-secondary);">{{ review.comment|truncatewords:10 }}</div>
-                            <div style="font-size: 0.65rem; color: var(--text-secondary); margin-top: 2px;">
-                                {{ review.created_at|date:"M d, Y" }}
-                                {% if review.is_verified %}
-                                    <span style="background: #28a745; color: white; padding: 1px 6px; font-size: 0.55rem; border-radius: 0px;">Verified</span>
-                                {% endif %}
-                            </div>
-                        </td>
-                        <td style="padding: 8px 10px; text-align: center;">
-                            {% if review.status == 'APPROVED' %}
-                                <span style="background: #d4edda; color: #155724; padding: 2px 10px; border-radius: 0px; font-size: 0.65rem; font-weight: 600;">Approved</span>
-                            {% elif review.status == 'PENDING' %}
-                                <span style="background: #fff3cd; color: #856404; padding: 2px 10px; border-radius: 0px; font-size: 0.65rem; font-weight: 600;">Pending</span>
-                            {% else %}
-                                <span style="background: #f8d7da; color: #721c24; padding: 2px 10px; border-radius: 0px; font-size: 0.65rem; font-weight: 600;">Rejected</span>
-                            {% endif %}
-                        </td>
-                        <td style="padding: 8px 10px; text-align: center;">
-                            <div style="display: flex; gap: 4px; flex-wrap: wrap; justify-content: center;">
-                                <a href="{% url 'bookings:admin_review_detail' review.id %}" style="font-size: 0.7rem; color: #007bff; text-decoration: none;">View</a>
-                                <a href="{% url 'bookings:resource_detail' review.resource.id %}" style="font-size: 0.7rem; color: #28a745; text-decoration: none;">Resource</a>
-                            </div>
-                        </td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</form>
-
-<!-- Pagination -->
-{% if reviews.paginator.num_pages > 1 %}
-    <div style="display: flex; justify-content: center; gap: 5px; margin-top: 20px; flex-wrap: wrap;">
-        {% if reviews.has_previous %}
-            <a href="?page=1&status={{ status_filter }}&rating={{ rating_filter }}&search={{ search_query }}" style="padding: 4px 12px; background: #e9ecef; color: #333; text-decoration: none; border-radius: 0px; font-size: 0.75rem;">⏮ First</a>
-            <a href="?page={{ reviews.previous_page_number }}&status={{ status_filter }}&rating={{ rating_filter }}&search={{ search_query }}" style="padding: 4px 12px; background: #e9ecef; color: #333; text-decoration: none; border-radius: 0px; font-size: 0.75rem;">◀ Prev</a>
-        {% endif %}
-        
-        {% for num in reviews.paginator.page_range %}
-            {% if reviews.number == num %}
-                <span style="padding: 4px 12px; background: #007bff; color: white; border-radius: 0px; font-size: 0.75rem;">{{ num }}</span>
-            {% elif num > reviews.number|add:'-3' and num < reviews.number|add:'3' %}
-                <a href="?page={{ num }}&status={{ status_filter }}&rating={{ rating_filter }}&search={{ search_query }}" style="padding: 4px 12px; background: #e9ecef; color: #333; text-decoration: none; border-radius: 0px; font-size: 0.75rem;">{{ num }}</a>
-            {% endif %}
-        {% endfor %}
-        
-        {% if reviews.has_next %}
-            <a href="?page={{ reviews.next_page_number }}&status={{ status_filter }}&rating={{ rating_filter }}&search={{ search_query }}" style="padding: 4px 12px; background: #e9ecef; color: #333; text-decoration: none; border-radius: 0px; font-size: 0.75rem;">Next ▶</a>
-            <a href="?page={{ reviews.paginator.num_pages }}&status={{ status_filter }}&rating={{ rating_filter }}&search={{ search_query }}" style="padding: 4px 12px; background: #e9ecef; color: #333; text-decoration: none; border-radius: 0px; font-size: 0.75rem;">Last ⏭</a>
-        {% endif %}
-    </div>
-{% endif %}
-
-{% else %}
-    <div style="text-align: center; padding: 60px 20px; background: var(--bg-hover); border: 1px solid var(--border-color); border-radius: 0px;">
-        <div style="font-size: 48px; margin-bottom: 15px;">📭</div>
-        <h3 style="font-size: 1.2rem; color: var(--text-primary); margin-bottom: 10px;">No reviews found</h3>
-        <p style="font-size: 0.85rem; color: var(--text-secondary);">No reviews match your filters.</p>
-    </div>
-{% endif %}
 
 <script>
+// ============ TOGGLE ALL CHECKBOXES ============
 function toggleAll(masterCheckbox) {
     const checkboxes = document.querySelectorAll('.review-checkbox');
     checkboxes.forEach(cb => cb.checked = masterCheckbox.checked);
 }
 
-// Confirm before bulk action
+// ============ BULK ACTION CONFIRMATION ============
 document.getElementById('bulk-action-form').addEventListener('submit', function(e) {
     const action = this.querySelector('select[name="action"]').value;
     const selected = document.querySelectorAll('.review-checkbox:checked');
     
     if (!action) {
         e.preventDefault();
-        alert('Please select an action to perform.');
+        alert(' Please select an action to perform.');
         return;
     }
     
     if (selected.length === 0) {
         e.preventDefault();
-        alert('Please select at least one review.');
+        alert(' Please select at least one review.');
         return;
     }
     
-    if (!confirm(`Are you sure you want to ${action} ${selected.length} review(s)?`)) {
+    const actionLabels = {
+        'approve': 'approve',
+        'reject': 'reject',
+        'delete': 'delete'
+    };
+    
+    if (!confirm(` Are you sure you want to ${actionLabels[action] || action} ${selected.length} review(s)?`)) {
         e.preventDefault();
+    }
+});
+
+// ============ QUICK APPROVE ============
+function quickApprove(reviewId) {
+    if (!confirm('Approve this review?')) return;
+    
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/reviews-admin/${reviewId}/`;
+    
+    const csrf = document.createElement('input');
+    csrf.type = 'hidden';
+    csrf.name = 'csrfmiddlewaretoken';
+    csrf.value = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    form.appendChild(csrf);
+    
+    const action = document.createElement('input');
+    action.type = 'hidden';
+    action.name = 'action';
+    action.value = 'approve';
+    form.appendChild(action);
+    
+    document.body.appendChild(form);
+    form.submit();
+}
+
+// ============ QUICK REJECT ============
+function quickReject(reviewId) {
+    if (!confirm('Reject this review?')) return;
+    
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/reviews-admin/${reviewId}/`;
+    
+    const csrf = document.createElement('input');
+    csrf.type = 'hidden';
+    csrf.name = 'csrfmiddlewaretoken';
+    csrf.value = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    form.appendChild(csrf);
+    
+    const action = document.createElement('input');
+    action.type = 'hidden';
+    action.name = 'action';
+    action.value = 'reject';
+    form.appendChild(action);
+    
+    document.body.appendChild(form);
+    form.submit();
+}
+
+// ============ STATUS FILTER AUTO-SUBMIT ============
+document.querySelectorAll('.filter-group select').forEach(select => {
+    select.addEventListener('change', function() {
+        this.closest('form').submit();
+    });
+});
+
+// ============ ENTER KEY SEARCH ============
+document.getElementById('search')?.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        this.closest('form').submit();
     }
 });
 </script>
 
+
 <style>
-    @media (max-width: 768px) {
-        table {
-            font-size: 0.7rem !important;
-        }
-        th, td {
-            padding: 4px 6px !important;
-        }
-        
-        .stats-grid {
-            grid-template-columns: 1fr 1fr !important;
-        }
+/* ============ CONTAINER ============ */
+.admin-reviews-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 15px;
+}
+
+/* ============ PAGE HEADER ============ */
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #e9ecef;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.page-header h1 {
+    margin: 0;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #1a1a2e;
+}
+
+.page-header h1 i {
+    color: #007bff;
+    margin-right: 10px;
+}
+
+.page-header .subtitle {
+    margin: 4px 0 0;
+    color: #6c757d;
+    font-size: 0.85rem;
+}
+
+.header-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.btn-dashboard,
+.btn-pending {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+
+.btn-dashboard {
+    background: #007bff;
+    color: white;
+}
+
+.btn-dashboard:hover {
+    background: #0056b3;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+}
+
+.btn-pending {
+    background: #ffc107;
+    color: #856404;
+}
+
+.btn-pending:hover {
+    background: #e0a800;
+    color: #856404;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(255, 193, 7, 0.3);
+}
+
+/* ============ STATISTICS CARDS ============ */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.stat-card {
+    background: white;
+    padding: 16px 20px;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: all 0.2s;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+}
+
+.stat-card:hover .stat-hover {
+    opacity: 1;
+}
+
+.stat-hover {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 4px;
+    text-align: center;
+    font-size: 0.6rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    opacity: 0;
+    transition: opacity 0.2s;
+    background: rgba(0,0,0,0.05);
+}
+
+.stat-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+.stat-total .stat-icon { background: #e3f2fd; color: #007bff; }
+.stat-pending .stat-icon { background: #fff3cd; color: #ffc107; }
+.stat-approved .stat-icon { background: #d4edda; color: #28a745; }
+.stat-rejected .stat-icon { background: #fce4ec; color: #dc3545; }
+
+.stat-content {
+    flex: 1;
+}
+
+.stat-number {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1a1a2e;
+    line-height: 1.2;
+}
+
+.stat-label {
+    display: block;
+    font-size: 0.7rem;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+/* ============ FILTER SECTION ============ */
+.filter-section {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+}
+
+.filter-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: flex-end;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.filter-group label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #495057;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.filter-group label i {
+    color: #007bff;
+    margin-right: 4px;
+}
+
+.filter-group select,
+.filter-group input {
+    padding: 6px 12px;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    background: white;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    min-width: 140px;
+}
+
+.filter-group select:focus,
+.filter-group input:focus {
+    border-color: #007bff;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.filter-search {
+    flex: 1;
+    min-width: 200px;
+}
+
+.search-wrapper {
+    display: flex;
+    gap: 4px;
+}
+
+.search-wrapper input {
+    flex: 1;
+    min-width: 100px;
+}
+
+.btn-search {
+    padding: 6px 14px;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-search:hover {
+    background: #0056b3;
+}
+
+.filter-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding-bottom: 2px;
+}
+
+.btn-apply {
+    padding: 6px 16px;
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-apply:hover {
+    background: #218838;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+}
+
+.btn-clear {
+    padding: 6px 16px;
+    background: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-decoration: none;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-clear:hover {
+    background: #5a6268;
+    color: white;
+}
+
+/* ============ BULK ACTIONS BAR ============ */
+.bulk-actions-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.bulk-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.bulk-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #495057;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.bulk-select {
+    padding: 4px 10px;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    background: white;
+}
+
+.btn-bulk-apply {
+    padding: 4px 14px;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.btn-bulk-apply:hover {
+    background: #0056b3;
+}
+
+.bulk-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.results-count {
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+
+.results-count i {
+    color: #007bff;
+}
+
+.bulk-info {
+    font-size: 0.7rem;
+    color: #adb5bd;
+}
+
+/* ============ TABLE ============ */
+.table-container {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.table-responsive {
+    overflow-x: auto;
+}
+
+.reviews-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.reviews-table thead {
+    background: #f8f9fa;
+}
+
+.reviews-table th {
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #495057;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.reviews-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid #e9ecef;
+    vertical-align: middle;
+}
+
+.reviews-table tbody tr:hover {
+    background: #f8f9fa;
+}
+
+.review-row.status-pending { border-left: 3px solid #ffc107; }
+.review-row.status-approved { border-left: 3px solid #28a745; }
+.review-row.status-rejected { border-left: 3px solid #dc3545; }
+
+/* Column widths */
+.select-col { width: 40px; text-align: center; }
+.resource-col { width: 15%; }
+.user-col { width: 15%; }
+.rating-col { width: 12%; }
+.review-col { width: 28%; }
+.status-col { width: 12%; }
+.actions-col { width: 12%; }
+
+/* ============ TABLE CELLS ============ */
+.select-col input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.resource-link {
+    color: #1a1a2e;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s;
+}
+
+.resource-link:hover {
+    color: #007bff;
+}
+
+.user-name {
+    display: block;
+    font-weight: 500;
+    color: #1a1a2e;
+}
+
+.user-email {
+    display: block;
+    font-size: 0.7rem;
+    color: #6c757d;
+}
+
+/* ============ RATING STARS ============ */
+.rating-stars {
+    display: flex;
+    align-items: center;
+    gap: 1px;
+}
+
+.star {
+    font-size: 0.9rem;
+}
+
+.star.filled { color: #ffc107; }
+.star.empty { color: #dee2e6; }
+
+.rating-number {
+    font-size: 0.7rem;
+    color: #6c757d;
+    margin-left: 4px;
+}
+
+/* ============ REVIEW CONTENT ============ */
+.review-title {
+    font-weight: 600;
+    color: #1a1a2e;
+    margin-bottom: 2px;
+}
+
+.review-comment {
+    font-size: 0.8rem;
+    color: #495057;
+    line-height: 1.4;
+}
+
+.review-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+    flex-wrap: wrap;
+}
+
+.review-date {
+    font-size: 0.65rem;
+    color: #6c757d;
+}
+
+.badge-verified {
+    font-size: 0.55rem;
+    background: #d4edda;
+    color: #155724;
+    padding: 1px 8px;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.badge-helpful {
+    font-size: 0.55rem;
+    background: #e3f2fd;
+    color: #004085;
+    padding: 1px 8px;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+
+/* ============ STATUS BADGE ============ */
+.status-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.status-approved { background: #d4edda; color: #155724; }
+.status-pending { background: #fff3cd; color: #856404; }
+.status-rejected { background: #f8d7da; color: #721c24; }
+
+/* ============ ACTION BUTTONS ============ */
+.action-buttons {
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+}
+
+.btn-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    font-size: 0.7rem;
+}
+
+.btn-view {
+    background: #e3f2fd;
+    color: #007bff;
+}
+
+.btn-view:hover {
+    background: #007bff;
+    color: white;
+}
+
+.btn-approve {
+    background: #d4edda;
+    color: #28a745;
+}
+
+.btn-approve:hover {
+    background: #28a745;
+    color: white;
+}
+
+.btn-reject {
+    background: #fce4ec;
+    color: #dc3545;
+}
+
+.btn-reject:hover {
+    background: #dc3545;
+    color: white;
+}
+
+/* ============ PAGINATION ============ */
+.pagination-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 20px;
+    padding: 12px 16px;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.pagination-info {
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+
+.total-items {
+    margin-left: 8px;
+    padding: 2px 8px;
+    background: white;
+    border-radius: 4px;
+    border: 1px solid #e9ecef;
+}
+
+.pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.page-btn {
+    padding: 4px 10px;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    text-decoration: none;
+    color: #007bff;
+    transition: all 0.2s;
+    font-size: 0.8rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+}
+
+.page-btn:hover:not(.disabled) {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+.page-btn.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.page-current {
+    padding: 4px 12px;
+    background: #007bff;
+    color: white;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 0.8rem;
+    min-width: 32px;
+    text-align: center;
+}
+
+/* ============ EMPTY STATE ============ */
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+}
+
+.empty-icon {
+    font-size: 4rem;
+    color: #adb5bd;
+    margin-bottom: 16px;
+}
+
+.empty-state h2 {
+    margin: 0 0 8px;
+    font-size: 1.3rem;
+    color: #1a1a2e;
+}
+
+.empty-state p {
+    color: #6c757d;
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+}
+
+.empty-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.empty-actions .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 20px;
+    background: #28a745;
+    color: white;
+    text-decoration: none;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+}
+
+.empty-actions .btn-primary:hover {
+    background: #218838;
+    transform: translateY(-1px);
+}
+
+.empty-actions .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 20px;
+    background: #6c757d;
+    color: white;
+    text-decoration: none;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+}
+
+.empty-actions .btn-secondary:hover {
+    background: #5a6268;
+}
+
+.empty-tips {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid #e9ecef;
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.tip-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    color: #495057;
+}
+
+.tip-badge i {
+    color: #ffc107;
+}
+
+/* ============ RESPONSIVE ============ */
+@media (max-width: 1200px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 992px) {
+    .reviews-table {
+        font-size: 0.75rem;
     }
     
-    @media (max-width: 480px) {
-        .stats-grid {
-            grid-template-columns: 1fr !important;
-        }
-        
-        .filter-form {
-            flex-direction: column !important;
-            align-items: stretch !important;
-        }
-        
-        .filter-form > div {
-            width: 100% !important;
-        }
-        
-        .filter-form input[type="text"] {
-            min-width: unset !important;
-        }
+    .reviews-table th,
+    .reviews-table td {
+        padding: 6px 10px;
     }
-</style>
+}
 
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .header-actions {
+        width: 100%;
+    }
+    
+    .header-actions a {
+        flex: 1;
+        justify-content: center;
+    }
+    
+    .filter-form {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .filter-group {
+        width: 100%;
+    }
+    
+    .filter-group select,
+    .filter-group input {
+        width: 100%;
+        min-width: unset;
+    }
+    
+    .filter-search {
+        min-width: unset;
+    }
+    
+    .filter-actions {
+        flex-direction: column;
+    }
+    
+    .btn-apply,
+    .btn-clear {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .bulk-actions-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .bulk-left {
+        flex-wrap: wrap;
+    }
+    
+    .bulk-right {
+        justify-content: space-between;
+    }
+    
+    .pagination-section {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .pagination-controls {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .reviews-table {
+        font-size: 0.65rem;
+    }
+    
+    .reviews-table th,
+    .reviews-table td {
+        padding: 4px 8px;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+        align-items: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .stat-card {
+        padding: 12px 16px;
+    }
+    
+    .stat-number {
+        font-size: 1.2rem;
+    }
+    
+    .reviews-table {
+        font-size: 0.6rem;
+    }
+    
+    .reviews-table th,
+    .reviews-table td {
+        padding: 4px 6px;
+    }
+    
+    .rating-stars .star {
+        font-size: 0.7rem;
+    }
+    
+    .bulk-left {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .bulk-select {
+        width: 100%;
+    }
+    
+    .btn-bulk-apply {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .empty-tips {
+        flex-direction: column;
+        align-items: center;
+    }
+}
+</style>
 {% endblock %}

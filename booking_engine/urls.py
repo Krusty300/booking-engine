@@ -9,7 +9,7 @@ urlpatterns = [
     path('accounts/', include('django.contrib.auth.urls')),
     path('logout/', views.custom_logout, name='logout'),  # Custom logout (GET allowed)
     path('analytics/', views.admin_dashboard, name='admin_dashboard'),
-    path('analytics/export/', views.export_report, name='export_report'),  # Add this
+    path('analytics/export/', views.export_report, name='export_report'),  # Keep this
     path('', include('bookings.urls')),
 ]
 

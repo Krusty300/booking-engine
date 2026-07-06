@@ -6,7 +6,7 @@
     <!-- Page Header -->
     <div class="page-header">
         <div>
-            <h1>My Equipment Rentals</h1>
+            <h1><i class="fas fa-hand-holding"></i> My Equipment Rentals</h1>
             <p class="subtitle">Manage your rented equipment and track returns</p>
         </div>
         <div class="header-stats">
@@ -35,11 +35,7 @@
     {% if overdue_count > 0 %}
         <div class="alert alert-danger">
             <div class="alert-icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"/>
-                    <line x1="12" y1="8" x2="12" y2="12"/>
-                    <line x1="12" y1="16" x2="12.01" y2="16"/>
-                </svg>
+                <i class="fas fa-exclamation-triangle"></i>
             </div>
             <div class="alert-content">
                 <strong>⚠️ Attention Required</strong>
@@ -53,7 +49,7 @@
     <div class="filter-section">
         <form method="get" class="filter-form">
             <div class="filter-group">
-                <label for="status">Filter by Status</label>
+                <label for="status"><i class="fas fa-filter"></i> Filter by Status</label>
                 <select name="status" id="status" onchange="this.form.submit()">
                     <option value="">All Rentals</option>
                     <option value="CHECKED_OUT" {% if request.GET.status == 'CHECKED_OUT' %}selected{% endif %}>Active</option>
@@ -65,14 +61,14 @@
             </div>
             
             <div class="filter-group">
-                <label for="search">Search Equipment</label>
+                <label for="search"><i class="fas fa-search"></i> Search Equipment</label>
                 <input type="text" name="search" id="search" placeholder="Name or serial..." 
                        value="{{ request.GET.search|default:'' }}" 
                        onchange="this.form.submit()">
             </div>
             
             <div class="filter-group">
-                <label for="sort">Sort By</label>
+                <label for="sort"><i class="fas fa-sort"></i> Sort By</label>
                 <select name="sort" id="sort" onchange="this.form.submit()">
                     <option value="-checkout_date" {% if request.GET.sort == '-checkout_date' %}selected{% endif %}>Newest First</option>
                     <option value="checkout_date" {% if request.GET.sort == 'checkout_date' %}selected{% endif %}>Oldest First</option>
@@ -83,7 +79,9 @@
             </div>
             
             <div class="filter-actions">
-                <a href="{% url 'bookings:my_rentals' %}" class="btn-clear">Clear Filters</a>
+                <a href="{% url 'bookings:my_rentals' %}" class="btn-clear">
+                    <i class="fas fa-undo"></i> Clear Filters
+                </a>
             </div>
         </form>
     </div>
@@ -93,7 +91,7 @@
         <div class="rentals-grid">
             {% for rental in rentals %}
                 <div class="rental-card {% if rental.is_overdue %}overdue{% endif %}">
-                    <!-- ============ EQUIPMENT IMAGE ============ -->
+                    <!-- Equipment Image -->
                     <div class="rental-image">
                         {% if rental.equipment.has_image %}
                             <img src="{{ rental.equipment.get_image_url }}" 
@@ -117,14 +115,12 @@
                             </div>
                         {% endif %}
                         
-                        <!-- Image count badge -->
                         {% if rental.equipment.image_count > 1 %}
                             <span class="image-count-badge">
                                 <i class="fas fa-images"></i> {{ rental.equipment.image_count }}
                             </span>
                         {% endif %}
                     </div>
-                    <!-- ============ END EQUIPMENT IMAGE ============ -->
                     
                     <!-- Rental Info -->
                     <div class="rental-info">
@@ -141,15 +137,15 @@
                         
                         <div class="rental-details">
                             <div class="detail-row">
-                                <span class="detail-label">Serial Number:</span>
+                                <span class="detail-label"><i class="fas fa-barcode"></i> Serial Number:</span>
                                 <span class="detail-value">{{ rental.equipment.serial_number }}</span>
                             </div>
                             <div class="detail-row">
-                                <span class="detail-label">Checkout Date:</span>
+                                <span class="detail-label"><i class="fas fa-calendar-check"></i> Checkout Date:</span>
                                 <span class="detail-value">{{ rental.checkout_date|date:"M d, Y H:i" }}</span>
                             </div>
                             <div class="detail-row">
-                                <span class="detail-label">Expected Return:</span>
+                                <span class="detail-label"><i class="fas fa-calendar-return"></i> Expected Return:</span>
                                 <span class="detail-value {% if rental.is_overdue %}text-danger{% endif %}">
                                     {{ rental.expected_return_date|date:"M d, Y H:i" }}
                                     {% if rental.is_overdue %}
@@ -158,24 +154,24 @@
                                 </span>
                             </div>
                             <div class="detail-row">
-                                <span class="detail-label">Days Rented:</span>
+                                <span class="detail-label"><i class="fas fa-clock"></i> Days Rented:</span>
                                 <span class="detail-value">{{ rental.days_rented }} days</span>
                             </div>
                             {% if rental.actual_return_date %}
                                 <div class="detail-row">
-                                    <span class="detail-label">Returned:</span>
+                                    <span class="detail-label"><i class="fas fa-check-circle"></i> Returned:</span>
                                     <span class="detail-value text-success">{{ rental.actual_return_date|date:"M d, Y H:i" }}</span>
                                 </div>
                             {% endif %}
                             {% if rental.condition_on_checkout %}
                                 <div class="detail-row">
-                                    <span class="detail-label">Condition on Checkout:</span>
+                                    <span class="detail-label"><i class="fas fa-clipboard"></i> Condition on Checkout:</span>
                                     <span class="detail-value">{{ rental.condition_on_checkout|truncatewords:10 }}</span>
                                 </div>
                             {% endif %}
                             {% if rental.condition_on_return %}
                                 <div class="detail-row">
-                                    <span class="detail-label">Condition on Return:</span>
+                                    <span class="detail-label"><i class="fas fa-clipboard-check"></i> Condition on Return:</span>
                                     <span class="detail-value">{{ rental.condition_on_return|truncatewords:10 }}</span>
                                 </div>
                             {% endif %}
@@ -185,14 +181,16 @@
                     <!-- Actions -->
                     <div class="rental-actions">
                         <a href="{% url 'bookings:equipment_detail' rental.equipment.id %}" class="btn-view">
-                            View Equipment
+                            <i class="fas fa-eye"></i> View Equipment
                         </a>
                         {% if rental.status == 'CHECKED_OUT' %}
                             <button onclick="returnEquipment({{ rental.id }})" class="btn-return">
-                                Return Equipment
+                                <i class="fas fa-undo"></i> Return Equipment
                             </button>
                         {% elif rental.status == 'CHECKED_IN' %}
-                            <span class="returned-label">Returned</span>
+                            <span class="returned-label">
+                                <i class="fas fa-check-circle"></i> Returned
+                            </span>
                         {% endif %}
                     </div>
                 </div>
@@ -201,12 +199,20 @@
     {% else %}
         <!-- Empty State -->
         <div class="empty-state">
+            <div class="empty-icon">
+                <i class="fas fa-box-open"></i>
+            </div>
             <h2>No Rentals Found</h2>
             <p>You haven't rented any equipment yet.</p>
             <div class="empty-actions">
                 <a href="{% url 'bookings:equipment_list' %}" class="btn-browse">
-                    Browse Available Equipment
+                    <i class="fas fa-search"></i> Browse Available Equipment
                 </a>
+            </div>
+            <div class="empty-tips">
+                <span class="tip-badge"><i class="fas fa-lightbulb"></i> Rent equipment for your projects</span>
+                <span class="tip-badge"><i class="fas fa-check-circle"></i> Track your rentals here</span>
+                <span class="tip-badge"><i class="fas fa-clock"></i> Return on time to avoid penalties</span>
             </div>
         </div>
     {% endif %}
@@ -251,8 +257,8 @@ function returnEquipment(rentalId) {
     formData.append('condition_notes', conditionNotes || '');
     
     const btn = event.target;
-    const originalText = btn.textContent;
-    btn.textContent = '⏳ Processing...';
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
     btn.disabled = true;
     
     fetch('/equipment/return/', {
@@ -266,7 +272,7 @@ function returnEquipment(rentalId) {
     .then(data => {
         if (data.error) {
             alert('❌ Error: ' + data.error);
-            btn.textContent = originalText;
+            btn.innerHTML = originalText;
             btn.disabled = false;
         } else {
             alert('✅ Success! ' + data.message);
@@ -275,7 +281,7 @@ function returnEquipment(rentalId) {
     })
     .catch(error => {
         alert('❌ Error: ' + error.message);
-        btn.textContent = originalText;
+        btn.innerHTML = originalText;
         btn.disabled = false;
     });
 }
@@ -287,16 +293,28 @@ document.addEventListener('DOMContentLoaded', function() {
         overdueCards[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 });
+
+// Keyboard shortcut for search
+document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.key === 'f') {
+        e.preventDefault();
+        const searchInput = document.getElementById('search');
+        if (searchInput) {
+            searchInput.focus();
+        }
+    }
+});
 </script>
 
 <style>
-/* Container */
+/* ============ CONTAINER ============ */
 .my-rentals-container {
     max-width: 1200px;
     margin: 0 auto;
+    padding: 0 16px;
 }
 
-/* Page Header */
+/* ============ PAGE HEADER ============ */
 .page-header {
     display: flex;
     justify-content: space-between;
@@ -304,34 +322,45 @@ document.addEventListener('DOMContentLoaded', function() {
     margin-bottom: 24px;
     padding-bottom: 16px;
     border-bottom: 2px solid #e9ecef;
+    flex-wrap: wrap;
+    gap: 16px;
 }
 
 .page-header h1 {
     margin: 0;
-    font-size: 1.8rem;
+    font-size: 1.6rem;
     font-weight: 700;
+    color: #1a1a2e;
+}
+
+.page-header h1 i {
+    color: #007bff;
+    margin-right: 10px;
 }
 
 .page-header .subtitle {
     margin: 4px 0 0;
     color: #6c757d;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
 }
 
 .header-stats {
     display: flex;
     gap: 20px;
+    flex-wrap: wrap;
 }
 
 .stat-item {
     text-align: center;
+    min-width: 60px;
 }
 
 .stat-number {
     display: block;
-    font-size: 1.5rem;
+    font-size: 1.3rem;
     font-weight: 700;
-    color: #212529;
+    color: #1a1a2e;
+    line-height: 1.2;
 }
 
 .stat-number.overdue-count {
@@ -347,19 +376,20 @@ document.addEventListener('DOMContentLoaded', function() {
 }
 
 .stat-label {
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     color: #6c757d;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.3px;
 }
 
-/* Alert */
+/* ============ ALERT ============ */
 .alert {
     display: flex;
     align-items: flex-start;
-    gap: 12px;
+    gap: 14px;
     padding: 16px 20px;
     margin-bottom: 20px;
+    border-radius: 8px;
 }
 
 .alert-danger {
@@ -371,6 +401,7 @@ document.addEventListener('DOMContentLoaded', function() {
 .alert-icon {
     flex-shrink: 0;
     margin-top: 2px;
+    font-size: 1.2rem;
 }
 
 .alert-content {
@@ -388,10 +419,11 @@ document.addEventListener('DOMContentLoaded', function() {
     font-size: 0.85rem;
 }
 
-/* Filters */
+/* ============ FILTERS ============ */
 .filter-section {
     background: #f8f9fa;
     border: 1px solid #e9ecef;
+    border-radius: 8px;
     padding: 16px 20px;
     margin-bottom: 24px;
 }
@@ -413,19 +445,25 @@ document.addEventListener('DOMContentLoaded', function() {
 
 .filter-group label {
     font-weight: 600;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     color: #495057;
     text-transform: uppercase;
     letter-spacing: 0.3px;
 }
 
+.filter-group label i {
+    color: #007bff;
+    margin-right: 4px;
+}
+
 .filter-group select,
 .filter-group input {
     padding: 8px 12px;
-    border: 1px solid #ddd;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
     font-size: 0.85rem;
     background: white;
-    transition: border-color 0.2s;
+    transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .filter-group select:focus,
@@ -442,14 +480,18 @@ document.addEventListener('DOMContentLoaded', function() {
 }
 
 .btn-clear {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     padding: 8px 16px;
     background: #6c757d;
     color: white;
     border: none;
+    border-radius: 6px;
     cursor: pointer;
     font-size: 0.8rem;
     text-decoration: none;
-    transition: background 0.2s;
+    transition: all 0.2s;
 }
 
 .btn-clear:hover {
@@ -457,13 +499,14 @@ document.addEventListener('DOMContentLoaded', function() {
     color: white;
 }
 
-/* Rentals Grid */
+/* ============ RENTALS GRID ============ */
 .rentals-grid {
     display: flex;
     flex-direction: column;
     gap: 16px;
 }
 
+/* ============ RENTAL CARD ============ */
 .rental-card {
     display: grid;
     grid-template-columns: auto 1fr auto;
@@ -471,12 +514,13 @@ document.addEventListener('DOMContentLoaded', function() {
     padding: 20px;
     background: white;
     border: 1px solid #e9ecef;
+    border-radius: 8px;
     transition: all 0.3s ease;
 }
 
 .rental-card:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    border-color: #dee2e6;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
 }
 
 .rental-card.overdue {
@@ -498,9 +542,9 @@ document.addEventListener('DOMContentLoaded', function() {
     height: 80px;
     background: #f8f9fa;
     border: 1px solid #e9ecef;
+    border-radius: 8px;
     flex-shrink: 0;
     overflow: hidden;
-    border-radius: 4px;
 }
 
 .equipment-thumbnail {
@@ -520,23 +564,22 @@ document.addEventListener('DOMContentLoaded', function() {
     position: absolute;
     bottom: 4px;
     right: 4px;
-    padding: 1px 8px;
-    background: rgba(0, 0, 0, 0.7);
+    padding: 2px 8px;
+    background: rgba(0, 0, 0, 0.8);
     color: white;
     border-radius: 12px;
-    font-size: 0.55rem;
+    font-size: 0.5rem;
     font-weight: 600;
     display: flex;
     align-items: center;
-    gap: 2px;
+    gap: 3px;
 }
 
 .image-count-badge i {
     font-size: 0.5rem;
 }
-/* ============ END RENTAL IMAGE ============ */
 
-/* Rental Info */
+/* ============ RENTAL INFO ============ */
 .rental-info {
     flex: 1;
     min-width: 0;
@@ -554,33 +597,38 @@ document.addEventListener('DOMContentLoaded', function() {
 .equipment-name {
     margin: 0;
     font-size: 1.1rem;
+    font-weight: 600;
 }
 
 .equipment-name a {
-    color: #212529;
+    color: #1a1a2e;
     text-decoration: none;
     transition: color 0.2s;
 }
 
 .equipment-name a:hover {
     color: #007bff;
-    text-decoration: underline;
 }
 
+/* ============ STATUS BADGE ============ */
 .status-badge {
+    display: inline-block;
     padding: 4px 14px;
+    border-radius: 20px;
     font-weight: 600;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
 }
 
-/* Status Colors */
 .status-checked_out { background: #fff3cd; color: #856404; }
 .status-checked_in { background: #d4edda; color: #155724; }
 .status-overdue { background: #f8d7da; color: #721c24; }
 .status-lost { background: #f8d7da; color: #721c24; }
 .status-damaged { background: #f8d7da; color: #721c24; }
 
+/* ============ RENTAL DETAILS ============ */
 .rental-details {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -591,7 +639,7 @@ document.addEventListener('DOMContentLoaded', function() {
     display: flex;
     align-items: baseline;
     gap: 6px;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
 }
 
 .detail-label {
@@ -600,8 +648,14 @@ document.addEventListener('DOMContentLoaded', function() {
     min-width: 100px;
 }
 
+.detail-label i {
+    margin-right: 4px;
+    width: 14px;
+    color: #007bff;
+}
+
 .detail-value {
-    color: #212529;
+    color: #1a1a2e;
     font-weight: 400;
 }
 
@@ -620,7 +674,8 @@ document.addEventListener('DOMContentLoaded', function() {
     padding: 1px 10px;
     background: #dc3545;
     color: white;
-    font-size: 0.6rem;
+    border-radius: 4px;
+    font-size: 0.55rem;
     font-weight: 700;
     animation: pulse 2s infinite;
 }
@@ -630,19 +685,24 @@ document.addEventListener('DOMContentLoaded', function() {
     50% { opacity: 0.6; }
 }
 
-/* Rental Actions */
+/* ============ RENTAL ACTIONS ============ */
 .rental-actions {
     display: flex;
     flex-direction: column;
     gap: 8px;
     justify-content: center;
-    min-width: 120px;
+    min-width: 130px;
 }
 
 .rental-actions .btn-view,
 .rental-actions .btn-return {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     padding: 8px 16px;
     border: none;
+    border-radius: 6px;
     cursor: pointer;
     font-size: 0.8rem;
     font-weight: 500;
@@ -679,53 +739,92 @@ document.addEventListener('DOMContentLoaded', function() {
 }
 
 .returned-label {
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     padding: 8px 16px;
     text-align: center;
     font-weight: 600;
     color: #28a745;
+    background: #d4edda;
+    border-radius: 6px;
+    font-size: 0.8rem;
 }
 
-/* Empty State */
+/* ============ EMPTY STATE ============ */
 .empty-state {
     text-align: center;
     padding: 60px 20px;
-    background: #f8f9fa;
+    background: white;
     border: 2px dashed #dee2e6;
+    border-radius: 8px;
 }
 
 .empty-icon {
     font-size: 4rem;
+    color: #adb5bd;
     margin-bottom: 16px;
 }
 
 .empty-state h2 {
     margin: 0 0 8px;
-    font-size: 1.5rem;
-    color: #212529;
+    font-size: 1.3rem;
+    color: #1a1a2e;
 }
 
 .empty-state p {
-    margin: 0 0 20px;
     color: #6c757d;
-    font-size: 1rem;
+    font-size: 0.9rem;
+    margin-bottom: 20px;
 }
 
 .empty-actions .btn-browse {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     padding: 10px 24px;
     background: #007bff;
     color: white;
     text-decoration: none;
-    transition: background 0.2s;
+    border-radius: 6px;
+    font-weight: 600;
+    transition: all 0.2s;
 }
 
 .empty-actions .btn-browse:hover {
     background: #0056b3;
     color: white;
+    transform: translateY(-1px);
 }
 
-/* Responsive */
+.empty-tips {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid #e9ecef;
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.tip-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    color: #495057;
+}
+
+.tip-badge i {
+    color: #ffc107;
+}
+
+/* ============ RESPONSIVE ============ */
 @media (max-width: 992px) {
     .rental-card {
         grid-template-columns: 1fr;
@@ -781,6 +880,7 @@ document.addEventListener('DOMContentLoaded', function() {
     .btn-clear {
         width: 100%;
         text-align: center;
+        justify-content: center;
     }
     
     .rental-details {
@@ -807,8 +907,12 @@ document.addEventListener('DOMContentLoaded', function() {
 }
 
 @media (max-width: 480px) {
+    .my-rentals-container {
+        padding: 0 8px;
+    }
+    
     .rental-card {
-        padding: 16px;
+        padding: 14px;
     }
     
     .rental-actions {
@@ -827,7 +931,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     .detail-label {
         min-width: unset;
-        font-size: 0.75rem;
+        font-size: 0.7rem;
     }
     
     .rental-image {
@@ -837,6 +941,15 @@ document.addEventListener('DOMContentLoaded', function() {
     
     .category-icon {
         font-size: 1.2rem;
+    }
+    
+    .empty-tips {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .page-header h1 {
+        font-size: 1.3rem;
     }
 }
 </style>

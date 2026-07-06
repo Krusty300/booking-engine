@@ -1,16 +1,28 @@
 {% extends 'bookings/base.html' %}
+{% load static %}
 
 {% block content %}
-<div class="calendar-container">
-    <!-- Header -->
+<div class="reservation-calendar-container">
+    <!-- Page Header -->
     <div class="calendar-header">
-        <h1>Reservation Calendar</h1>
+        <div>
+            <h1><i class="fas fa-calendar-alt"></i> Reservation Calendar</h1>
+            <p class="subtitle">View and manage equipment reservations</p>
+        </div>
         <div class="calendar-nav">
-            <a href="?year={{ prev_year }}&month={{ prev_month }}" class="btn-nav">◀</a>
+            <a href="?year={{ prev_year }}&month={{ prev_month }}" class="btn-nav" title="Previous Month">
+                <i class="fas fa-chevron-left"></i>
+            </a>
             <span class="current-month">{{ month_name }} {{ year }}</span>
-            <a href="?year={{ next_year }}&month={{ next_month }}" class="btn-nav">▶</a>
-            <a href="{% url 'bookings:create_reservation' %}" class="btn-primary">New Reservation</a>
-            <a href="{% url 'bookings:reservation_list' %}" class="btn-secondary">List View</a>
+            <a href="?year={{ next_year }}&month={{ next_month }}" class="btn-nav" title="Next Month">
+                <i class="fas fa-chevron-right"></i>
+            </a>
+            <a href="{% url 'bookings:create_reservation' %}" class="btn-primary">
+                <i class="fas fa-plus"></i> New Reservation
+            </a>
+            <a href="{% url 'bookings:reservation_list' %}" class="btn-secondary">
+                <i class="fas fa-list"></i> List View
+            </a>
         </div>
     </div>
 
@@ -30,32 +42,67 @@
             <div class="calendar-week">
                 {% for day in week %}
                     {% if day %}
-                        <div class="calendar-day {% if day.date|date:'Y-m-d' == today|date:'Y-m-d' %}today{% endif %}">
-                            <div class="day-number">{{ day.day }}</div>
+                        <div class="calendar-day {% if day.date|date:'Y-m-d' == today|date:'Y-m-d' %}today{% endif %}" 
+                             {% if day.count > 0 %}title="{{ day.count }} reservation{{ day.count|pluralize }}"{% endif %}>
+                            <div class="day-number">
+                                {{ day.day }}
+                                {% if day.date|date:'Y-m-d' == today|date:'Y-m-d' %}
+                                    <span class="today-badge">Today</span>
+                                {% endif %}
+                            </div>
                             {% if day.count > 0 %}
                                 <div class="day-reservations">
                                     <span class="reservation-count">{{ day.count }}</span>
                                     <span class="reservation-label">reservation{{ day.count|pluralize }}</span>
                                 </div>
+                                <!-- Status Indicators -->
+                                <div class="day-status-indicators">
+                                    {% for reservation in day.reservations|slice:":3" %}
+                                        <span class="status-dot status-{{ reservation.status|lower }}" 
+                                              title="{{ reservation.equipment.name }} - {{ reservation.get_status_display }}"></span>
+                                    {% endfor %}
+                                    {% if day.reservations|length > 3 %}
+                                        <span class="status-dot more">+{{ day.reservations|length|add:"-3" }}</span>
+                                    {% endif %}
+                                </div>
                             {% endif %}
-                            <div class="day-tooltip">
-                                {% for reservation in day.reservations %}
-                                    <div class="tooltip-item">
-                                        <strong>{{ reservation.equipment.name }}</strong>
-                                        <span class="tooltip-status status-{{ reservation.status|lower }}">
-                                            {{ reservation.get_status_display }}
-                                        </span>
-                                        <!-- ADD OWNER INFO -->
-                                        <span class="tooltip-owner">
-                                            {% if reservation.equipment.owner %}
-                                                {{ reservation.equipment.owner.username }}
-                                            {% else %}
-                                                No owner
-                                            {% endif %}
-                                        </span>
+                            <!-- Tooltip -->
+                            {% if day.count > 0 %}
+                                <div class="day-tooltip">
+                                    <div class="tooltip-header">
+                                        <span class="tooltip-date">{{ day.date|date:"l, F j, Y" }}</span>
+                                        <span class="tooltip-count">{{ day.count }} reservation{{ day.count|pluralize }}</span>
                                     </div>
-                                {% endfor %}
-                            </div>
+                                    {% for reservation in day.reservations %}
+                                        <div class="tooltip-item">
+                                            <span class="tooltip-equipment">
+                                                <i class="fas fa-cube"></i>
+                                                {{ reservation.equipment.name }}
+                                            </span>
+                                            <span class="tooltip-user">
+                                                <i class="fas fa-user"></i>
+                                                {{ reservation.user.username }}
+                                            </span>
+                                            <span class="tooltip-status status-{{ reservation.status|lower }}">
+                                                {{ reservation.get_status_display }}
+                                            </span>
+                                            <span class="tooltip-owner">
+                                                {% if reservation.equipment.owner %}
+                                                    <i class="fas fa-user-cog"></i>
+                                                    {{ reservation.equipment.owner.username }}
+                                                {% else %}
+                                                    No owner
+                                                {% endif %}
+                                            </span>
+                                        </div>
+                                    {% endfor %}
+                                    <div class="tooltip-footer">
+                                        <a href="{% url 'bookings:reservation_list' %}?date={{ day.date|date:'Y-m-d' }}" class="tooltip-link">
+                                            View all reservations <i class="fas fa-arrow-right"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            {% endif %}
                         </div>
                     {% else %}
                         <div class="calendar-day empty"></div>
@@ -67,68 +114,73 @@
 
     <!-- Legend -->
     <div class="calendar-legend">
-        <div class="legend-item">
-            <span class="legend-color pending"></span>
-            <span>Pending</span>
-        </div>
-        <div class="legend-item">
-            <span class="legend-color confirmed"></span>
-            <span>Confirmed</span>
-        </div>
-        <div class="legend-item">
-            <span class="legend-color cancelled"></span>
-            <span>Cancelled</span>
-        </div>
-        <div class="legend-item">
-            <span class="legend-color completed"></span>
-            <span>Completed</span>
-        </div>
-        <div class="legend-item">
-            <span class="legend-color expired"></span>
-            <span>Expired</span>
-        </div>
-        <div class="legend-item">
-            <span class="legend-color today-indicator"></span>
-            <span>Today</span>
+        <span class="legend-label"><i class="fas fa-info-circle"></i> Legend:</span>
+        <div class="legend-items">
+            <div class="legend-item">
+                <span class="legend-color pending"></span>
+                <span>Pending</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-color confirmed"></span>
+                <span>Confirmed</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-color completed"></span>
+                <span>Completed</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-color cancelled"></span>
+                <span>Cancelled</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-color expired"></span>
+                <span>Expired</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-color today-indicator"></span>
+                <span>Today</span>
+            </div>
         </div>
     </div>
 
     <!-- Status Summary -->
     <div class="status-summary">
         <div class="summary-item">
-            <span class="summary-label">Total:</span>
-            <span class="summary-value">{{ status_counts.PENDING|add:status_counts.CONFIRMED|add:status_counts.COMPLETED|add:status_counts.CANCELLED|add:status_counts.EXPIRED }}</span>
+            <span class="summary-label"><i class="fas fa-list"></i> Total:</span>
+            <span class="summary-value total">{{ status_counts.PENDING|add:status_counts.CONFIRMED|add:status_counts.COMPLETED|add:status_counts.CANCELLED|add:status_counts.EXPIRED }}</span>
         </div>
         <div class="summary-item">
-            <span class="summary-label">Pending:</span>
+            <span class="summary-label"><i class="fas fa-clock"></i> Pending:</span>
             <span class="summary-value pending">{{ status_counts.PENDING }}</span>
         </div>
         <div class="summary-item">
-            <span class="summary-label">Confirmed:</span>
+            <span class="summary-label"><i class="fas fa-check-circle"></i> Confirmed:</span>
             <span class="summary-value confirmed">{{ status_counts.CONFIRMED }}</span>
         </div>
         <div class="summary-item">
-            <span class="summary-label">Completed:</span>
+            <span class="summary-label"><i class="fas fa-check-double"></i> Completed:</span>
             <span class="summary-value completed">{{ status_counts.COMPLETED }}</span>
         </div>
         <div class="summary-item">
-            <span class="summary-label">Cancelled:</span>
+            <span class="summary-label"><i class="fas fa-times-circle"></i> Cancelled:</span>
             <span class="summary-value cancelled">{{ status_counts.CANCELLED }}</span>
         </div>
         <div class="summary-item">
-            <span class="summary-label">Expired:</span>
+            <span class="summary-label"><i class="fas fa-hourglass-end"></i> Expired:</span>
             <span class="summary-value expired">{{ status_counts.EXPIRED }}</span>
         </div>
     </div>
 </div>
 
 <style>
-.calendar-container {
+/* ============ CONTAINER ============ */
+.reservation-calendar-container {
     max-width: 1200px;
     margin: 0 auto;
     padding: 0 15px;
 }
 
+/* ============ HEADER ============ */
 .calendar-header {
     display: flex;
     justify-content: space-between;
@@ -137,13 +189,25 @@
     padding-bottom: 16px;
     border-bottom: 2px solid #e9ecef;
     flex-wrap: wrap;
-    gap: 10px;
+    gap: 16px;
 }
 
 .calendar-header h1 {
     margin: 0;
     font-size: 1.6rem;
     font-weight: 700;
+    color: #1a1a2e;
+}
+
+.calendar-header h1 i {
+    color: #007bff;
+    margin-right: 10px;
+}
+
+.calendar-header .subtitle {
+    margin: 4px 0 0;
+    color: #6c757d;
+    font-size: 0.85rem;
 }
 
 .calendar-nav {
@@ -154,58 +218,63 @@
 }
 
 .btn-nav {
-    padding: 6px 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
     background: #f8f9fa;
     border: 1px solid #dee2e6;
-    border-radius: 4px;
+    border-radius: 6px;
     text-decoration: none;
     color: #495057;
-    font-size: 1.2rem;
+    font-size: 1rem;
     transition: all 0.2s;
 }
 
 .btn-nav:hover {
     background: #e9ecef;
+    border-color: #adb5bd;
 }
 
 .current-month {
     font-weight: 600;
     font-size: 1.1rem;
-    min-width: 120px;
+    min-width: 140px;
     text-align: center;
+    color: #1a1a2e;
 }
 
-.btn-primary {
+.btn-primary,
+.btn-secondary {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 6px 16px;
-    background: #007bff;
-    color: white;
-    text-decoration: none;
-    border-radius: 4px;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
     font-weight: 600;
     font-size: 0.85rem;
-    transition: background 0.2s;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+
+.btn-primary {
+    background: #007bff;
+    color: white;
 }
 
 .btn-primary:hover {
     background: #0056b3;
     color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
 }
 
 .btn-secondary {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 16px;
     background: #6c757d;
     color: white;
-    text-decoration: none;
-    border-radius: 4px;
-    font-weight: 600;
-    font-size: 0.85rem;
-    transition: background 0.2s;
 }
 
 .btn-secondary:hover {
@@ -213,10 +282,11 @@
     color: white;
 }
 
+/* ============ CALENDAR GRID ============ */
 .calendar-grid {
     background: white;
     border: 1px solid #e9ecef;
-    border-radius: 4px;
+    border-radius: 8px;
     overflow: hidden;
 }
 
@@ -228,11 +298,13 @@
 }
 
 .calendar-weekdays div {
-    padding: 10px;
+    padding: 12px 10px;
     text-align: center;
     font-weight: 600;
     color: #495057;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .calendar-week {
@@ -240,10 +312,11 @@
     grid-template-columns: repeat(7, 1fr);
 }
 
+/* ============ CALENDAR DAY ============ */
 .calendar-day {
     position: relative;
-    min-height: 80px;
-    padding: 8px;
+    min-height: 90px;
+    padding: 8px 10px;
     border-right: 1px solid #e9ecef;
     border-bottom: 1px solid #e9ecef;
     cursor: pointer;
@@ -252,6 +325,7 @@
 
 .calendar-day:hover {
     background: #f8f9fa;
+    z-index: 2;
 }
 
 .calendar-day:hover .day-tooltip {
@@ -267,6 +341,10 @@
     cursor: default;
 }
 
+.calendar-day.empty:hover {
+    background: #f8f9fa;
+}
+
 .calendar-day.today {
     background: #e3f2fd;
     border-left: 3px solid #007bff;
@@ -276,19 +354,33 @@
     font-weight: 600;
     font-size: 0.9rem;
     color: #1a1a2e;
+    display: flex;
+    align-items: center;
+    gap: 4px;
 }
 
 .today .day-number {
     color: #007bff;
 }
 
+.today-badge {
+    display: inline-block;
+    font-size: 0.5rem;
+    background: #007bff;
+    color: white;
+    padding: 1px 6px;
+    border-radius: 10px;
+    font-weight: 600;
+}
+
+/* ============ DAY RESERVATIONS ============ */
 .day-reservations {
     margin-top: 4px;
 }
 
 .reservation-count {
     display: inline-block;
-    padding: 2px 8px;
+    padding: 2px 10px;
     background: #007bff;
     color: white;
     font-size: 0.7rem;
@@ -302,27 +394,90 @@
     margin-left: 4px;
 }
 
+/* ============ STATUS INDICATORS ============ */
+.day-status-indicators {
+    display: flex;
+    gap: 3px;
+    margin-top: 4px;
+    flex-wrap: wrap;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    border: 1px solid rgba(0,0,0,0.1);
+}
+
+.status-dot.status-pending { background: #ffc107; }
+.status-dot.status-confirmed { background: #28a745; }
+.status-dot.status-completed { background: #17a2b8; }
+.status-dot.status-cancelled { background: #dc3545; }
+.status-dot.status-expired { background: #6c757d; }
+
+.status-dot.more {
+    background: #6c757d;
+    color: white;
+    font-size: 0.5rem;
+    font-weight: 600;
+    width: auto;
+    padding: 0 4px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 14px;
+    height: 14px;
+    border: none;
+}
+
+/* ============ TOOLTIP ============ */
 .day-tooltip {
     display: none;
     position: absolute;
     top: 100%;
     left: 0;
     right: 0;
-    z-index: 10;
+    z-index: 100;
     background: white;
     border: 1px solid #dee2e6;
-    border-top: none;
-    padding: 8px;
-    min-width: 200px;
+    border-radius: 8px;
+    padding: 12px;
+    min-width: 260px;
     max-width: 100%;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    margin-top: 4px;
+}
+
+.tooltip-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.tooltip-date {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: #1a1a2e;
+}
+
+.tooltip-count {
+    font-size: 0.7rem;
+    color: #6c757d;
+    background: #f8f9fa;
+    padding: 2px 8px;
+    border-radius: 12px;
 }
 
 .tooltip-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 4px 0;
+    padding: 6px 0;
     border-bottom: 1px solid #f1f3f5;
     font-size: 0.75rem;
     gap: 6px;
@@ -333,22 +488,41 @@
     border-bottom: none;
 }
 
-.tooltip-item strong {
+.tooltip-equipment {
     flex: 1;
+    min-width: 80px;
+    font-weight: 500;
+    color: #1a1a2e;
+}
+
+.tooltip-equipment i {
+    color: #007bff;
+    margin-right: 4px;
+}
+
+.tooltip-user {
+    font-size: 0.7rem;
+    color: #6c757d;
     min-width: 60px;
 }
 
+.tooltip-user i {
+    margin-right: 4px;
+}
+
 .tooltip-status {
-    padding: 1px 8px;
+    padding: 2px 10px;
+    border-radius: 12px;
     font-size: 0.6rem;
     font-weight: 600;
-    border-radius: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
 }
 
 .tooltip-status.status-pending { background: #fff3cd; color: #856404; }
 .tooltip-status.status-confirmed { background: #d4edda; color: #155724; }
-.tooltip-status.status-cancelled { background: #f8d7da; color: #721c24; }
 .tooltip-status.status-completed { background: #d1ecf1; color: #0c5460; }
+.tooltip-status.status-cancelled { background: #f8d7da; color: #721c24; }
 .tooltip-status.status-expired { background: #e9ecef; color: #6c757d; }
 
 .tooltip-owner {
@@ -358,51 +532,98 @@
     text-align: right;
 }
 
-/* Calendar Legend */
+.tooltip-owner i {
+    margin-right: 2px;
+}
+
+.tooltip-footer {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #e9ecef;
+    text-align: center;
+}
+
+.tooltip-link {
+    font-size: 0.75rem;
+    color: #007bff;
+    text-decoration: none;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.tooltip-link:hover {
+    text-decoration: underline;
+}
+
+/* ============ LEGEND ============ */
 .calendar-legend {
     display: flex;
-    justify-content: center;
-    gap: 20px;
-    flex-wrap: wrap;
-    margin-top: 20px;
-    padding: 12px 16px;
-    background: #f8f9fa;
-    border: 1px solid #e9ecef;
-    border-radius: 4px;
-}
-
-.legend-item {
-    display: flex;
     align-items: center;
-    gap: 6px;
-    font-size: 0.8rem;
-    color: #495057;
-}
-
-.legend-color {
-    width: 16px;
-    height: 16px;
-    border-radius: 3px;
-    border: 1px solid #dee2e6;
-}
-
-.legend-color.pending { background: #ffc107; }
-.legend-color.confirmed { background: #28a745; }
-.legend-color.cancelled { background: #dc3545; }
-.legend-color.completed { background: #17a2b8; }
-.legend-color.expired { background: #6c757d; }
-.legend-color.today-indicator { background: #e3f2fd; border: 2px solid #007bff; }
-
-/* Status Summary */
-.status-summary {
-    display: flex;
     gap: 16px;
     flex-wrap: wrap;
     margin-top: 20px;
     padding: 12px 16px;
     background: #f8f9fa;
     border: 1px solid #e9ecef;
+    border-radius: 8px;
+}
+
+.legend-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #495057;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.legend-label i {
+    color: #007bff;
+    margin-right: 4px;
+}
+
+.legend-items {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    color: #495057;
+}
+
+.legend-color {
+    width: 14px;
+    height: 14px;
     border-radius: 4px;
+    border: 1px solid #dee2e6;
+}
+
+.legend-color.pending { background: #ffc107; }
+.legend-color.confirmed { background: #28a745; }
+.legend-color.completed { background: #17a2b8; }
+.legend-color.cancelled { background: #dc3545; }
+.legend-color.expired { background: #6c757d; }
+.legend-color.today-indicator { 
+    background: #e3f2fd; 
+    border: 2px solid #007bff;
+}
+
+/* ============ STATUS SUMMARY ============ */
+.status-summary {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-top: 20px;
+    padding: 14px 18px;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
 }
 
 .summary-item {
@@ -417,22 +638,32 @@
     font-weight: 500;
 }
 
+.summary-label i {
+    color: #007bff;
+    margin-right: 4px;
+}
+
 .summary-value {
     font-weight: 700;
     color: #1a1a2e;
 }
 
+.summary-value.total { color: #1a1a2e; }
 .summary-value.pending { color: #ffc107; }
 .summary-value.confirmed { color: #28a745; }
 .summary-value.completed { color: #17a2b8; }
 .summary-value.cancelled { color: #dc3545; }
 .summary-value.expired { color: #6c757d; }
 
-/* Responsive */
+/* ============ RESPONSIVE ============ */
 @media (max-width: 992px) {
     .calendar-day {
         min-height: 70px;
-        padding: 6px;
+        padding: 6px 8px;
+    }
+    
+    .tooltip-item {
+        font-size: 0.7rem;
     }
 }
 
@@ -453,85 +684,99 @@
     .btn-secondary {
         flex: 1;
         justify-content: center;
-        min-width: 100px;
+        min-width: 80px;
     }
     
     .calendar-day {
         min-height: 60px;
-        padding: 4px;
+        padding: 4px 6px;
     }
     
     .day-number {
-        font-size: 0.8rem;
+        font-size: 0.75rem;
+    }
+    
+    .today-badge {
+        font-size: 0.4rem;
+        padding: 0 4px;
     }
     
     .reservation-count {
-        font-size: 0.6rem;
+        font-size: 0.55rem;
         padding: 1px 6px;
-    }
-    
-    .calendar-weekdays div {
-        font-size: 0.7rem;
-        padding: 6px;
-    }
-    
-    .tooltip-item {
-        font-size: 0.7rem;
-    }
-    
-    .status-summary {
-        gap: 10px;
-    }
-    
-    .summary-item {
-        font-size: 0.75rem;
-    }
-}
-
-@media (max-width: 480px) {
-    .calendar-day {
-        min-height: 50px;
-        padding: 3px;
-    }
-    
-    .day-number {
-        font-size: 0.7rem;
     }
     
     .reservation-label {
         display: none;
     }
     
-    .reservation-count {
-        font-size: 0.5rem;
-        padding: 1px 4px;
+    .calendar-weekdays div {
+        font-size: 0.6rem;
+        padding: 8px 4px;
     }
     
-    .calendar-weekdays div {
-        font-size: 0.55rem;
-        padding: 4px;
+    .day-status-indicators {
+        gap: 2px;
+    }
+    
+    .status-dot {
+        width: 6px;
+        height: 6px;
+    }
+    
+    .tooltip-item {
+        font-size: 0.65rem;
+        padding: 4px 0;
+    }
+    
+    .tooltip-equipment {
+        min-width: 60px;
+    }
+    
+    .tooltip-owner {
+        min-width: 40px;
+    }
+    
+    .status-summary {
+        gap: 10px;
+        padding: 10px 14px;
+    }
+    
+    .summary-item {
+        font-size: 0.75rem;
     }
     
     .calendar-legend {
-        gap: 8px;
-        padding: 8px 12px;
+        gap: 10px;
     }
     
     .legend-item {
         font-size: 0.7rem;
     }
-    
-    .legend-color {
-        width: 12px;
-        height: 12px;
+}
+
+@media (max-width: 480px) {
+    .reservation-calendar-container {
+        padding: 0 8px;
     }
     
-    .status-summary {
-        gap: 6px;
+    .calendar-day {
+        min-height: 50px;
+        padding: 3px 4px;
     }
     
-    .summary-item {
-        font-size: 0.7rem;
+    .day-number {
+        font-size: 0.65rem;
+    }
+    
+    .reservation-count {
+        font-size: 0.5rem;
+        padding: 0 4px;
+    }
+    
+    .calendar-weekdays div {
+        font-size: 0.5rem;
+        padding: 4px 2px;
     }
     
     .calendar-nav {
@@ -539,13 +784,82 @@
     }
     
     .btn-nav {
-        padding: 4px 10px;
-        font-size: 1rem;
+        width: 30px;
+        height: 30px;
+        font-size: 0.8rem;
     }
     
     .current-month {
-        font-size: 0.9rem;
+        font-size: 0.85rem;
         min-width: 80px;
+    }
+    
+    .btn-primary,
+    .btn-secondary {
+        font-size: 0.75rem;
+        padding: 6px 10px;
+        min-width: 60px;
+    }
+    
+    .day-status-indicators {
+        display: none;
+    }
+    
+    .day-tooltip {
+        min-width: 180px;
+        padding: 8px;
+    }
+    
+    .tooltip-item {
+        flex-wrap: wrap;
+        gap: 2px;
+    }
+    
+    .tooltip-equipment {
+        width: 100%;
+        min-width: unset;
+    }
+    
+    .tooltip-user {
+        font-size: 0.6rem;
+    }
+    
+    .tooltip-owner {
+        font-size: 0.55rem;
+        min-width: 30px;
+    }
+    
+    .status-summary {
+        gap: 6px;
+        padding: 8px 10px;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .summary-item {
+        font-size: 0.7rem;
+        width: 100%;
+        justify-content: space-between;
+    }
+    
+    .calendar-legend {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+        padding: 8px 12px;
+    }
+    
+    .legend-items {
+        gap: 6px;
+    }
+    
+    .legend-item {
+        font-size: 0.65rem;
+    }
+    
+    .legend-color {
+        width: 10px;
+        height: 10px;
     }
 }
 </style>

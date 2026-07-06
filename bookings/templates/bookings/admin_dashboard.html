@@ -2,169 +2,234 @@
 {% load static %}
 
 {% block content %}
-<div style="margin-bottom: 20px;">
-    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+<div class="admin-dashboard-container">
+    <!-- Page Header -->
+    <div class="page-header">
         <div>
-            <h1 style="font-size: 1.6rem; font-weight: 800; margin: 0;">Admin Dashboard</h1>
-            <p style="color: var(--text-secondary); font-size: 0.85rem;">Overview of your booking platform analytics</p>
+            <h1><i class="fas fa-chart-line"></i> Admin Dashboard</h1>
+            <p class="subtitle">Real-time analytics and insights for your booking platform</p>
         </div>
-        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-            <button onclick="refreshData()" style="background: #28a745; padding: 8px 16px; font-size: 0.85rem;">
-                Refresh
+        <div class="header-actions">
+            <button onclick="refreshData()" class="btn-refresh">
+                <i class="fas fa-sync"></i> Refresh
             </button>
-            <button onclick="toggleAutoRefresh()" id="autoRefreshBtn" style="background: #17a2b8; padding: 8px 16px; font-size: 0.85rem;">
-                Auto-Refresh: OFF
-            </button>
+            
+            <!-- Export Dropdown -->
+            <div class="export-dropdown">
+                <button onclick="toggleExportMenu()" class="btn-export">
+                    <i class="fas fa-download"></i> Export ▾
+                </button>
+                <div id="exportMenu" class="export-menu" style="display: none;">
+                    <div class="export-section">
+                        <span class="export-label"><i class="fas fa-cube"></i> Resources</span>
+                        <a href="#" onclick="exportData('resources', 'csv')"><i class="fas fa-file-csv"></i> CSV</a>
+                        <a href="#" onclick="exportData('resources', 'excel')"><i class="fas fa-file-excel"></i> Excel</a>
+                        <a href="#" onclick="exportData('resources', 'pdf')"><i class="fas fa-file-pdf"></i> PDF</a>
+                        <a href="#" onclick="exportData('resources', 'json')"><i class="fas fa-file-code"></i> JSON</a>
+                    </div>
+                    <div class="export-section">
+                        <span class="export-label"><i class="fas fa-calendar-check"></i> Bookings</span>
+                        <a href="#" onclick="exportData('bookings', 'csv')"><i class="fas fa-file-csv"></i> CSV</a>
+                        <a href="#" onclick="exportData('bookings', 'excel')"><i class="fas fa-file-excel"></i> Excel</a>
+                        <a href="#" onclick="exportData('bookings', 'pdf')"><i class="fas fa-file-pdf"></i> PDF</a>
+                        <a href="#" onclick="exportData('bookings', 'json')"><i class="fas fa-file-code"></i> JSON</a>
+                    </div>
+                    <div class="export-section">
+                        <span class="export-label"><i class="fas fa-users"></i> Users</span>
+                        <a href="#" onclick="exportData('users', 'csv')"><i class="fas fa-file-csv"></i> CSV</a>
+                        <a href="#" onclick="exportData('users', 'excel')"><i class="fas fa-file-excel"></i> Excel</a>
+                        <a href="#" onclick="exportData('users', 'pdf')"><i class="fas fa-file-pdf"></i> PDF</a>
+                        <a href="#" onclick="exportData('users', 'json')"><i class="fas fa-file-code"></i> JSON</a>
+                    </div>
+                    <div class="export-section">
+                        <span class="export-label"><i class="fas fa-tools"></i> Equipment</span>
+                        <a href="#" onclick="exportData('equipment', 'csv')"><i class="fas fa-file-csv"></i> CSV</a>
+                        <a href="#" onclick="exportData('equipment', 'excel')"><i class="fas fa-file-excel"></i> Excel</a>
+                        <a href="#" onclick="exportData('equipment', 'pdf')"><i class="fas fa-file-pdf"></i> PDF</a>
+                        <a href="#" onclick="exportData('equipment', 'json')"><i class="fas fa-file-code"></i> JSON</a>
+                    </div>
+                    <div class="export-section">
+                        <span class="export-label"><i class="fas fa-star"></i> Reviews</span>
+                        <a href="#" onclick="exportData('reviews', 'csv')"><i class="fas fa-file-csv"></i> CSV</a>
+                        <a href="#" onclick="exportData('reviews', 'excel')"><i class="fas fa-file-excel"></i> Excel</a>
+                        <a href="#" onclick="exportData('reviews', 'pdf')"><i class="fas fa-file-pdf"></i> PDF</a>
+                        <a href="#" onclick="exportData('reviews', 'json')"><i class="fas fa-file-code"></i> JSON</a>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-</div>
 
-<!-- Statistics Cards -->
-<div class="stat-cards" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 25px;">
-    <div class="stat-card" style="background: var(--bg-card); padding: 15px; border-left: 4px solid #007bff;">
-        <div class="stat-number" style="font-size: 1.8rem; font-weight: 800; color: #007bff;">{{ stats.total_bookings }}</div>
-        <div class="stat-label" style="font-size: 0.75rem; color: var(--text-secondary);">Total Bookings</div>
+    <!-- Statistics Cards -->
+    <div class="stats-grid">
+        <!-- Total Bookings -->
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-calendar-check"></i></div>
+            <div class="stat-content">
+                <span class="stat-number">{{ stats.total_bookings|default:0 }}</span>
+                <span class="stat-label">Total Bookings</span>
+                <span class="stat-change {% if stats.booking_growth > 0 %}positive{% elif stats.booking_growth < 0 %}negative{% else %}neutral{% endif %}">
+                    {% if stats.booking_growth > 0 %}+{% endif %}{{ stats.booking_growth|default:0 }}%
+                </span>
+            </div>
+        </div>
+        
+        <!-- Total Users -->
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-users"></i></div>
+            <div class="stat-content">
+                <span class="stat-number">{{ stats.total_users|default:0 }}</span>
+                <span class="stat-label">Total Users</span>
+                <span class="stat-change {% if stats.user_growth > 0 %}positive{% elif stats.user_growth < 0 %}negative{% else %}neutral{% endif %}">
+                    {% if stats.user_growth > 0 %}+{% endif %}{{ stats.user_growth|default:0 }}%
+                </span>
+            </div>
+        </div>
+        
+        <!-- Revenue -->
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-dollar-sign"></i></div>
+            <div class="stat-content">
+                {% if stats.total_revenue and stats.total_revenue > 0 %}
+                    <span class="stat-number">${{ stats.total_revenue|floatformat:2 }}</span>
+                {% else %}
+                    <span class="stat-number" style="color: #6c757d;">$0.00</span>
+                {% endif %}
+                <span class="stat-label">Total Revenue</span>
+                <span class="stat-change {% if stats.revenue_growth > 0 %}positive{% elif stats.revenue_growth < 0 %}negative{% else %}neutral{% endif %}">
+                    {% if stats.revenue_growth > 0 %}+{% endif %}{{ stats.revenue_growth|default:0 }}%
+                </span>
+                
+                <!-- Revenue Breakdown -->
+                <div class="stat-breakdown">
+                    <div class="breakdown-item">
+                        <span class="breakdown-label">This Month:</span>
+                        {% if stats.revenue_this_month and stats.revenue_this_month > 0 %}
+                            <span class="breakdown-value">${{ stats.revenue_this_month|floatformat:2 }}</span>
+                        {% else %}
+                            <span class="breakdown-value" style="color: #6c757d;">$0.00</span>
+                        {% endif %}
+                    </div>
+                    <div class="breakdown-item">
+                        <span class="breakdown-label">Last Month:</span>
+                        {% if stats.revenue_last_month and stats.revenue_last_month > 0 %}
+                            <span class="breakdown-value">${{ stats.revenue_last_month|floatformat:2 }}</span>
+                        {% else %}
+                            <span class="breakdown-value" style="color: #6c757d;">$0.00</span>
+                        {% endif %}
+                    </div>
+                    <div class="breakdown-item">
+                        <span class="breakdown-label">This Week:</span>
+                        {% if stats.revenue_this_week and stats.revenue_this_week > 0 %}
+                            <span class="breakdown-value">${{ stats.revenue_this_week|floatformat:2 }}</span>
+                        {% else %}
+                            <span class="breakdown-value" style="color: #6c757d;">$0.00</span>
+                        {% endif %}
+                    </div>
+                    <div class="breakdown-item">
+                        <span class="breakdown-label">Avg. Booking:</span>
+                        {% if stats.avg_booking_value and stats.avg_booking_value > 0 %}
+                            <span class="breakdown-value">${{ stats.avg_booking_value|floatformat:2 }}</span>
+                        {% else %}
+                            <span class="breakdown-value" style="color: #6c757d;">$0.00</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Average Rating -->
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-star"></i></div>
+            <div class="stat-content">
+                <span class="stat-number">{{ stats.avg_rating|default:0 }}</span>
+                <span class="stat-label">Average Rating</span>
+                <span class="stat-change neutral">★</span>
+            </div>
+        </div>
     </div>
-    <div class="stat-card" style="background: var(--bg-card); padding: 15px; border-left: 4px solid #28a745;">
-        <div class="stat-number" style="font-size: 1.8rem; font-weight: 800; color: #28a745;">{{ stats.confirmed_bookings }}</div>
-        <div class="stat-label" style="font-size: 0.75rem; color: var(--text-secondary);">Confirmed</div>
-    </div>
-    <div class="stat-card" style="background: var(--bg-card); padding: 15px; border-left: 4px solid #dc3545;">
-        <div class="stat-number" style="font-size: 1.8rem; font-weight: 800; color: #dc3545;">{{ stats.cancelled_bookings }}</div>
-        <div class="stat-label" style="font-size: 0.75rem; color: var(--text-secondary);">Cancelled</div>
-    </div>
-    <div class="stat-card" style="background: var(--bg-card); padding: 15px; border-left: 4px solid #17a2b8;">
-        <div class="stat-number" style="font-size: 1.8rem; font-weight: 800; color: #17a2b8;">{{ stats.completed_bookings }}</div>
-        <div class="stat-label" style="font-size: 0.75rem; color: var(--text-secondary);">Completed</div>
-    </div>
-    <div class="stat-card" style="background: var(--bg-card); padding: 15px; border-left: 4px solid #ffc107;">
-        <div class="stat-number" style="font-size: 1.8rem; font-weight: 800; color: #ffc107;">{{ stats.total_users }}</div>
-        <div class="stat-label" style="font-size: 0.75rem; color: var(--text-secondary);">Total Users</div>
-    </div>
-    <div class="stat-card" style="background: var(--bg-card); padding: 15px; border-left: 4px solid #6c757d;">
-        <div class="stat-number" style="font-size: 1.8rem; font-weight: 800; color: #6c757d;">{{ stats.active_users }}</div>
-        <div class="stat-label" style="font-size: 0.75rem; color: var(--text-secondary);">Active Users (30d)</div>
-    </div>
-</div>
 
-<!-- Charts Grid -->
-<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px;">
-    <!-- Booking Trends -->
-    <div style="background: var(--bg-card); padding: 20px;">
-        <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 15px;">Booking Trends (30 Days)</h3>
-        <div style="height: 200px; position: relative;">
-            <canvas id="bookingTrendsChart"></canvas>
+    <!-- Charts Row 1 -->
+    <div class="charts-row">
+        <div class="chart-card">
+            <div class="chart-header">
+                <h3><i class="fas fa-chart-bar"></i> Booking Trends</h3>
+                <div class="chart-controls">
+                    <button class="period-btn active" data-period="7d">7d</button>
+                    <button class="period-btn" data-period="30d">30d</button>
+                    <button class="period-btn" data-period="90d">90d</button>
+                </div>
+            </div>
+            <div class="chart-body">
+                <canvas id="bookingTrendsChart"></canvas>
+            </div>
+        </div>
+        <div class="chart-card">
+            <div class="chart-header">
+                <h3><i class="fas fa-chart-pie"></i> Status Distribution</h3>
+            </div>
+            <div class="chart-body">
+                <canvas id="statusDistributionChart"></canvas>
+            </div>
         </div>
     </div>
-    
-    <!-- Hourly Patterns -->
-    <div style="background: var(--bg-card); padding: 20px;">
-        <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 15px;">Hourly Booking Patterns</h3>
-        <div style="height: 200px; position: relative;">
-            <canvas id="hourlyChart"></canvas>
-        </div>
-    </div>
-    
-    <!-- Category Distribution -->
-    <div style="background: var(--bg-card); padding: 20px;">
-        <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 15px;">Category Distribution</h3>
-        <div style="height: 200px; position: relative;">
-            <canvas id="categoryChart"></canvas>
-        </div>
-    </div>
-    
-    <!-- Status Distribution -->
-    <div style="background: var(--bg-card); padding: 20px;">
-        <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 15px;">Status Distribution</h3>
-        <div style="height: 200px; position: relative;">
-            <canvas id="statusChart"></canvas>
-        </div>
-    </div>
-    
-    <!-- Weekly Trends -->
-    <div style="background: var(--bg-card); padding: 20px; grid-column: 1 / -1;">
-        <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 15px;">Weekly Trends</h3>
-        <div style="height: 150px; position: relative;">
-            <canvas id="weeklyChart"></canvas>
-        </div>
-    </div>
-</div>
 
-<!-- Popular Resources -->
-<div style="background: var(--bg-card); padding: 20px; margin-bottom: 25px;">
-    <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 15px;">Popular Resources</h3>
-    <div style="overflow-x: auto;">
-        <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
-            <thead>
-                <tr>
-                    <th style="padding: 10px; text-align: left;">Resource</th>
-                    <th style="padding: 10px; text-align: left;">Category</th>
-                    <th style="padding: 10px; text-align: center;">Bookings</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for resource in stats.popular_resources %}
-                    <tr>
-                        <td style="padding: 10px;">{{ resource.name }}</td>
-                        <td style="padding: 10px;">{{ resource.category.name|default:"Uncategorized" }}</td>
-                        <td style="padding: 10px; text-align: center;">{{ resource.booking_count }}</td>
-                    </tr>
-                {% empty %}
-                    <tr>
-                        <td colspan="3" style="padding: 20px; text-align: center; color: var(--text-secondary);">No bookings yet</td>
-                    </tr>
+    <!-- Charts Row 2 -->
+    <div class="charts-row">
+        <div class="chart-card">
+            <div class="chart-header">
+                <h3><i class="fas fa-clock"></i> Hourly Booking Patterns</h3>
+            </div>
+            <div class="chart-body">
+                <canvas id="hourlyPatternsChart"></canvas>
+            </div>
+        </div>
+        <div class="chart-card">
+            <div class="chart-header">
+                <h3><i class="fas fa-trophy"></i> Popular Resources</h3>
+            </div>
+            <div class="chart-body">
+                <canvas id="popularResourcesChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Monthly Revenue Chart -->
+    <div class="charts-row">
+        <div class="chart-card full-width">
+            <div class="chart-header">
+                <h3><i class="fas fa-chart-line"></i> Monthly Revenue Trend</h3>
+            </div>
+            <div class="chart-body">
+                <canvas id="monthlyRevenueChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="recent-activity-section">
+        <h3><i class="fas fa-clock"></i> Recent Activity</h3>
+        <div class="activity-timeline">
+            {% if stats.recent_activities %}
+                {% for activity in stats.recent_activities %}
+                    <div class="activity-item">
+                        <div class="activity-icon">
+                            <i class="fas fa-{{ activity.icon|default:'circle' }}"></i>
+                        </div>
+                        <div class="activity-content">
+                            <span class="activity-text">{{ activity.text }}</span>
+                            <span class="activity-time">{{ activity.time|timesince }} ago</span>
+                        </div>
+                    </div>
                 {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
-
-<!-- Export Buttons -->
-<div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 20px; padding: 20px; background: var(--bg-card);">
-    <h3 style="font-size: 1rem; font-weight: 700; margin: 0; margin-right: 15px;">Export Reports:</h3>
-    
-    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-        <a href="{% url 'export_report' %}?type=bookings&format=csv" style="background: #28a745; color: white; padding: 6px 14px; text-decoration: none; font-size: 0.8rem; font-weight: 600; transition: all 0.2s ease;"
-           onmouseover="this.style.background='#218838'"
-           onmouseout="this.style.background='#28a745'">
-            Bookings CSV
-        </a>
-        <a href="{% url 'export_report' %}?type=bookings&format=excel" style="background: #17a2b8; color: white; padding: 6px 14px; text-decoration: none; font-size: 0.8rem; font-weight: 600; transition: all 0.2s ease;"
-           onmouseover="this.style.background='#138496'"
-           onmouseout="this.style.background='#17a2b8'">
-            Bookings Excel
-        </a>
-        <a href="{% url 'export_report' %}?type=bookings&format=pdf" style="background: #dc3545; color: white; padding: 6px 14px; text-decoration: none; font-size: 0.8rem; font-weight: 600; transition: all 0.2s ease;"
-           onmouseover="this.style.background='#c82333'"
-           onmouseout="this.style.background='#dc3545'">
-            Bookings PDF
-        </a>
-    </div>
-    
-    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-        <a href="{% url 'export_report' %}?type=users&format=csv" style="background: #007bff; color: white; padding: 6px 14px; text-decoration: none; font-size: 0.8rem; font-weight: 600; transition: all 0.2s ease;"
-           onmouseover="this.style.background='#0056b3'"
-           onmouseout="this.style.background='#007bff'">
-            Users CSV
-        </a>
-        <a href="{% url 'export_report' %}?type=users&format=excel" style="background: #17a2b8; color: white; padding: 6px 14px; text-decoration: none; font-size: 0.8rem; font-weight: 600; transition: all 0.2s ease;"
-           onmouseover="this.style.background='#138496'"
-           onmouseout="this.style.background='#17a2b8'">
-            Users Excel
-        </a>
-    </div>
-    
-    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-        <a href="{% url 'export_report' %}?type=resources&format=csv" style="background: #6c757d; color: white; padding: 6px 14px; text-decoration: none; font-size: 0.8rem; font-weight: 600; transition: all 0.2s ease;"
-           onmouseover="this.style.background='#5a6268'"
-           onmouseout="this.style.background='#6c757d'">
-            Resources CSV
-        </a>
-        <a href="{% url 'export_report' %}?type=resources&format=excel" style="background: #17a2b8; color: white; padding: 6px 14px; text-decoration: none; font-size: 0.8rem; font-weight: 600; transition: all 0.2s ease;"
-           onmouseover="this.style.background='#138496'"
-           onmouseout="this.style.background='#17a2b8'">
-            Resources Excel
-        </a>
+            {% else %}
+                <div class="activity-item">
+                    <div class="activity-content">
+                        <span class="activity-text">No recent activity</span>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
     </div>
 </div>
 
@@ -172,64 +237,65 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
-let autoRefreshInterval = null;
-let charts = {};
+// ============ EXPORT FUNCTIONS ============
+function exportData(type, format) {
+    const url = `/export/?type=${type}&format=${format}`;
+    window.location.href = url;
+}
 
-document.addEventListener('DOMContentLoaded', function() {
-    createCharts();
-    startAutoRefresh();
+function toggleExportMenu() {
+    const menu = document.getElementById('exportMenu');
+    if (menu.style.display === 'none' || menu.style.display === '') {
+        menu.style.display = 'block';
+    } else {
+        menu.style.display = 'none';
+    }
+}
+
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.export-dropdown')) {
+        const menu = document.getElementById('exportMenu');
+        if (menu) {
+            menu.style.display = 'none';
+        }
+    }
 });
 
-function createCharts() {
-    const chartConfigs = {
-        bookingTrends: {
-            type: 'line',
-            ctx: document.getElementById('bookingTrendsChart'),
-            data: {{ booking_analytics.daily_data|safe }},
-            label: 'Bookings',
-            color: '#007bff',
-            fill: true
-        },
-        hourly: {
-            type: 'bar',
-            ctx: document.getElementById('hourlyChart'),
-            data: {{ hourly_patterns|safe }},
-            label: 'Bookings',
-            color: '#28a745'
-        },
-        category: {
-            type: 'doughnut',
-            ctx: document.getElementById('categoryChart'),
-            data: {{ stats.category_distribution|safe }},
-            colors: ['#007bff', '#28a745', '#dc3545', '#ffc107', '#17a2b8', '#6f42c1']
-        },
-        status: {
-            type: 'doughnut',
-            ctx: document.getElementById('statusChart'),
-            data: {{ status_distribution|safe }},
-            colors: ['#28a745', '#ffc107', '#dc3545', '#17a2b8']
-        },
-        weekly: {
-            type: 'bar',
-            ctx: document.getElementById('weeklyChart'),
-            data: {{ weekly_trends|safe }},
-            label: 'Bookings',
-            color: '#6c757d'
-        }
-    };
+// ============ PERIOD SELECTOR ============
+document.querySelectorAll('.period-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        refreshData(this.dataset.period);
+    });
+});
 
-    // Create Booking Trends Chart
-    if (chartConfigs.bookingTrends.ctx) {
-        charts.bookingTrends = new Chart(chartConfigs.bookingTrends.ctx, {
-            type: chartConfigs.bookingTrends.type,
+// ============ LOAD CHARTS ============
+document.addEventListener('DOMContentLoaded', function() {
+    loadCharts();
+});
+
+function loadCharts() {
+    // Get data from context with fallbacks
+    const bookingAnalytics = {{ booking_analytics|default:'{"labels":[],"data":[]}'|safe }};
+    const statusData = {{ status_distribution|default:'{"labels":[],"data":[]}'|safe }};
+    const hourlyData = {{ hourly_patterns|default:'{"labels":[],"data":[]}'|safe }};
+    const resourceData = {{ resource_analytics|default:'{"popularity":[]}'|safe }};
+    const monthlyRevenue = {{ stats.monthly_revenue|default:'[]'|safe }};
+
+    // Booking Trends Chart
+    const bookingCtx = document.getElementById('bookingTrendsChart');
+    if (bookingCtx) {
+        new Chart(bookingCtx, {
+            type: 'line',
             data: {
-                labels: chartConfigs.bookingTrends.data.map(d => d.date),
+                labels: bookingAnalytics.labels || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
                 datasets: [{
-                    label: chartConfigs.bookingTrends.label,
-                    data: chartConfigs.bookingTrends.data.map(d => d.bookings),
-                    borderColor: chartConfigs.bookingTrends.color,
-                    backgroundColor: chartConfigs.bookingTrends.color + '33',
-                    fill: chartConfigs.bookingTrends.fill,
+                    label: 'Bookings',
+                    data: bookingAnalytics.data || [0, 0, 0, 0, 0, 0, 0],
+                    borderColor: '#007bff',
+                    backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                    fill: true,
                     tension: 0.4
                 }]
             },
@@ -242,17 +308,49 @@ function createCharts() {
         });
     }
 
-    // Create Hourly Chart
-    if (chartConfigs.hourly.ctx) {
-        charts.hourly = new Chart(chartConfigs.hourly.ctx, {
-            type: chartConfigs.hourly.type,
+    // Status Distribution Chart
+    const statusCtx = document.getElementById('statusDistributionChart');
+    if (statusCtx) {
+        const statusLabels = statusData.labels || ['Pending', 'Confirmed', 'Completed', 'Cancelled'];
+        const statusValues = statusData.data || [0, 0, 0, 0];
+        const statusColors = statusData.colors || ['#ffc107', '#28a745', '#17a2b8', '#dc3545'];
+
+        new Chart(statusCtx, {
+            type: 'doughnut',
             data: {
-                labels: chartConfigs.hourly.data.map(d => d.hour),
+                labels: statusLabels,
                 datasets: [{
-                    label: chartConfigs.hourly.label,
-                    data: chartConfigs.hourly.data.map(d => d.count),
-                    backgroundColor: chartConfigs.hourly.color + '66',
-                    borderColor: chartConfigs.hourly.color,
+                    data: statusValues,
+                    backgroundColor: statusColors,
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { padding: 20, usePointStyle: true } }
+                },
+                cutout: '60%'
+            }
+        });
+    }
+
+    // Hourly Patterns Chart
+    const hourlyCtx = document.getElementById('hourlyPatternsChart');
+    if (hourlyCtx) {
+        const hourLabels = hourlyData.labels || Array.from({length: 24}, (_, i) => i + ':00');
+        const hourValues = hourlyData.data || Array(24).fill(0);
+
+        new Chart(hourlyCtx, {
+            type: 'bar',
+            data: {
+                labels: hourLabels,
+                datasets: [{
+                    label: 'Bookings',
+                    data: hourValues,
+                    backgroundColor: 'rgba(40, 167, 69, 0.7)',
+                    borderColor: '#28a745',
                     borderWidth: 1
                 }]
             },
@@ -260,161 +358,599 @@ function createCharts() {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
-                scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
-            }
-        });
-    }
-
-    // Create Category Chart
-    if (chartConfigs.category.ctx) {
-        charts.category = new Chart(chartConfigs.category.ctx, {
-            type: chartConfigs.category.type,
-            data: {
-                labels: chartConfigs.category.data.map(d => d.name),
-                datasets: [{
-                    data: chartConfigs.category.data.map(d => d.count),
-                    backgroundColor: chartConfigs.category.colors.slice(0, chartConfigs.category.data.length),
-                    borderWidth: 0
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'right',
-                        labels: { boxWidth: 12, padding: 10, font: { size: 11 } }
-                    }
+                scales: {
+                    y: { beginAtZero: true, ticks: { stepSize: 1 } },
+                    x: { grid: { display: false } }
                 }
             }
         });
     }
 
-    // Create Status Chart
-    if (chartConfigs.status.ctx) {
-        charts.status = new Chart(chartConfigs.status.ctx, {
-            type: chartConfigs.status.type,
-            data: {
-                labels: chartConfigs.status.data.map(d => d.status),
-                datasets: [{
-                    data: chartConfigs.status.data.map(d => d.count),
-                    backgroundColor: chartConfigs.status.colors.slice(0, chartConfigs.status.data.length),
-                    borderWidth: 0
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'right',
-                        labels: { boxWidth: 12, padding: 10, font: { size: 11 } }
-                    }
-                }
-            }
-        });
-    }
+    // Popular Resources Chart
+    const popularCtx = document.getElementById('popularResourcesChart');
+    if (popularCtx) {
+        const popularity = resourceData.popularity || [];
+        const resourceLabels = popularity.map(r => r.name).slice(0, 5);
+        const resourceValues = popularity.map(r => r.count).slice(0, 5);
 
-    // Create Weekly Chart
-    if (chartConfigs.weekly.ctx) {
-        charts.weekly = new Chart(chartConfigs.weekly.ctx, {
-            type: chartConfigs.weekly.type,
+        new Chart(popularCtx, {
+            type: 'bar',
             data: {
-                labels: chartConfigs.weekly.data.map(d => d.day),
+                labels: resourceLabels.length ? resourceLabels : ['No Data'],
                 datasets: [{
-                    label: chartConfigs.weekly.label,
-                    data: chartConfigs.weekly.data.map(d => d.count),
-                    backgroundColor: chartConfigs.weekly.color + '66',
-                    borderColor: chartConfigs.weekly.color,
+                    label: 'Bookings',
+                    data: resourceValues.length ? resourceValues : [0],
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.7)',
+                        'rgba(54, 162, 235, 0.7)',
+                        'rgba(255, 206, 86, 0.7)',
+                        'rgba(75, 192, 192, 0.7)',
+                        'rgba(153, 102, 255, 0.7)'
+                    ],
+                    borderColor: ['#ff6384', '#36a2eb', '#ffce56', '#4bc0c0', '#9966ff'],
                     borderWidth: 1
                 }]
             },
             options: {
+                indexAxis: 'y',
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
-                scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+                scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } }
+            }
+        });
+    }
+
+    // Monthly Revenue Chart
+    const revenueCtx = document.getElementById('monthlyRevenueChart');
+    if (revenueCtx) {
+        const revenueData = monthlyRevenue.length ? monthlyRevenue : [];
+        const revenueLabels = revenueData.map(m => m.month) || ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+        const revenueValues = revenueData.map(m => m.revenue) || [0, 0, 0, 0, 0, 0];
+        
+        new Chart(revenueCtx, {
+            type: 'bar',
+            data: {
+                labels: revenueLabels,
+                datasets: [{
+                    label: 'Revenue ($)',
+                    data: revenueValues,
+                    backgroundColor: 'rgba(40, 167, 69, 0.7)',
+                    borderColor: '#28a745',
+                    borderWidth: 2,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: true, position: 'top' },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return '$' + context.parsed.y.toFixed(2);
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return '$' + value.toFixed(0);
+                            }
+                        }
+                    },
+                    x: { grid: { display: false } }
+                }
             }
         });
     }
 }
 
-function refreshData() {
-    // Show loading state
-    const btn = event ? event.target : document.getElementById('refreshBtn');
-    if (btn) {
-        const originalText = btn.textContent;
-        btn.textContent = 'Loading...';
-        btn.disabled = true;
-    }
-    
-    fetch('/analytics/data/?type=dashboard')
+// ============ REFRESH DATA ============
+function refreshData(period = '30d') {
+    const btn = document.querySelector('.btn-refresh');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+    btn.disabled = true;
+
+    fetch(`/analytics/data/?period=${period}`)
         .then(response => response.json())
         .then(data => {
-            // Update statistics
-            document.querySelectorAll('.stat-number').forEach(el => {
-                // Find the matching stat and update
-            });
-            
-            // Update charts (recreate them with new data)
-            Object.values(charts).forEach(chart => chart.destroy());
-            createCharts();
-            
-            if (btn) {
-                btn.textContent = 'Refreshed!';
-                setTimeout(() => {
-                    btn.textContent = 'Refresh';
-                    btn.disabled = false;
-                }, 2000);
-            }
+            location.reload();
         })
         .catch(error => {
             console.error('Error refreshing data:', error);
-            if (btn) {
-                btn.textContent = 'Error';
-                setTimeout(() => {
-                    btn.textContent = 'Refresh';
-                    btn.disabled = false;
-                }, 2000);
-            }
+            alert('Failed to refresh data. Please try again.');
+        })
+        .finally(() => {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
         });
-}
-
-function toggleAutoRefresh() {
-    const btn = document.getElementById('autoRefreshBtn');
-    if (autoRefreshInterval) {
-        clearInterval(autoRefreshInterval);
-        autoRefreshInterval = null;
-        btn.textContent = 'Auto-Refresh: OFF';
-        btn.style.background = '#17a2b8';
-    } else {
-        autoRefreshInterval = setInterval(refreshData, 30000); // 30 seconds
-        btn.textContent = 'Auto-Refresh: ON';
-        btn.style.background = '#28a745';
-    }
-}
-
-function startAutoRefresh() {
-    // Start auto-refresh by default
-    // toggleAutoRefresh(); // Uncomment to enable auto-refresh by default
 }
 </script>
 
 <style>
-    .stat-card {
-        transition: transform 0.2s ease;
+/* ============ CONTAINER ============ */
+.admin-dashboard-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 15px;
+}
+
+/* ============ PAGE HEADER ============ */
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #e9ecef;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.page-header h1 {
+    margin: 0;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #1a1a2e;
+}
+
+.page-header h1 i {
+    color: #007bff;
+    margin-right: 10px;
+}
+
+.page-header .subtitle {
+    margin: 4px 0 0;
+    color: #6c757d;
+    font-size: 0.85rem;
+}
+
+.header-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.btn-refresh {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: #f8f9fa;
+    color: #495057;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-refresh:hover {
+    background: #e9ecef;
+}
+
+/* ============ EXPORT DROPDOWN ============ */
+.export-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.btn-export {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-export:hover {
+    background: #218838;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+}
+
+.export-menu {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    min-width: 220px;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    overflow: hidden;
+    margin-top: 4px;
+    padding: 8px 0;
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.export-section {
+    padding: 6px 0;
+}
+
+.export-section:not(:last-child) {
+    border-bottom: 1px solid #f1f3f5;
+}
+
+.export-label {
+    display: block;
+    padding: 4px 16px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #6c757d;
+}
+
+.export-label i {
+    margin-right: 4px;
+}
+
+.export-menu a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 16px 6px 24px;
+    text-decoration: none;
+    color: #1a1a2e;
+    font-size: 0.8rem;
+    transition: background 0.2s;
+}
+
+.export-menu a:hover {
+    background: #f8f9fa;
+}
+
+.export-menu a i {
+    font-size: 0.9rem;
+    width: 18px;
+}
+
+.export-menu a i.fa-file-csv { color: #28a745; }
+.export-menu a i.fa-file-excel { color: #217346; }
+.export-menu a i.fa-file-pdf { color: #dc3545; }
+.export-menu a i.fa-file-code { color: #6f42c1; }
+
+/* ============ STATISTICS CARDS ============ */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.stat-card {
+    background: white;
+    padding: 20px;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: all 0.2s;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.stat-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 10px;
+    background: #e3f2fd;
+    color: #007bff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.stat-content {
+    flex: 1;
+}
+
+.stat-number {
+    display: block;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #1a1a2e;
+    line-height: 1.2;
+}
+
+.stat-label {
+    display: block;
+    font-size: 0.75rem;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.stat-change {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 1px 8px;
+    border-radius: 4px;
+    margin-top: 4px;
+}
+
+.stat-change.positive {
+    color: #28a745;
+    background: #d4edda;
+}
+
+.stat-change.negative {
+    color: #dc3545;
+    background: #f8d7da;
+}
+
+.stat-change.neutral {
+    color: #6c757d;
+    background: #e9ecef;
+}
+
+/* ============ REVENUE BREAKDOWN ============ */
+.stat-breakdown {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #e9ecef;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 12px;
+}
+
+.breakdown-item {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.7rem;
+    color: #6c757d;
+    padding: 2px 0;
+}
+
+.breakdown-label {
+    font-weight: 500;
+}
+
+.breakdown-value {
+    font-weight: 600;
+    color: #28a745;
+}
+
+/* ============ CHARTS ============ */
+.charts-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 24px;
+}
+
+.chart-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.chart-card.full-width {
+    grid-column: 1 / -1;
+}
+
+.chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.chart-header h3 {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #1a1a2e;
+}
+
+.chart-header h3 i {
+    color: #007bff;
+    margin-right: 6px;
+}
+
+.chart-controls {
+    display: flex;
+    gap: 4px;
+}
+
+.period-btn {
+    padding: 2px 10px;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.period-btn:hover {
+    background: #e9ecef;
+}
+
+.period-btn.active {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+.chart-body {
+    padding: 20px;
+    height: 300px;
+    position: relative;
+}
+
+/* ============ RECENT ACTIVITY ============ */
+.recent-activity-section {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 20px;
+    margin-top: 24px;
+}
+
+.recent-activity-section h3 {
+    margin: 0 0 16px 0;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.recent-activity-section h3 i {
+    color: #007bff;
+    margin-right: 6px;
+}
+
+.activity-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.activity-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.activity-item:hover {
+    background: #f8f9fa;
+}
+
+.activity-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #e3f2fd;
+    color: #007bff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    flex-shrink: 0;
+}
+
+.activity-content {
+    flex: 1;
+}
+
+.activity-text {
+    display: block;
+    font-size: 0.85rem;
+    color: #1a1a2e;
+}
+
+.activity-time {
+    font-size: 0.7rem;
+    color: #6c757d;
+}
+
+/* ============ RESPONSIVE ============ */
+@media (max-width: 1200px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
     }
-    .stat-card:hover {
-        transform: translateY(-2px);
+}
+
+@media (max-width: 992px) {
+    .charts-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
     }
     
-    @media (max-width: 768px) {
-        div[style*="grid-template-columns: 1fr 1fr"] {
-            grid-template-columns: 1fr !important;
-        }
-        .stat-cards {
-            grid-template-columns: repeat(2, 1fr) !important;
-        }
+    .header-actions {
+        width: 100%;
     }
+    
+    .header-actions button {
+        flex: 1;
+        justify-content: center;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+    
+    .stat-card {
+        padding: 16px;
+    }
+    
+    .stat-number {
+        font-size: 1.2rem;
+    }
+    
+    .chart-body {
+        height: 250px;
+    }
+    
+    .export-menu {
+        min-width: 180px;
+        right: -10px;
+    }
+    
+    .stat-breakdown {
+        grid-template-columns: 1fr;
+        gap: 2px;
+    }
+}
+
+@media (max-width: 480px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .stat-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 1.2rem;
+    }
+    
+    .chart-body {
+        height: 200px;
+    }
+    
+    .export-menu {
+        min-width: 160px;
+        right: -20px;
+    }
+}
 </style>
 {% endblock %}

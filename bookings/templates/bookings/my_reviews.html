@@ -1,146 +1,996 @@
 {% extends 'bookings/base.html' %}
+{% load static %}
 
 {% block content %}
-<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 20px;">
-    <h1 style="font-size: 1.6rem; font-weight: 800; margin: 0;">My Reviews</h1>
-    <span style="font-size: 0.85rem; color: var(--text-secondary);">{{ reviews.count }} reviews</span>
-</div>
-
-<!-- Filter -->
-<div style="margin: 15px 0 20px 0; padding: 15px; background: var(--bg-card);">
-    <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
-        <span style="font-size: 0.8rem; font-weight: 600;">Filter by status:</span>
-        <a href="?status=all" style="padding: 4px 14px; background: {% if status_filter == 'all' %}#007bff; color: white;{% else %}#e9ecef; color: #333;{% endif %} text-decoration: none; font-size: 0.75rem; font-weight: 600;">
-            All
-        </a>
-        <a href="?status=APPROVED" style="padding: 4px 14px; background: {% if status_filter == 'APPROVED' %}#28a745; color: white;{% else %}#e9ecef; color: #333;{% endif %} text-decoration: none; font-size: 0.75rem; font-weight: 600;">
-            Approved
-        </a>
-        <a href="?status=PENDING" style="padding: 4px 14px; background: {% if status_filter == 'PENDING' %}#ffc107; color: #856404;{% else %}#e9ecef; color: #333;{% endif %} text-decoration: none; font-size: 0.75rem; font-weight: 600;">
-            Pending
-        </a>
-        <a href="?status=REJECTED" style="padding: 4px 14px; background: {% if status_filter == 'REJECTED' %}#dc3545; color: white;{% else %}#e9ecef; color: #333;{% endif %} text-decoration: none; font-size: 0.75rem; font-weight: 600;">
-            Rejected
-        </a>
+<div class="my-reviews-container">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div>
+            <h1>My Reviews</h1>
+            <p class="subtitle">Manage and track your reviews</p>
+        </div>
+        <div class="header-stats">
+            <div class="stat-item">
+                <span class="stat-number">{{ reviews.count }}</span>
+                <span class="stat-label">Total Reviews</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">{{ approved_count }}</span>
+                <span class="stat-label">Approved</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">{{ pending_count }}</span>
+                <span class="stat-label">Pending</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">{{ rejected_count }}</span>
+                <span class="stat-label">Rejected</span>
+            </div>
+        </div>
     </div>
-</div>
 
-{% if reviews %}
-    <div style="display: flex; flex-direction: column; gap: 15px;">
-        {% for review in reviews %}
-            <div style="background: var(--bg-card); padding: 18px; border: 1px solid var(--border-color); 
-                        {% if review.status == 'APPROVED' %}border-left: 4px solid #28a745;
-                        {% elif review.status == 'PENDING' %}border-left: 4px solid #ffc107;
-                        {% else %}border-left: 4px solid #dc3545;{% endif %}">
-                
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap;">
-                    <div>
-                        <div style="font-size: 1.2rem; letter-spacing: 2px;">
-                            {% for i in "12345"|make_list %}
-                                {% if forloop.counter <= review.rating %}⭐{% else %}☆{% endif %}
-                            {% endfor %}
-                            <span style="font-size: 0.8rem; color: var(--text-secondary); margin-left: 5px;">({{ review.rating }}/5)</span>
-                        </div>
-                        
-                        {% if review.title %}
-                            <h3 style="font-size: 1rem; font-weight: 700; margin: 5px 0;">{{ review.title }}</h3>
-                        {% endif %}
-                        
-                        <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 5px 0;">
-                            {{ review.comment|truncatewords:30 }}
-                            {% if review.comment|wordcount > 30 %}
-                                <a href="#" onclick="toggleFullReview(this)" style="color: #007bff; text-decoration: none;">Read more</a>
+    <!-- Filter Section -->
+    <div class="filter-section">
+        <div class="filter-left">
+            <span class="filter-label"><i class="fas fa-filter"></i> Filter by status:</span>
+            <div class="filter-buttons">
+                <a href="?status=all" class="filter-btn {% if status_filter == 'all' %}active{% endif %}">
+                    All
+                    <span class="filter-count">{{ reviews.count }}</span>
+                </a>
+                <a href="?status=APPROVED" class="filter-btn {% if status_filter == 'APPROVED' %}active{% endif %}">
+                    Approved
+                    <span class="filter-count">{{ approved_count }}</span>
+                </a>
+                <a href="?status=PENDING" class="filter-btn {% if status_filter == 'PENDING' %}active{% endif %}">
+                    Pending
+                    <span class="filter-count">{{ pending_count }}</span>
+                </a>
+                <a href="?status=REJECTED" class="filter-btn {% if status_filter == 'REJECTED' %}active{% endif %}">
+                    Rejected
+                    <span class="filter-count">{{ rejected_count }}</span>
+                </a>
+            </div>
+        </div>
+        <div class="filter-right">
+            <a href="{% url 'bookings:resource_list' %}" class="btn-write-review">
+                <i class="fas fa-pen"></i> Write a Review
+            </a>
+        </div>
+    </div>
+
+    <!-- Reviews List -->
+    {% if reviews %}
+        <div class="reviews-list">
+            {% for review in reviews %}
+                <div class="review-card status-{{ review.status|lower }}">
+                    <!-- Review Header -->
+                    <div class="review-header">
+                        <div class="review-left">
+                            <div class="review-rating">
+                                {% for i in "12345"|make_list %}
+                                    {% if forloop.counter <= review.rating %}
+                                        <span class="star filled">⭐</span>
+                                    {% else %}
+                                        <span class="star empty">☆</span>
+                                    {% endif %}
+                                {% endfor %}
+                                <span class="rating-text">({{ review.rating }}/5)</span>
+                            </div>
+                            
+                            {% if review.title %}
+                                <h3 class="review-title">{{ review.title }}</h3>
                             {% endif %}
-                        </p>
-                        <div class="full-review" style="display: none; font-size: 0.85rem; color: var(--text-secondary); margin-top: 5px;">
-                            {{ review.comment }}
-                            <a href="#" onclick="toggleFullReview(this)" style="color: #007bff; text-decoration: none;">Show less</a>
                         </div>
-                        
-                        <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 5px;">
-                            <span>{{ review.created_at|date:"M d, Y" }}</span>
-                            <span style="margin-left: 15px;">Resource: <a href="{% url 'bookings:resource_detail' review.resource.id %}" style="color: #007bff; text-decoration: none;">{{ review.resource.name }}</a></span>
-                            {% if review.is_verified %}
-                                <span style="margin-left: 15px; background: #28a745; color: white; padding: 1px 8px; font-size: 0.6rem;">Verified</span>
-                            {% endif %}
+                        <div class="review-right">
+                            <span class="status-badge status-{{ review.status|lower }}">
+                                {{ review.get_status_display }}
+                            </span>
                         </div>
                     </div>
-                    
-                    <div style="text-align: right;">
-                        <div style="font-size: 0.7rem; font-weight: 600; padding: 2px 10px; 
-                            {% if review.status == 'APPROVED' %}background: #d4edda; color: #155724;
-                            {% elif review.status == 'PENDING' %}background: #fff3cd; color: #856404;
-                            {% else %}background: #f8d7da; color: #721c24;{% endif %}">
-                            {{ review.get_status_display }}
-                        </div>
-                        <div style="margin-top: 5px;">
-                            {% if review.status == 'PENDING' %}
-                                <span style="font-size: 0.7rem; color: var(--text-secondary);">Awaiting approval</span>
-                            {% elif review.status == 'REJECTED' %}
-                                <span style="font-size: 0.7rem; color: var(--text-secondary);">Rejected</span>
-                            {% else %}
-                                <span style="font-size: 0.7rem; color: var(--text-secondary);">Published</span>
+
+                    <!-- Review Body -->
+                    <div class="review-body">
+                        <div class="review-comment short">
+                            <p>{{ review.comment|truncatewords:30 }}</p>
+                            {% if review.comment|wordcount > 30 %}
+                                <a href="#" onclick="toggleFullReview(this, {{ review.id }})" class="read-more-link" data-id="{{ review.id }}">
+                                    Read more <i class="fas fa-chevron-down"></i>
+                                </a>
                             {% endif %}
                         </div>
-                        {% if review.status == 'PENDING' %}
-                            <a href="{% url 'bookings:edit_review' review.id %}" style="font-size: 0.75rem; color: #007bff; text-decoration: none; display: block; margin-top: 5px;">Edit</a>
-                            <a href="{% url 'bookings:delete_review' review.id %}" 
-                                style="font-size: 0.75rem; color: #b93535; text-decoration: none; display: block; padding: 4px 8px; border-radius: 4px; transition: all 0.2s ease;">
-                                Delete
+                        <div class="review-comment full" id="full-review-{{ review.id }}" style="display: none;">
+                            <p>{{ review.comment }}</p>
+                            <a href="#" onclick="toggleFullReview(this, {{ review.id }})" class="read-less-link" data-id="{{ review.id }}">
+                                Show less <i class="fas fa-chevron-up"></i>
                             </a>
-                        {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Review Footer -->
+                    <div class="review-footer">
+                        <div class="review-meta">
+                            <span class="meta-item">
+                                <i class="far fa-calendar-alt"></i>
+                                {{ review.created_at|date:"M d, Y" }}
+                            </span>
+                            <span class="meta-item">
+                                <i class="fas fa-cube"></i>
+                                <a href="{% url 'bookings:resource_detail' review.resource.id %}" class="resource-link">
+                                    {{ review.resource.name }}
+                                </a>
+                            </span>
+                            {% if review.is_verified %}
+                                <span class="badge-verified">
+                                    <i class="fas fa-check-circle"></i> Verified
+                                </span>
+                            {% endif %}
+                            {% if review.helpful_count > 0 %}
+                                <span class="badge-helpful">
+                                    <i class="fas fa-thumbs-up"></i> {{ review.helpful_count }} helpful
+                                </span>
+                            {% endif %}
+                        </div>
+
+                        <!-- Review Actions -->
+                        <div class="review-actions">
+                            {% if review.status == 'PENDING' %}
+                                <span class="action-status pending-status">
+                                    <i class="fas fa-clock"></i> Awaiting approval
+                                </span>
+                                <a href="{% url 'bookings:edit_review' review.id %}" class="btn-action btn-edit">
+                                    <i class="fas fa-edit"></i> Edit
+                                </a>
+                                <a href="{% url 'bookings:delete_review' review.id %}" 
+                                   class="btn-action btn-delete" 
+                                   onclick="return confirm('Are you sure you want to delete this review?')">
+                                    <i class="fas fa-trash"></i> Delete
+                                </a>
+                            {% elif review.status == 'REJECTED' %}
+                                <span class="action-status rejected-status">
+                                    <i class="fas fa-times-circle"></i> Rejected
+                                </span>
+                                {% if review.moderation_reason %}
+                                    <span class="rejection-reason" title="{{ review.moderation_reason }}">
+                                        <i class="fas fa-info-circle"></i> View reason
+                                    </span>
+                                {% endif %}
+                            {% else %}
+                                <span class="action-status approved-status">
+                                    <i class="fas fa-check-circle"></i> Published
+                                </span>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
-                
-                <!-- Helpful Stats -->
-                {% if review.status == 'APPROVED' %}
-                    <div style="margin-top: 10px; font-size: 0.75rem; color: var(--text-secondary);">
-                        {{ review.helpful_count }} people found this helpful
-                    </div>
-                {% endif %}
+            {% endfor %}
+        </div>
+
+        <!-- Pagination -->
+        {% if reviews.has_other_pages %}
+            <div class="pagination-section">
+                <div class="pagination-info">
+                    <span>Showing page {{ reviews.number }} of {{ reviews.paginator.num_pages }}</span>
+                    <span class="total-items">{{ reviews.paginator.count }} total reviews</span>
+                </div>
+                <div class="pagination-controls">
+                    {% if reviews.has_previous %}
+                        <a href="?page=1&status={{ status_filter }}" class="page-btn" title="First">
+                            <i class="fas fa-angle-double-left"></i>
+                        </a>
+                        <a href="?page={{ reviews.previous_page_number }}&status={{ status_filter }}" class="page-btn" title="Previous">
+                            <i class="fas fa-angle-left"></i>
+                        </a>
+                    {% else %}
+                        <span class="page-btn disabled"><i class="fas fa-angle-double-left"></i></span>
+                        <span class="page-btn disabled"><i class="fas fa-angle-left"></i></span>
+                    {% endif %}
+                    
+                    <span class="page-current">{{ reviews.number }}</span>
+                    
+                    {% if reviews.has_next %}
+                        <a href="?page={{ reviews.next_page_number }}&status={{ status_filter }}" class="page-btn" title="Next">
+                            <i class="fas fa-angle-right"></i>
+                        </a>
+                        <a href="?page={{ reviews.paginator.num_pages }}&status={{ status_filter }}" class="page-btn" title="Last">
+                            <i class="fas fa-angle-double-right"></i>
+                        </a>
+                    {% else %}
+                        <span class="page-btn disabled"><i class="fas fa-angle-right"></i></span>
+                        <span class="page-btn disabled"><i class="fas fa-angle-double-right"></i></span>
+                    {% endif %}
+                </div>
             </div>
-        {% endfor %}
-    </div>
-{% else %}
-    <div style="text-align: center; padding: 60px 20px; background: var(--bg-hover); border: 1px solid var(--border-color);">
-        <h3 style="font-size: 1.2rem; color: var(--text-primary); margin-bottom: 10px;">No reviews yet</h3>
-        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 20px;">
-            You haven't written any reviews yet. Review resources you've booked!
-        </p>
-        <a href="{% url 'bookings:resource_list' %}" style="background: #007bff; color: white; padding: 10px 25px; text-decoration: none; font-size: 0.85rem; font-weight: 600; display: inline-block;">
-            Browse Resources
-        </a>
-    </div>
-{% endif %}
+        {% endif %}
+
+    {% else %}
+        <!-- Empty State -->
+        <div class="empty-state">
+            <div class="empty-icon">
+                <i class="fas fa-star"></i>
+            </div>
+            <h2>No Reviews Yet</h2>
+            <p>You haven't written any reviews yet. Share your experience with resources you've booked!</p>
+            <div class="empty-actions">
+                <a href="{% url 'bookings:resource_list' %}" class="btn-primary">
+                    <i class="fas fa-search"></i> Browse Resources
+                </a>
+                <a href="{% url 'bookings:my_bookings' %}" class="btn-secondary">
+                    <i class="fas fa-calendar-check"></i> View My Bookings
+                </a>
+            </div>
+            <div class="empty-tips">
+                <span class="tip-badge"><i class="fas fa-lightbulb"></i> You can only review resources you've booked</span>
+                <span class="tip-badge"><i class="fas fa-star"></i> Your reviews help other users</span>
+                <span class="tip-badge"><i class="fas fa-check-circle"></i> Verified reviews are marked with a badge</span>
+            </div>
+        </div>
+    {% endif %}
+</div>
 
 <script>
-function toggleFullReview(element) {
-    const container = element.closest('div');
-    const shortReview = container.querySelector('p');
-    const fullReview = container.querySelector('.full-review');
+// ============ TOGGLE FULL REVIEW ============
+function toggleFullReview(element, reviewId) {
+    const shortReview = element.closest('.review-card').querySelector('.review-comment.short');
+    const fullReview = document.getElementById(`full-review-${reviewId}`);
     
     if (fullReview.style.display === 'none') {
         shortReview.style.display = 'none';
         fullReview.style.display = 'block';
         element.textContent = 'Show less';
+        element.innerHTML = 'Show less <i class="fas fa-chevron-up"></i>';
     } else {
         shortReview.style.display = 'block';
         fullReview.style.display = 'none';
         element.textContent = 'Read more';
+        element.innerHTML = 'Read more <i class="fas fa-chevron-down"></i>';
     }
 }
+
+// ============ DELETE CONFIRMATION ============
+document.querySelectorAll('.btn-delete').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+        if (!confirm('⚠️ Are you sure you want to delete this review? This action cannot be undone.')) {
+            e.preventDefault();
+        }
+    });
+});
+
+// ============ ANIMATE STATS ON LOAD ============
+document.addEventListener('DOMContentLoaded', function() {
+    const statNumbers = document.querySelectorAll('.stat-number');
+    statNumbers.forEach(stat => {
+        const finalValue = parseInt(stat.textContent);
+        let currentValue = 0;
+        const increment = Math.ceil(finalValue / 20);
+        const duration = 500;
+        const stepTime = Math.floor(duration / 20);
+        
+        const timer = setInterval(() => {
+            currentValue += increment;
+            if (currentValue >= finalValue) {
+                currentValue = finalValue;
+                clearInterval(timer);
+            }
+            stat.textContent = currentValue;
+        }, stepTime);
+    });
+});
 </script>
 
 <style>
-    @media (max-width: 480px) {
-        .filter-section {
-            flex-direction: column !important;
-            align-items: stretch !important;
-        }
-        .review-card {
-            padding: 12px !important;
-        }
-    }
-</style>
+/* ============ CONTAINER ============ */
+.my-reviews-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 15px;
+}
 
+/* ============ PAGE HEADER ============ */
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #e9ecef;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.page-header h1 {
+    margin: 0;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #1a1a2e;
+}
+
+.page-header h1 i {
+    color: #ffc107;
+    margin-right: 10px;
+}
+
+.page-header .subtitle {
+    margin: 4px 0 0;
+    color: #6c757d;
+    font-size: 0.85rem;
+}
+
+.header-stats {
+    display: flex;
+    gap: 20px;
+}
+
+.stat-item {
+    text-align: center;
+}
+
+.stat-number {
+    display: block;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #1a1a2e;
+}
+
+.stat-label {
+    font-size: 0.65rem;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+/* ============ FILTER SECTION ============ */
+.filter-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.filter-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.filter-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #495057;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.filter-label i {
+    color: #007bff;
+    margin-right: 4px;
+}
+
+.filter-buttons {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.filter-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #495057;
+    transition: all 0.2s;
+}
+
+.filter-btn:hover {
+    background: #e9ecef;
+}
+
+.filter-btn.active {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+.filter-btn .filter-count {
+    padding: 0 6px;
+    background: rgba(0,0,0,0.1);
+    border-radius: 10px;
+    font-size: 0.6rem;
+    font-weight: 600;
+}
+
+.filter-btn.active .filter-count {
+    background: rgba(255,255,255,0.2);
+    color: white;
+}
+
+.btn-write-review {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 16px;
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+
+.btn-write-review:hover {
+    background: #218838;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+}
+
+/* ============ REVIEWS LIST ============ */
+.reviews-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* ============ REVIEW CARD ============ */
+.review-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 0px;
+    padding: 20px;
+    transition: all 0.2s;
+}
+
+.review-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.review-card.status-approved {
+    border-left: 4px solid #28a745;
+}
+
+.review-card.status-pending {
+    border-left: 4px solid #ffc107;
+}
+
+.review-card.status-rejected {
+    border-left: 4px solid #dc3545;
+}
+
+/* ============ REVIEW HEADER ============ */
+.review-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.review-left {
+    flex: 1;
+}
+
+.review-rating {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    margin-bottom: 4px;
+}
+
+.review-rating .star {
+    font-size: 1rem;
+}
+
+.review-rating .star.filled { color: #ffc107; }
+.review-rating .star.empty { color: #dee2e6; }
+
+.rating-text {
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin-left: 4px;
+}
+
+.review-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1a1a2e;
+}
+
+.review-right {
+    flex-shrink: 0;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.status-approved { background: #d4edda; color: #155724; }
+.status-pending { background: #fff3cd; color: #856404; }
+.status-rejected { background: #f8d7da; color: #721c24; }
+
+/* ============ REVIEW BODY ============ */
+.review-body {
+    margin-bottom: 12px;
+}
+
+.review-comment {
+    font-size: 0.85rem;
+    color: #495057;
+    line-height: 1.6;
+}
+
+.review-comment p {
+    margin: 0 0 8px 0;
+}
+
+.read-more-link,
+.read-less-link {
+    color: #007bff;
+    text-decoration: none;
+    font-size: 0.8rem;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.read-more-link:hover,
+.read-less-link:hover {
+    text-decoration: underline;
+}
+
+.read-more-link i,
+.read-less-link i {
+    font-size: 0.6rem;
+    transition: transform 0.2s;
+}
+
+/* ============ REVIEW FOOTER ============ */
+.review-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 12px;
+    border-top: 1px solid #e9ecef;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.review-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.meta-item {
+    font-size: 0.7rem;
+    color: #6c757d;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.meta-item i {
+    font-size: 0.65rem;
+}
+
+.resource-link {
+    color: #007bff;
+    text-decoration: none;
+}
+
+.resource-link:hover {
+    text-decoration: underline;
+}
+
+.badge-verified {
+    font-size: 0.6rem;
+    background: #d4edda;
+    color: #155724;
+    padding: 2px 8px;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.badge-helpful {
+    font-size: 0.6rem;
+    background: #e3f2fd;
+    color: #004085;
+    padding: 2px 8px;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+
+/* ============ REVIEW ACTIONS ============ */
+.review-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.action-status {
+    font-size: 0.7rem;
+    font-weight: 500;
+}
+
+.pending-status {
+    color: #856404;
+}
+
+.approved-status {
+    color: #28a745;
+}
+
+.rejected-status {
+    color: #dc3545;
+}
+
+.rejection-reason {
+    font-size: 0.7rem;
+    color: #6c757d;
+    cursor: pointer;
+    padding: 2px 8px;
+    border: 1px dashed #dee2e6;
+    border-radius: 4px;
+}
+
+.rejection-reason:hover {
+    background: #f8f9fa;
+}
+
+.btn-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+
+.btn-edit {
+    background: #e3f2fd;
+    color: #0056b3;
+}
+
+.btn-edit:hover {
+    background: #007bff;
+    color: white;
+}
+
+.btn-delete {
+    background: #fce4ec;
+    color: #c82333;
+}
+
+.btn-delete:hover {
+    background: #dc3545;
+    color: white;
+}
+
+/* ============ PAGINATION ============ */
+.pagination-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 24px;
+    padding: 12px 16px;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.pagination-info {
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+
+.total-items {
+    margin-left: 8px;
+    padding: 2px 8px;
+    background: white;
+    border-radius: 4px;
+    border: 1px solid #e9ecef;
+}
+
+.pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.page-btn {
+    padding: 4px 10px;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    text-decoration: none;
+    color: #007bff;
+    transition: all 0.2s;
+    font-size: 0.8rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+}
+
+.page-btn:hover:not(.disabled) {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+.page-btn.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.page-current {
+    padding: 4px 12px;
+    background: #007bff;
+    color: white;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 0.8rem;
+    min-width: 32px;
+    text-align: center;
+}
+
+/* ============ EMPTY STATE ============ */
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+}
+
+.empty-icon {
+    font-size: 4rem;
+    color: #ffc107;
+    margin-bottom: 16px;
+}
+
+.empty-state h2 {
+    margin: 0 0 8px;
+    font-size: 1.3rem;
+    color: #1a1a2e;
+}
+
+.empty-state p {
+    color: #6c757d;
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.empty-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.empty-actions .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 20px;
+    background: #28a745;
+    color: white;
+    text-decoration: none;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+}
+
+.empty-actions .btn-primary:hover {
+    background: #218838;
+    transform: translateY(-1px);
+}
+
+.empty-actions .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 20px;
+    background: #6c757d;
+    color: white;
+    text-decoration: none;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+}
+
+.empty-actions .btn-secondary:hover {
+    background: #5a6268;
+}
+
+.empty-tips {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid #e9ecef;
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.tip-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    color: #495057;
+}
+
+.tip-badge i {
+    color: #ffc107;
+}
+
+/* ============ RESPONSIVE ============ */
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .header-stats {
+        width: 100%;
+        justify-content: space-around;
+    }
+    
+    .filter-section {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .filter-left {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .filter-buttons {
+        width: 100%;
+    }
+    
+    .filter-btn {
+        flex: 1;
+        justify-content: center;
+    }
+    
+    .btn-write-review {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .review-footer {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .review-meta {
+        width: 100%;
+        justify-content: flex-start;
+    }
+    
+    .review-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+    
+    .pagination-section {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .pagination-controls {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .review-card {
+        padding: 16px;
+    }
+    
+    .stat-number {
+        font-size: 1.1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .header-stats {
+        gap: 10px;
+    }
+    
+    .stat-item {
+        flex: 1;
+        min-width: 60px;
+    }
+    
+    .stat-number {
+        font-size: 1rem;
+    }
+    
+    .stat-label {
+        font-size: 0.55rem;
+    }
+    
+    .review-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .review-card {
+        padding: 12px;
+    }
+    
+    .review-rating .star {
+        font-size: 0.85rem;
+    }
+    
+    .review-actions {
+        flex-wrap: wrap;
+    }
+    
+    .btn-action {
+        font-size: 0.65rem;
+        padding: 3px 8px;
+    }
+    
+    .empty-tips {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .filter-buttons {
+        flex-wrap: wrap;
+    }
+    
+    .filter-btn {
+        font-size: 0.65rem;
+        padding: 3px 8px;
+    }
+}
+</style>
 {% endblock %}

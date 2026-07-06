@@ -89,7 +89,6 @@
                 {% endfor %}
             {% else %}
                 <div class="empty-recent">
-                    <img src="{% static 'bookings/images/no-recent.svg' %}" alt="No recently viewed" style="max-width: 100px;">
                     <p>No equipment viewed recently</p>
                     <a href="{% url 'bookings:equipment_list' %}" class="btn-browse">
                         Browse Equipment

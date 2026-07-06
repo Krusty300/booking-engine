@@ -675,22 +675,62 @@ class MeetingRoomAdmin(admin.ModelAdmin):
         }),
     )
 
-# ============ ANALYTICS ============
+
+# ============ ANALYTICS ADMIN ============
 
 @admin.register(AnalyticsEvent)
 class AnalyticsEventAdmin(admin.ModelAdmin):
-    list_display = ['event_type', 'user', 'created_at']
+    list_display = ['event_type', 'user', 'created_at', 'ip_address']
     list_filter = ['event_type', 'created_at']
-    search_fields = ['user__username', 'url']
+    search_fields = ['user__username', 'url', 'ip_address']
     readonly_fields = ['created_at']
     date_hierarchy = 'created_at'
+    
+    fieldsets = (
+        ('Event Information', {
+            'fields': ('event_type', 'user', 'url')
+        }),
+        ('Technical Details', {
+            'fields': ('ip_address', 'user_agent', 'metadata')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at',)
+        }),
+    )
+    
+    def has_add_permission(self, request):
+        return False
+    
+    def has_change_permission(self, request, obj=None):
+        return False
 
 @admin.register(DailyAnalytics)
 class DailyAnalyticsAdmin(admin.ModelAdmin):
-    list_display = ['date', 'total_users', 'active_users', 'new_users', 'total_bookings']
+    list_display = ['date', 'total_users', 'active_users', 'new_users', 'total_bookings', 'total_revenue']
     list_filter = ['date']
     readonly_fields = ['created_at', 'updated_at']
     date_hierarchy = 'date'
+    
+    fieldsets = (
+        ('Date', {
+            'fields': ('date',)
+        }),
+        ('User Statistics', {
+            'fields': ('total_users', 'active_users', 'new_users')
+        }),
+        ('Booking Statistics', {
+            'fields': ('total_bookings', 'total_revenue', 'page_views')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at')
+        }),
+    )
+    
+    def has_add_permission(self, request):
+        return False
+    
+    def has_change_permission(self, request, obj=None):
+        return False
 
 # ============ SAVED SEARCH ============
 

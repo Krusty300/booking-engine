@@ -1,61 +1,63 @@
 {% extends 'bookings/base.html' %}
+{% load static %}
 
 {% block content %}
 <div class="booking-detail-container">
-    <!-- Header -->
+    <!-- Page Header -->
     <div class="detail-header">
         <div>
             <h1>Booking Details</h1>
             <p class="subtitle">Booking #{{ booking.id }} - {{ booking.resource.name }}</p>
         </div>
         <div class="header-actions">
-            <a href="{% url 'bookings:my_bookings' %}" class="btn-back">← Back to My Bookings</a>
+            <a href="{% url 'bookings:my_bookings' %}" class="btn-back">
+                <i class="fas fa-arrow-left"></i> Back to My Bookings
+            </a>
         </div>
     </div>
 
     <!-- Status Banner -->
     <div class="status-banner status-{{ booking.status|lower }}">
-        <span class="status-icon">
-            {% if booking.status == 'PENDING' %}⏳
-            {% elif booking.status == 'CONFIRMED' %}✅
-            {% elif booking.status == 'CANCELLED' %}❌
-            {% elif booking.status == 'COMPLETED' %}📌
+        <div class="status-content">
+            <span class="status-text">
+                Status: <strong>{{ booking.get_status_display }}</strong>
+            </span>
+            {% if booking.is_upcoming %}
+                <span class="status-badge upcoming"><i class="fas fa-calendar-day"></i> Upcoming</span>
+            {% elif booking.is_past and booking.status != 'CANCELLED' %}
+                <span class="status-badge past"><i class="fas fa-history"></i> Past</span>
             {% endif %}
-        </span>
-        <span class="status-text">
-            Status: <strong>{{ booking.get_status_display }}</strong>
-        </span>
-        {% if booking.is_upcoming %}
-            <span class="status-badge upcoming">Upcoming</span>
-        {% elif booking.is_past %}
-            <span class="status-badge past">Past</span>
-        {% endif %}
+        </div>
+        <div class="status-time">
+            <i class="far fa-clock"></i>
+            {{ booking.start_time|date:"M d, Y" }}
+        </div>
     </div>
 
     <!-- Main Content -->
     <div class="detail-grid">
         <!-- Left Column: Booking Information -->
         <div class="detail-card">
-            <h2>Booking Information</h2>
+            <h3><i class="fas fa-info-circle"></i> Booking Information</h3>
             <table class="detail-table">
                 <tr>
-                    <th>Booking ID</th>
-                    <td>#{{ booking.id }}</td>
+                    <th><i class="fas fa-hashtag"></i> Booking ID</th>
+                    <td><strong>#{{ booking.id }}</strong></td>
                 </tr>
                 <tr>
-                    <th>Start Time</th>
+                    <th><i class="far fa-calendar-alt"></i> Start Time</th>
                     <td>{{ booking.start_time|date:"l, F d, Y at H:i" }}</td>
                 </tr>
                 <tr>
-                    <th>End Time</th>
+                    <th><i class="far fa-calendar-alt"></i> End Time</th>
                     <td>{{ booking.end_time|date:"l, F d, Y at H:i" }}</td>
                 </tr>
                 <tr>
-                    <th>Duration</th>
-                    <td>{{ booking.get_duration }} hours</td>
+                    <th><i class="fas fa-clock"></i> Duration</th>
+                    <td><strong>{{ booking.get_duration }} hours</strong></td>
                 </tr>
                 <tr>
-                    <th>Status</th>
+                    <th><i class="fas fa-tag"></i> Status</th>
                     <td>
                         <span class="status-badge status-{{ booking.status|lower }}">
                             {{ booking.get_status_display }}
@@ -63,17 +65,17 @@
                     </td>
                 </tr>
                 <tr>
-                    <th>Created</th>
+                    <th><i class="far fa-calendar-plus"></i> Created</th>
                     <td>{{ booking.created_at|date:"F d, Y at H:i" }}</td>
                 </tr>
                 <tr>
-                    <th>Last Updated</th>
+                    <th><i class="far fa-calendar-alt"></i> Last Updated</th>
                     <td>{{ booking.updated_at|date:"F d, Y at H:i" }}</td>
                 </tr>
                 {% if booking.notes %}
                 <tr>
-                    <th>Notes</th>
-                    <td>{{ booking.notes }}</td>
+                    <th><i class="fas fa-sticky-note"></i> Notes</th>
+                    <td>{{ booking.notes|linebreaks }}</td>
                 </tr>
                 {% endif %}
             </table>
@@ -83,16 +85,16 @@
                 {% if can_cancel %}
                     <a href="{% url 'bookings:cancel_booking' booking.id %}" 
                        class="btn-cancel" 
-                       onclick="return confirm('Are you sure you want to cancel this booking?')">
-                        Cancel Booking
+                       onclick="return confirm('⚠️ Are you sure you want to cancel this booking?')">
+                        <i class="fas fa-times"></i> Cancel Booking
                     </a>
                 {% endif %}
                 <div class="export-buttons">
-                    <a href="{% url 'bookings:export_single_booking_pdf' booking.id %}" class="btn-export-pdf">
-                        Export as PDF
+                    <a href="{% url 'bookings:export_single_booking_pdf' booking.id %}" class="btn-export-pdf" title="Export as PDF">
+                        <i class="fas fa-file-pdf"></i> PDF
                     </a>
-                    <a href="{% url 'bookings:export_single_booking_html' booking.id %}" class="btn-export-html">
-                        Export as HTML
+                    <a href="{% url 'bookings:export_single_booking_html' booking.id %}" class="btn-export-html" title="Export as HTML">
+                        <i class="fas fa-file-code"></i> HTML
                     </a>
                 </div>
             </div>
@@ -100,54 +102,54 @@
 
         <!-- Right Column: Resource Information -->
         <div class="detail-card">
-            <h2>Resource Information</h2>
+            <h3><i class="fas fa-cube"></i> Resource Information</h3>
             
             <!-- Resource Image -->
             {% if has_image %}
                 <div class="resource-image">
                     <img src="{{ image_url }}" alt="{{ resource.name }}" 
-                         onerror="this.src='/static/bookings/images/default-resource.png'">
+                         onerror="this.src='{% static 'bookings/images/default-resource.png' %}'">
                 </div>
             {% endif %}
             
             <table class="detail-table">
                 <tr>
-                    <th>Resource Name</th>
+                    <th><i class="fas fa-tag"></i> Resource Name</th>
                     <td><strong>{{ resource.name }}</strong></td>
                 </tr>
                 <tr>
-                    <th>Category</th>
+                    <th><i class="fas fa-folder"></i> Category</th>
                     <td>{{ category.name|default:"Uncategorized" }}</td>
                 </tr>
                 <tr>
-                    <th>Description</th>
-                    <td>{{ resource.description|default:"No description" }}</td>
+                    <th><i class="fas fa-align-left"></i> Description</th>
+                    <td>{{ resource.description|default:"No description"|truncatewords:20 }}</td>
                 </tr>
                 <tr>
-                    <th>Location</th>
+                    <th><i class="fas fa-map-marker-alt"></i> Location</th>
                     <td>{{ resource.location|default:"Not specified" }}</td>
                 </tr>
                 <tr>
-                    <th>Max Capacity</th>
+                    <th><i class="fas fa-users"></i> Max Capacity</th>
                     <td>{{ resource.max_capacity }} people</td>
                 </tr>
                 <tr>
-                    <th>Price per Hour</th>
-                    <td>{% if resource.price_per_hour %}${{ resource.price_per_hour }}{% else %}Free{% endif %}</td>
+                    <th><i class="fas fa-dollar-sign"></i> Price per Hour</th>
+                    <td>{% if resource.price_per_hour %}${{ resource.price_per_hour }}{% else %}<span class="free-text">Free</span>{% endif %}</td>
                 </tr>
                 <tr>
-                    <th>Owner</th>
+                    <th><i class="fas fa-user"></i> Owner</th>
                     <td>{{ resource.owner.username|default:"No owner" }}</td>
                 </tr>
                 <tr>
-                    <th>Created</th>
+                    <th><i class="far fa-calendar-alt"></i> Created</th>
                     <td>{{ resource.created_at|date:"F d, Y" }}</td>
                 </tr>
             </table>
             
             <div class="resource-actions">
                 <a href="{% url 'bookings:resource_detail' resource.id %}" class="btn-resource-detail">
-                    View Resource Details
+                    <i class="fas fa-eye"></i> View Resource Details
                 </a>
             </div>
         </div>
@@ -156,9 +158,10 @@
     <!-- Meeting Room Details (if applicable) -->
     {% if meeting_room %}
     <div class="meeting-room-section">
-        <h2>Meeting Room Details</h2>
+        <h3><i class="fas fa-door-open"></i> Meeting Room Details</h3>
         <div class="meeting-room-grid">
             <div class="room-info">
+                <h4><i class="fas fa-info-circle"></i> Room Information</h4>
                 <table class="detail-table">
                     <tr>
                         <th>Room Number</th>
@@ -176,26 +179,34 @@
                         <th>Room Size</th>
                         <td>{% if meeting_room.room_size_sqft %}{{ meeting_room.room_size_sqft }} sq ft{% else %}Not specified{% endif %}</td>
                     </tr>
+                    <tr>
+                        <th>Setup Time</th>
+                        <td>{{ meeting_room.default_setup_time }} minutes</td>
+                    </tr>
+                    <tr>
+                        <th>Teardown Time</th>
+                        <td>{{ meeting_room.default_teardown_time }} minutes</td>
+                    </tr>
                 </table>
             </div>
             <div class="room-capacity">
-                <h4>Capacities</h4>
+                <h4><i class="fas fa-users"></i> Capacities</h4>
                 <table class="detail-table">
                     <tr>
                         <th>Seating</th>
-                        <td>{{ meeting_room.seating_capacity }}</td>
+                        <td><strong>{{ meeting_room.seating_capacity }}</strong></td>
                     </tr>
                     <tr>
                         <th>Standing</th>
-                        <td>{{ meeting_room.standing_capacity }}</td>
+                        <td><strong>{{ meeting_room.standing_capacity }}</strong></td>
                     </tr>
                     <tr>
                         <th>Classroom</th>
-                        <td>{{ meeting_room.classroom_capacity }}</td>
+                        <td><strong>{{ meeting_room.classroom_capacity }}</strong></td>
                     </tr>
                     <tr>
                         <th>Theater</th>
-                        <td>{{ meeting_room.theater_capacity }}</td>
+                        <td><strong>{{ meeting_room.theater_capacity }}</strong></td>
                     </tr>
                 </table>
             </div>
@@ -204,10 +215,10 @@
         <!-- Features -->
         {% if meeting_room.get_features_list %}
         <div class="features-section">
-            <h4>Features</h4>
+            <h4><i class="fas fa-check-circle"></i> Features</h4>
             <div class="features-list">
                 {% for feature in meeting_room.get_features_list %}
-                    <span class="feature-tag">{{ feature }}</span>
+                    <span class="feature-tag"><i class="fas fa-check"></i> {{ feature }}</span>
                 {% endfor %}
             </div>
         </div>
@@ -216,7 +227,7 @@
         <!-- Amenities -->
         {% if amenities %}
         <div class="amenities-section">
-            <h4>Amenities</h4>
+            <h4><i class="fas fa-gem"></i> Amenities</h4>
             <div class="amenities-list">
                 {% for amenity in amenities %}
                     <span class="amenity-tag">{{ amenity.name }}</span>
@@ -224,34 +235,29 @@
             </div>
         </div>
         {% endif %}
-        
-        <!-- Setup/Teardown -->
-        <div class="setup-info">
-            {% if meeting_room.default_setup_time %}
-                <span>Setup Time: <strong>{{ meeting_room.default_setup_time }} minutes</strong></span>
-            {% endif %}
-            {% if meeting_room.default_teardown_time %}
-                <span>Teardown Time: <strong>{{ meeting_room.default_teardown_time }} minutes</strong></span>
-            {% endif %}
-        </div>
     </div>
     {% endif %}
 
     <!-- Footer -->
     <div class="detail-footer">
-        <p>Generated on {{ now|date:"F d, Y at H:i" }}</p>
-        <a href="{% url 'bookings:my_bookings' %}" class="btn-back">← Back to My Bookings</a>
+        <p>
+            <i class="far fa-clock"></i> Generated on {{ now|date:"F d, Y at H:i" }}
+        </p>
+        <a href="{% url 'bookings:my_bookings' %}" class="btn-back-footer">
+            <i class="fas fa-arrow-left"></i> Back to My Bookings
+        </a>
     </div>
 </div>
 
 <style>
-/* Container */
+/* ============ CONTAINER ============ */
 .booking-detail-container {
     max-width: 1000px;
     margin: 0 auto;
+    padding: 0 16px;
 }
 
-/* Header */
+/* ============ HEADER ============ */
 .detail-header {
     display: flex;
     justify-content: space-between;
@@ -259,44 +265,62 @@
     margin-bottom: 24px;
     padding-bottom: 16px;
     border-bottom: 2px solid #e9ecef;
+    flex-wrap: wrap;
+    gap: 16px;
 }
 
 .detail-header h1 {
     margin: 0;
-    font-size: 1.8rem;
+    font-size: 1.6rem;
     font-weight: 700;
+    color: #1a1a2e;
+}
+
+.detail-header h1 i {
+    color: #007bff;
+    margin-right: 10px;
 }
 
 .detail-header .subtitle {
     margin: 4px 0 0;
     color: #6c757d;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
+}
+
+.header-actions {
+    flex-shrink: 0;
 }
 
 .btn-back {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     padding: 8px 16px;
     background: #f8f9fa;
     color: #495057;
     text-decoration: none;
     border: 1px solid #dee2e6;
+    border-radius: 6px;
     font-size: 0.85rem;
     font-weight: 500;
-    transition: all 0.2s ease;
+    transition: all 0.2s;
 }
 
 .btn-back:hover {
     background: #e9ecef;
+    color: #212529;
 }
 
-/* Status Banner */
+/* ============ STATUS BANNER ============ */
 .status-banner {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 14px 20px;
+    gap: 16px;
+    padding: 16px 20px;
     margin-bottom: 24px;
+    border-radius: 0px;
     border-left: 4px solid;
+    flex-wrap: wrap;
 }
 
 .status-banner.status-pending {
@@ -320,16 +344,44 @@
 }
 
 .status-icon {
-    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.6);
+    font-size: 1.2rem;
+}
+
+.status-pending .status-icon { color: #856404; }
+.status-confirmed .status-icon { color: #155724; }
+.status-cancelled .status-icon { color: #721c24; }
+.status-completed .status-icon { color: #0c5460; }
+
+.status-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    flex-wrap: wrap;
 }
 
 .status-text {
     font-size: 0.95rem;
+    color: #495057;
+}
+
+.status-text strong {
+    color: #1a1a2e;
 }
 
 .status-badge {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
     padding: 3px 12px;
+    border-radius: 20px;
     font-size: 0.7rem;
     font-weight: 600;
 }
@@ -344,7 +396,16 @@
     color: white;
 }
 
-/* Detail Grid */
+.status-time {
+    margin-left: auto;
+    font-size: 0.8rem;
+    color: #6c757d;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* ============ DETAIL GRID ============ */
 .detail-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -355,16 +416,23 @@
 .detail-card {
     background: white;
     border: 1px solid #e9ecef;
+    border-radius: 8px;
     padding: 20px;
 }
 
-.detail-card h2 {
+.detail-card h3 {
     margin: 0 0 16px 0;
-    font-size: 1.1rem;
+    font-size: 1rem;
     font-weight: 600;
+    color: #1a1a2e;
 }
 
-/* Detail Table */
+.detail-card h3 i {
+    color: #007bff;
+    margin-right: 6px;
+}
+
+/* ============ DETAIL TABLE ============ */
 .detail-table {
     width: 100%;
     border-collapse: collapse;
@@ -383,8 +451,15 @@
     text-align: left;
     padding: 8px 12px 8px 0;
     font-weight: 600;
-    color: #495057;
+    color: #6c757d;
     width: 35%;
+    font-size: 0.8rem;
+}
+
+.detail-table th i {
+    margin-right: 4px;
+    color: #007bff;
+    width: 16px;
 }
 
 .detail-table td {
@@ -392,48 +467,77 @@
     color: #1a1a2e;
 }
 
-/* Status Badge in Table */
+.detail-table td strong {
+    color: #1a1a2e;
+}
+
+.free-text {
+    color: #28a745;
+    font-weight: 600;
+}
+
+/* ============ STATUS BADGE IN TABLE ============ */
+.status-badge {
+    display: inline-block;
+    padding: 3px 12px;
+    border-radius: 20px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
 .status-badge.status-pending { background: #fff3cd; color: #856404; }
 .status-badge.status-confirmed { background: #d4edda; color: #155724; }
 .status-badge.status-cancelled { background: #f8d7da; color: #721c24; }
 .status-badge.status-completed { background: #d1ecf1; color: #0c5460; }
 
-/* Resource Image */
+/* ============ RESOURCE IMAGE ============ */
 .resource-image {
     margin-bottom: 16px;
     text-align: center;
+    background: #f8f9fa;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid #e9ecef;
 }
 
 .resource-image img {
     max-width: 100%;
     max-height: 200px;
     object-fit: cover;
-    border: 1px solid #e9ecef;
 }
 
-/* Action Buttons */
+/* ============ ACTION BUTTONS ============ */
 .action-buttons {
     display: flex;
     flex-direction: column;
     gap: 8px;
     margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #e9ecef;
 }
 
 .btn-cancel {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     padding: 10px 16px;
     background: #dc3545;
     color: white;
     text-decoration: none;
-    border-radius: 4px;
+    border-radius: 6px;
     font-size: 0.85rem;
     font-weight: 600;
-    text-align: center;
-    transition: background 0.2s;
+    transition: all 0.2s;
 }
 
 .btn-cancel:hover {
     background: #c82333;
     color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
 }
 
 .export-buttons {
@@ -443,13 +547,16 @@
 
 .btn-export-pdf,
 .btn-export-html {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
     flex: 1;
     padding: 8px 16px;
     text-decoration: none;
-    border-radius: 4px;
+    border-radius: 6px;
     font-size: 0.8rem;
     font-weight: 500;
-    text-align: center;
     transition: all 0.2s;
 }
 
@@ -473,17 +580,25 @@
     color: #856404;
 }
 
+/* ============ RESOURCE ACTIONS ============ */
+.resource-actions {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #e9ecef;
+}
+
 .btn-resource-detail {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     padding: 8px 16px;
     background: #17a2b8;
     color: white;
     text-decoration: none;
-    border-radius: 4px;
+    border-radius: 6px;
     font-size: 0.85rem;
     font-weight: 500;
-    margin-top: 12px;
-    transition: background 0.2s;
+    transition: all 0.2s;
 }
 
 .btn-resource-detail:hover {
@@ -491,18 +606,25 @@
     color: white;
 }
 
-/* Meeting Room Section */
+/* ============ MEETING ROOM SECTION ============ */
 .meeting-room-section {
     background: white;
     border: 1px solid #e9ecef;
+    border-radius: 8px;
     padding: 20px;
     margin-bottom: 24px;
 }
 
-.meeting-room-section h2 {
+.meeting-room-section h3 {
     margin: 0 0 16px 0;
-    font-size: 1.1rem;
+    font-size: 1rem;
     font-weight: 600;
+    color: #1a1a2e;
+}
+
+.meeting-room-section h3 i {
+    color: #007bff;
+    margin-right: 6px;
 }
 
 .meeting-room-grid {
@@ -517,8 +639,25 @@
 .features-section h4,
 .amenities-section h4 {
     margin: 0 0 8px 0;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     font-weight: 600;
+    color: #495057;
+}
+
+.room-info h4 i,
+.room-capacity h4 i,
+.features-section h4 i,
+.amenities-section h4 i {
+    color: #007bff;
+    margin-right: 4px;
+}
+
+/* ============ FEATURES & AMENITIES ============ */
+.features-section,
+.amenities-section {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #e9ecef;
 }
 
 .features-list,
@@ -530,34 +669,28 @@
 }
 
 .feature-tag {
-    display: inline-block;
-    padding: 3px 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 12px;
     background: #e3f2fd;
-    color: #0c5460;
-    font-size: 0.75rem;
-    border-radius: 4px;
+    color: #004085;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 500;
 }
 
 .amenity-tag {
     display: inline-block;
-    padding: 3px 12px;
+    padding: 4px 12px;
     background: #f3e5f5;
     color: #4a148c;
-    font-size: 0.75rem;
-    border-radius: 4px;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 500;
 }
 
-.setup-info {
-    margin-top: 16px;
-    padding-top: 16px;
-    border-top: 1px solid #e9ecef;
-    display: flex;
-    gap: 20px;
-    font-size: 0.85rem;
-    color: #6c757d;
-}
-
-/* Footer */
+/* ============ FOOTER ============ */
 .detail-footer {
     display: flex;
     justify-content: space-between;
@@ -566,12 +699,35 @@
     border-top: 1px solid #e9ecef;
     font-size: 0.8rem;
     color: #6c757d;
+    flex-wrap: wrap;
+    gap: 12px;
 }
 
-/* Responsive */
+.btn-back-footer {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: #f8f9fa;
+    color: #495057;
+    text-decoration: none;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.btn-back-footer:hover {
+    background: #e9ecef;
+    color: #212529;
+}
+
+/* ============ RESPONSIVE ============ */
 @media (max-width: 768px) {
     .detail-grid {
         grid-template-columns: 1fr;
+        gap: 16px;
     }
     
     .detail-header {
@@ -586,7 +742,7 @@
     
     .btn-back {
         width: 100%;
-        text-align: center;
+        justify-content: center;
     }
     
     .meeting-room-grid {
@@ -597,31 +753,77 @@
         flex-direction: column;
     }
     
+    .btn-export-pdf,
+    .btn-export-html {
+        width: 100%;
+    }
+    
     .detail-footer {
         flex-direction: column;
-        gap: 10px;
         text-align: center;
+        align-items: center;
+    }
+    
+    .status-banner {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .status-time {
+        margin-left: 0;
+    }
+    
+    .status-content {
+        justify-content: center;
     }
 }
 
 @media (max-width: 480px) {
+    .booking-detail-container {
+        padding: 0 8px;
+    }
+    
     .detail-card {
-        padding: 16px;
+        padding: 14px;
+    }
+    
+    .detail-card h3 {
+        font-size: 0.9rem;
     }
     
     .detail-table {
-        font-size: 0.8rem;
+        font-size: 0.75rem;
     }
     
     .detail-table th {
         width: 40%;
+        padding: 6px 8px 6px 0;
     }
     
-    .action-buttons .btn-cancel,
-    .action-buttons .btn-export-pdf,
-    .action-buttons .btn-export-html {
-        width: 100%;
-        text-align: center;
+    .detail-table td {
+        padding: 6px 0;
+    }
+    
+    .detail-header h1 {
+        font-size: 1.3rem;
+    }
+    
+    .status-banner {
+        padding: 12px 14px;
+    }
+    
+    .status-text {
+        font-size: 0.85rem;
+    }
+    
+    .meeting-room-section {
+        padding: 14px;
+    }
+    
+    .feature-tag,
+    .amenity-tag {
+        font-size: 0.6rem;
+        padding: 3px 8px;
     }
 }
 </style>

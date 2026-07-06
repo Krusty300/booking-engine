@@ -1,8 +1,9 @@
 {% extends 'bookings/base.html' %}
+{% load static %}
 
 {% block content %}
 <div class="reservations-container">
-    <!-- Header -->
+    <!-- Page Header -->
     <div class="page-header">
         <div>
             <h1>My Reservations</h1>
@@ -12,75 +13,119 @@
             <a href="{% url 'bookings:create_reservation' %}" class="btn-primary">
                 New Reservation
             </a>
-            <a href="{% url 'bookings:reservation_calendar' %}" class="btn-secondary">Calendar View</a>
+            <a href="{% url 'bookings:reservation_calendar' %}" class="btn-secondary">
+                Calendar View
+            </a>
         </div>
     </div>
 
     <!-- Statistics -->
     <div class="stats-grid">
         <div class="stat-card">
-            <div class="stat-number">{{ total }}</div>
-            <div class="stat-label">Total Reservations</div>
+            <div class="stat-icon"><i class="fas fa-list"></i></div>
+            <div class="stat-content">
+                <span class="stat-number">{{ total }}</span>
+                <span class="stat-label">Total</span>
+            </div>
         </div>
         <div class="stat-card stat-pending">
-            <div class="stat-number">{{ pending }}</div>
-            <div class="stat-label">Pending</div>
+            <div class="stat-icon"><i class="fas fa-clock"></i></div>
+            <div class="stat-content">
+                <span class="stat-number">{{ pending }}</span>
+                <span class="stat-label">Pending</span>
+            </div>
         </div>
         <div class="stat-card stat-confirmed">
-            <div class="stat-number">{{ confirmed }}</div>
-            <div class="stat-label">Confirmed</div>
+            <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+            <div class="stat-content">
+                <span class="stat-number">{{ confirmed }}</span>
+                <span class="stat-label">Confirmed</span>
+            </div>
         </div>
         <div class="stat-card stat-cancelled">
-            <div class="stat-number">{{ cancelled }}</div>
-            <div class="stat-label">Cancelled</div>
+            <div class="stat-icon"><i class="fas fa-times-circle"></i></div>
+            <div class="stat-content">
+                <span class="stat-number">{{ cancelled }}</span>
+                <span class="stat-label">Cancelled</span>
+            </div>
         </div>
         {% if is_staff %}
             <div class="stat-card stat-expired">
-                <div class="stat-number">{{ expired }}</div>
-                <div class="stat-label">Expired</div>
+                <div class="stat-icon"><i class="fas fa-hourglass-end"></i></div>
+                <div class="stat-content">
+                    <span class="stat-number">{{ expired }}</span>
+                    <span class="stat-label">Expired</span>
+                </div>
             </div>
             <div class="stat-card stat-completed">
-                <div class="stat-number">{{ completed }}</div>
-                <div class="stat-label">Completed</div>
+                <div class="stat-icon"><i class="fas fa-check-double"></i></div>
+                <div class="stat-content">
+                    <span class="stat-number">{{ completed }}</span>
+                    <span class="stat-label">Completed</span>
+                </div>
             </div>
         {% endif %}
     </div>
 
-    <!-- Admin: Show all reservations with user info -->
+    <!-- Admin Banner -->
     {% if is_staff %}
         <div class="admin-banner">
+            <i class="fas fa-user-shield"></i>
             <span>Showing all reservations (Staff/Admin View)</span>
         </div>
     {% endif %}
 
     <!-- Filters -->
     <div class="filter-section">
-        <div class="filter-actions">
-            <a href="?status=all" class="filter-btn {% if status_filter == 'all' %}active{% endif %}">All</a>
-            {% for value, label in status_choices %}
-                <a href="?status={{ value }}" class="filter-btn {% if status_filter == value %}active{% endif %}">
-                    {{ label }}
+        <div class="filter-left">
+            <span class="filter-label"><i class="fas fa-filter"></i> Filter by status:</span>
+            <div class="filter-actions">
+                <a href="?status=all" class="filter-btn {% if status_filter == 'all' %}active{% endif %}">
+                    All
+                    <span class="filter-count">{{ total }}</span>
                 </a>
-            {% endfor %}
+                {% for value, label in status_choices %}
+                    <a href="?status={{ value }}" class="filter-btn {% if status_filter == value %}active{% endif %}">
+                        {{ label }}
+                        <span class="filter-count">
+                            {% if value == 'PENDING' %}{{ pending }}
+                            {% elif value == 'CONFIRMED' %}{{ confirmed }}
+                            {% elif value == 'CANCELLED' %}{{ cancelled }}
+                            {% elif value == 'EXPIRED' %}{{ expired }}
+                            {% elif value == 'COMPLETED' %}{{ completed }}
+                            {% endif %}
+                        </span>
+                    </a>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="filter-right">
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="searchReservations" placeholder="Search reservations..." oninput="filterReservations()">
+            </div>
         </div>
     </div>
 
     <!-- Reservations List -->
     {% if reservations %}
-        <div class="reservations-grid">
+        <div class="reservations-grid" id="reservationsGrid">
             {% for reservation in reservations %}
-                <div class="reservation-card status-{{ reservation.status|lower }}">
+                <div class="reservation-card status-{{ reservation.status|lower }}" data-search="{{ reservation.equipment.name }} {{ reservation.user.username }} {{ reservation.purpose|default:'' }}">
                     <div class="card-header">
-                        <div>
-                            <h3>{{ reservation.equipment.name }}</h3>
-                            <!-- OWNER INFO HERE -->
+                        <div class="card-title-group">
+                            <h3>
+                                <a href="{% url 'bookings:reservation_detail' reservation.id %}" class="reservation-link">
+                                    {{ reservation.equipment.name }}
+                                </a>
+                            </h3>
                             <div class="equipment-owner-info">
-                                <span class="owner-label">Owner:</span>
+                                <span class="owner-label"><i class="fas fa-user"></i> Owner:</span>
                                 {% if reservation.equipment.owner %}
                                     <span class="owner-name">
                                         {{ reservation.equipment.owner.username }}
                                         {% if reservation.equipment.owner == request.user %}
-                                            <span class="you-badge">(You)</span>
+                                            <span class="you-badge">You</span>
                                         {% endif %}
                                     </span>
                                 {% else %}
@@ -94,40 +139,39 @@
                     </div>
                     
                     <div class="card-details">
-                        <!-- Show user info for staff -->
                         {% if is_staff %}
-                            <p><span class="label">User:</span> {{ reservation.user.username }}</p>
+                            <p><span class="label"><i class="fas fa-user"></i> User:</span> {{ reservation.user.username }}</p>
                         {% endif %}
-                        <p><span class="label">Start:</span> {{ reservation.start_date|date:"M d, Y H:i" }}</p>
-                        <p><span class="label">End:</span> {{ reservation.end_date|date:"M d, Y H:i" }}</p>
-                        <p><span class="label">Duration:</span> {{ reservation.get_duration_days }} days</p>
-                        <p><span class="label">Serial:</span> {{ reservation.equipment.serial_number }}</p>
+                        <p><span class="label"><i class="far fa-calendar-alt"></i> Start:</span> {{ reservation.start_date|date:"M d, Y H:i" }}</p>
+                        <p><span class="label"><i class="far fa-calendar-alt"></i> End:</span> {{ reservation.end_date|date:"M d, Y H:i" }}</p>
+                        <p><span class="label"><i class="fas fa-clock"></i> Duration:</span> {{ reservation.get_duration_days }} days</p>
+                        <p><span class="label"><i class="fas fa-barcode"></i> Serial:</span> {{ reservation.equipment.serial_number }}</p>
                         {% if reservation.purpose %}
-                            <p><span class="label">Purpose:</span> {{ reservation.purpose|truncatewords:10 }}</p>
+                            <p><span class="label"><i class="fas fa-bullseye"></i> Purpose:</span> {{ reservation.purpose|truncatewords:10 }}</p>
                         {% endif %}
                     </div>
                     
                     <div class="card-actions">
-                        <a href="{% url 'bookings:reservation_detail' reservation.id %}" class="btn-view">View Details</a>
+                        <a href="{% url 'bookings:reservation_detail' reservation.id %}" class="btn-view">
+                            <i class="fas fa-eye"></i> View Details
+                        </a>
                         
-                        <!-- Cancel button - visible to user or staff -->
                         {% if reservation.can_cancel %}
                             {% if reservation.user == request.user or is_staff %}
                                 <form method="post" action="{% url 'bookings:cancel_reservation' reservation.id %}" style="display: inline;">
                                     {% csrf_token %}
-                                    <button type="submit" class="btn-cancel" onclick="return confirm('Cancel this reservation?')">
-                                        Cancel
+                                    <button type="submit" class="btn-cancel" onclick="return confirm(' Cancel this reservation?')">
+                                        <i class="fas fa-times"></i> Cancel
                                     </button>
                                 </form>
                             {% endif %}
                         {% endif %}
                         
-                        <!-- Confirm button - ONLY visible to staff with PENDING status -->
                         {% if is_staff and reservation.status == 'PENDING' %}
                             <form method="post" action="{% url 'bookings:confirm_reservation' reservation.id %}" style="display: inline;">
                                 {% csrf_token %}
-                                <button type="submit" class="btn-confirm" onclick="return confirm('Confirm this reservation?')">
-                                    Confirm
+                                <button type="submit" class="btn-confirm" onclick="return confirm(' Confirm this reservation?')">
+                                    <i class="fas fa-check"></i> Confirm
                                 </button>
                             </form>
                         {% endif %}
@@ -137,23 +181,66 @@
         </div>
     {% else %}
         <div class="empty-state">
+            <div class="empty-icon">
+                <i class="fas fa-calendar-plus"></i>
+            </div>
             <h2>No Reservations Found</h2>
             <p>You haven't made any equipment reservations yet.</p>
             <div class="empty-actions">
-                <a href="{% url 'bookings:create_reservation' %}" class="btn-primary">Make a Reservation</a>
-                <a href="{% url 'bookings:equipment_list' %}" class="btn-secondary">Browse Equipment</a>
+                <a href="{% url 'bookings:create_reservation' %}" class="btn-primary">
+                    <i class="fas fa-plus"></i> Make a Reservation
+                </a>
+                <a href="{% url 'bookings:equipment_list' %}" class="btn-secondary">
+                    <i class="fas fa-search"></i> Browse Equipment
+                </a>
+            </div>
+            <div class="empty-tips">
+                <span class="tip-badge"><i class="fas fa-lightbulb"></i> Reservations help you secure equipment</span>
+                <span class="tip-badge"><i class="fas fa-check-circle"></i> Pending reservations need confirmation</span>
+                <span class="tip-badge"><i class="fas fa-clock"></i> Plan ahead for busy periods</span>
             </div>
         </div>
     {% endif %}
 </div>
 
+<script>
+// ============ SEARCH FUNCTIONALITY ============
+function filterReservations() {
+    const searchInput = document.getElementById('searchReservations');
+    const query = searchInput.value.toLowerCase().trim();
+    const cards = document.querySelectorAll('.reservation-card');
+    
+    cards.forEach(card => {
+        const searchData = card.dataset.search || '';
+        if (searchData.toLowerCase().includes(query)) {
+            card.style.display = '';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+}
+
+// ============ KEYBOARD SHORTCUT ============
+document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.key === 'f') {
+        e.preventDefault();
+        const searchInput = document.getElementById('searchReservations');
+        if (searchInput) {
+            searchInput.focus();
+        }
+    }
+});
+</script>
+
 <style>
+/* ============ CONTAINER ============ */
 .reservations-container {
     max-width: 1200px;
     margin: 0 auto;
     padding: 0 15px;
 }
 
+/* ============ PAGE HEADER ============ */
 .page-header {
     display: flex;
     justify-content: space-between;
@@ -162,13 +249,19 @@
     padding-bottom: 16px;
     border-bottom: 2px solid #e9ecef;
     flex-wrap: wrap;
-    gap: 10px;
+    gap: 16px;
 }
 
 .page-header h1 {
     margin: 0;
     font-size: 1.6rem;
     font-weight: 700;
+    color: #1a1a2e;
+}
+
+.page-header h1 i {
+    color: #007bff;
+    margin-right: 10px;
 }
 
 .page-header .subtitle {
@@ -183,113 +276,173 @@
     flex-wrap: wrap;
 }
 
-.btn-primary {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 18px;
-    background: #b1d7ff;
-    color: white;
-    text-decoration: none;
-    border-radius: 0px;
-    font-weight: 600;
-    font-size: 0.85rem;
-    transition: all 0.2s;
-}
-
-.btn-primary:hover {
-    background: blanchedalmond;
-    color: white;
-    transform: translateY(-1px);
-}
-
+.btn-primary,
 .btn-secondary {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    padding: 8px 18px;
-    background: #b1d7ff;
-    color: white;
-    text-decoration: none;
-    border-radius: 0px;
+    gap: 6px;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
     font-weight: 600;
     font-size: 0.85rem;
+    text-decoration: none;
     transition: all 0.2s;
 }
 
-.btn-secondary:hover {
-    background: blanchedalmond;
+.btn-primary {
+    background: #007bff;
     color: white;
 }
 
-.admin-banner {
-    background: #cce5ff;
-    color: #004085;
-    padding: 10px 16px;
-    margin-bottom: 20px;
-    border-left: 4px solid #007bff;
-    border-radius: 0px;
+.btn-primary:hover {
+    background: #0056b3;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
 }
 
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+    color: white;
+}
+
+/* ============ STATISTICS ============ */
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: 16px;
     margin-bottom: 24px;
 }
 
 .stat-card {
     background: white;
-    padding: 14px 18px;
+    padding: 16px 20px;
     border: 1px solid #e9ecef;
-    border-radius: 0spx;
-    text-align: center;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: all 0.2s;
 }
 
-.stat-card .stat-number {
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.stat-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+.stat-card .stat-icon { background: #e3f2fd; color: #007bff; }
+.stat-pending .stat-icon { background: #fff3cd; color: #ffc107; }
+.stat-confirmed .stat-icon { background: #d4edda; color: #28a745; }
+.stat-cancelled .stat-icon { background: #fce4ec; color: #dc3545; }
+.stat-expired .stat-icon { background: #e9ecef; color: #6c757d; }
+.stat-completed .stat-icon { background: #d1ecf1; color: #17a2b8; }
+
+.stat-content {
+    flex: 1;
+}
+
+.stat-number {
     display: block;
-    font-size: 1.6rem;
+    font-size: 1.4rem;
     font-weight: 700;
     color: #1a1a2e;
+    line-height: 1.2;
 }
 
-.stat-card .stat-label {
-    font-size: 0.75rem;
+.stat-label {
+    font-size: 0.7rem;
     color: #6c757d;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.3px;
 }
 
-.stat-pending .stat-number { color: #ffc107; }
-.stat-confirmed .stat-number { color: #28a745; }
-.stat-cancelled .stat-number { color: #dc3545; }
-.stat-expired .stat-number { color: #6c757d; }
-.stat-completed .stat-number { color: #17a2b8; }
-
-.filter-section {
-    margin-bottom: 24px;
-    background: #f8f9fa;
-    padding: 12px 16px;
-    border: 1px solid #e9ecef;
+/* ============ ADMIN BANNER ============ */
+.admin-banner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #cce5ff;
+    color: #004085;
+    padding: 10px 16px;
+    margin-bottom: 20px;
+    border-left: 4px solid #000000;
     border-radius: 0px;
+}
+
+.admin-banner i {
+    font-size: 1rem;
+}
+
+/* ============ FILTER SECTION ============ */
+.filter-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.filter-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.filter-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #495057;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.filter-label i {
+    color: #007bff;
+    margin-right: 4px;
 }
 
 .filter-actions {
     display: flex;
-    gap: 6px;
+    gap: 4px;
     flex-wrap: wrap;
 }
 
 .filter-btn {
-    padding: 5px 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
     background: white;
     border: 1px solid #dee2e6;
+    border-radius: 6px;
     text-decoration: none;
-    color: #495057;
     font-size: 0.75rem;
     font-weight: 500;
+    color: #495057;
     transition: all 0.2s;
-    border-radius: 0px;
 }
 
 .filter-btn:hover {
@@ -302,23 +455,71 @@
     border-color: #007bff;
 }
 
+.filter-btn .filter-count {
+    padding: 0 6px;
+    background: rgba(0,0,0,0.1);
+    border-radius: 10px;
+    font-size: 0.6rem;
+    font-weight: 600;
+}
+
+.filter-btn.active .filter-count {
+    background: rgba(255,255,255,0.2);
+    color: white;
+}
+
+.filter-right {
+    flex-shrink: 0;
+}
+
+.search-box {
+    display: flex;
+    align-items: center;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 4px 12px;
+    transition: all 0.2s;
+}
+
+.search-box:focus-within {
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.search-box i {
+    color: #6c757d;
+    font-size: 0.8rem;
+}
+
+.search-box input {
+    border: none;
+    padding: 4px 10px;
+    font-size: 0.85rem;
+    outline: none;
+    background: transparent;
+    min-width: 150px;
+}
+
+/* ============ RESERVATIONS GRID ============ */
 .reservations-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
     gap: 20px;
 }
 
+/* ============ RESERVATION CARD ============ */
 .reservation-card {
     background: white;
     border: 1px solid #e9ecef;
     border-radius: 0px;
-    padding: 18px;
+    padding: 20px;
     transition: all 0.2s;
 }
 
 .reservation-card:hover {
-    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    transform: translateY(-3px);
 }
 
 .reservation-card.status-pending { border-left: 4px solid #ffc107; }
@@ -327,12 +528,18 @@
 .reservation-card.status-expired { border-left: 4px solid #6c757d; }
 .reservation-card.status-completed { border-left: 4px solid #17a2b8; }
 
+/* ============ CARD HEADER ============ */
 .card-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 10px;
-    gap: 8px;
+    margin-bottom: 12px;
+    gap: 10px;
+}
+
+.card-title-group {
+    flex: 1;
+    min-width: 0;
 }
 
 .card-header h3 {
@@ -341,8 +548,18 @@
     font-weight: 600;
 }
 
+.reservation-link {
+    color: #1a1a2e;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.reservation-link:hover {
+    color: #007bff;
+}
+
 .equipment-owner-info {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     color: #6c757d;
     margin-top: 2px;
 }
@@ -351,16 +568,20 @@
     font-weight: 600;
 }
 
+.owner-label i {
+    margin-right: 2px;
+}
+
 .owner-name {
     color: #495057;
 }
 
 .you-badge {
-    background: #000000;
-    color: white;
+    background: #ffffff;
+    color: rgb(0, 0, 0);
     padding: 1px 6px;
-    border-radius: 0px;
-    font-size: 0.6rem;
+    border-radius: 4px;
+    font-size: 0.55rem;
     font-weight: 600;
     margin-left: 4px;
 }
@@ -370,12 +591,16 @@
     font-style: italic;
 }
 
+/* ============ STATUS BADGE ============ */
 .status-badge {
-    padding: 2px 10px;
-    font-size: 0.7rem;
+    display: inline-block;
+    padding: 3px 12px;
+    border-radius: 10px;
+    font-size: 0.65rem;
     font-weight: 600;
     white-space: nowrap;
-    border-radius: 0px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
 }
 
 .status-pending .status-badge { background: #fff3cd; color: #856404; }
@@ -384,19 +609,28 @@
 .status-expired .status-badge { background: #e2e3e5; color: #383d41; }
 .status-completed .status-badge { background: #d1ecf1; color: #0c5460; }
 
+/* ============ CARD DETAILS ============ */
 .card-details p {
     margin: 4px 0;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     color: #495057;
 }
 
 .card-details .label {
     font-weight: 600;
     color: #6c757d;
+    font-size: 0.75rem;
 }
 
+.card-details .label i {
+    margin-right: 4px;
+    width: 14px;
+    color: #007bff;
+}
+
+/* ============ CARD ACTIONS ============ */
 .card-actions {
-    margin-top: 12px;
+    margin-top: 14px;
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
@@ -404,12 +638,15 @@
 
 .card-actions a,
 .card-actions button {
-    padding: 4px 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 14px;
     font-size: 0.75rem;
     font-weight: 600;
     text-decoration: none;
     border: none;
-    border-radius: 0px;
+    border-radius: 6px;
     cursor: pointer;
     transition: all 0.2s;
 }
@@ -444,37 +681,104 @@
     color: white;
 }
 
+/* ============ EMPTY STATE ============ */
 .empty-state {
     text-align: center;
     padding: 60px 20px;
-    background: #f8f9fa;
-    border: 2px dashed #dee2e6;
-    border-radius: 0px;
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
 }
 
 .empty-icon {
     font-size: 4rem;
+    color: #adb5bd;
     margin-bottom: 16px;
 }
 
 .empty-state h2 {
     margin: 0 0 8px;
     font-size: 1.3rem;
+    color: #1a1a2e;
 }
 
 .empty-state p {
     color: #6c757d;
+    font-size: 0.9rem;
     margin-bottom: 20px;
 }
 
 .empty-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.empty-actions .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 20px;
+    background: #007bff;
+    color: white;
+    text-decoration: none;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+}
+
+.empty-actions .btn-primary:hover {
+    background: #0056b3;
+    transform: translateY(-1px);
+}
+
+.empty-actions .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 20px;
+    background: #6c757d;
+    color: white;
+    text-decoration: none;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+}
+
+.empty-actions .btn-secondary:hover {
+    background: #5a6268;
+}
+
+.empty-tips {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid #e9ecef;
     display: flex;
     gap: 10px;
     justify-content: center;
     flex-wrap: wrap;
 }
 
-/* Responsive */
+.tip-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    color: #495057;
+}
+
+.tip-badge i {
+    color: #ffc107;
+}
+
+/* ============ RESPONSIVE ============ */
 @media (max-width: 992px) {
     .stats-grid {
         grid-template-columns: repeat(3, 1fr);
@@ -485,7 +789,6 @@
     .page-header {
         flex-direction: column;
         align-items: flex-start;
-        gap: 12px;
     }
     
     .header-actions {
@@ -501,6 +804,48 @@
     .stats-grid {
         grid-template-columns: repeat(2, 1fr);
         gap: 10px;
+    }
+    
+    .stat-card {
+        padding: 12px 16px;
+    }
+    
+    .stat-number {
+        font-size: 1.2rem;
+    }
+    
+    .filter-section {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .filter-left {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .filter-actions {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+    
+    .filter-btn {
+        flex: 1;
+        justify-content: center;
+        min-width: 60px;
+    }
+    
+    .filter-right {
+        width: 100%;
+    }
+    
+    .search-box {
+        width: 100%;
+    }
+    
+    .search-box input {
+        width: 100%;
+        min-width: unset;
     }
     
     .reservations-grid {
@@ -519,15 +864,15 @@
     .card-actions a,
     .card-actions button {
         width: 100%;
-        text-align: center;
-    }
-    
-    .filter-actions {
-        flex-wrap: wrap;
+        justify-content: center;
     }
 }
 
 @media (max-width: 480px) {
+    .reservations-container {
+        padding: 0 8px;
+    }
+    
     .stats-grid {
         grid-template-columns: 1fr 1fr;
         gap: 8px;
@@ -537,12 +882,18 @@
         padding: 10px 12px;
     }
     
-    .stat-card .stat-number {
-        font-size: 1.2rem;
+    .stat-number {
+        font-size: 1rem;
     }
     
-    .stat-card .stat-label {
-        font-size: 0.65rem;
+    .stat-label {
+        font-size: 0.6rem;
+    }
+    
+    .stat-icon {
+        width: 36px;
+        height: 36px;
+        font-size: 1rem;
     }
     
     .reservation-card {
@@ -551,6 +902,20 @@
     
     .page-header h1 {
         font-size: 1.3rem;
+    }
+    
+    .filter-btn {
+        font-size: 0.65rem;
+        padding: 3px 8px;
+    }
+    
+    .card-details p {
+        font-size: 0.75rem;
+    }
+    
+    .empty-tips {
+        flex-direction: column;
+        align-items: center;
     }
 }
 </style>

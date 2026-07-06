@@ -1,203 +1,337 @@
-from django.db.models import Count, Sum, Q
+from django.db import models
 from django.utils import timezone
-from datetime import timedelta
-from ..models import Booking, Resource, UserProfile
+from django.db.models import Count, Sum, Avg, Q
+from datetime import datetime, timedelta
+from bookings.models import Booking, Resource, UserProfile, Review, AnalyticsEvent
 
 class AnalyticsService:
-    """Service for analytics and reporting"""
-
+    """Service for handling analytics and statistics"""
+    
     @staticmethod
-    def get_dashboard_stats(request):
-        """Get statistics for admin dashboard"""
+    def get_dashboard_stats(request=None):
+        """Get all dashboard statistics"""
         now = timezone.now()
-        thirty_days_ago = now - timedelta(days=30)
-
-        # Booking stats
-        total_bookings = Booking.objects.count()
-        confirmed_bookings = Booking.objects.filter(status='CONFIRMED').count()
-        cancelled_bookings = Booking.objects.filter(status='CANCELLED').count()
-        completed_bookings = Booking.objects.filter(status='COMPLETED').count()
+        last_30_days = now - timedelta(days=30)
+        last_7_days = now - timedelta(days=7)
         
-        # User stats
+        # Total bookings
+        total_bookings = Booking.objects.count()
+        
+        # Bookings in last 30 days
+        recent_bookings = Booking.objects.filter(created_at__gte=last_30_days).count()
+        
+        # Total users
         total_users = UserProfile.objects.count()
-        active_users = UserProfile.objects.filter(last_activity__gte=thirty_days_ago).count()
         
         # New users in last 30 days
-        new_users = UserProfile.objects.filter(user__date_joined__gte=thirty_days_ago).count()
+        new_users = UserProfile.objects.filter(created_at__gte=last_30_days).count()
         
-        # Revenue (if applicable)
-        total_revenue = 0  # Calculate if you have a price field
+        # Total revenue (assuming price_per_hour * duration)
+        total_revenue = Booking.objects.filter(
+            status='CONFIRMED',
+            resource__price_per_hour__isnull=False
+        ).aggregate(
+            total=Sum(
+                models.ExpressionWrapper(
+                    models.F('resource__price_per_hour') * 
+                    models.F('end_time') - models.F('start_time'),
+                    output_field=models.DecimalField()
+                )
+            )
+        )['total'] or 0
         
-        # Booking trends for last 30 days
-        booking_trends = []
-        for i in range(30):
-            day = thirty_days_ago + timedelta(days=i)
-            day_start = day.replace(hour=0, minute=0, second=0, microsecond=0)
-            day_end = day.replace(hour=23, minute=59, second=59, microsecond=999999)
-            count = Booking.objects.filter(created_at__gte=day_start, created_at__lte=day_end).count()
-            booking_trends.append({
-                'date': day.strftime('%Y-%m-%d'),
-                'count': count
-            })
+        # Average rating
+        avg_rating = Review.objects.filter(status='APPROVED').aggregate(
+            avg=models.Avg('rating')
+        )['avg'] or 0
         
-        # Category distribution
-        category_distribution = []
-        for resource in Resource.objects.all():
-            count = Booking.objects.filter(resource=resource).count()
-            if count > 0:
-                category_distribution.append({
-                    'name': resource.name,
-                    'count': count
-                })
+        # Calculate growth percentages
+        prev_30_days = now - timedelta(days=60)
+        prev_30_booking_count = Booking.objects.filter(
+            created_at__gte=prev_30_days,
+            created_at__lt=last_30_days
+        ).count()
         
-        # Status distribution
-        status_distribution = [
-            {'status': 'Confirmed', 'count': confirmed_bookings},
-            {'status': 'Pending', 'count': Booking.objects.filter(status='PENDING').count()},
-            {'status': 'Cancelled', 'count': cancelled_bookings},
-            {'status': 'Completed', 'count': completed_bookings},
-        ]
+        booking_growth = AnalyticsService._calculate_growth(recent_bookings, prev_30_booking_count)
         
-        # Popular resources
-        popular_resources = Resource.objects.annotate(
-            booking_count=Count('bookings')
-        ).order_by('-booking_count')[:10]
+        prev_30_user_count = UserProfile.objects.filter(
+            created_at__gte=prev_30_days,
+            created_at__lt=last_30_days
+        ).count()
         
-        # Recent bookings
-        recent_bookings = Booking.objects.all().order_by('-created_at')[:10]
+        user_growth = AnalyticsService._calculate_growth(new_users, prev_30_user_count)
+        
+        # Recent activities
+        recent_activities = AnalyticsService._get_recent_activities(limit=10)
         
         return {
             'total_bookings': total_bookings,
-            'confirmed_bookings': confirmed_bookings,
-            'cancelled_bookings': cancelled_bookings,
-            'completed_bookings': completed_bookings,
             'total_users': total_users,
-            'active_users': active_users,
-            'new_users': new_users,
-            'total_revenue': total_revenue,
-            'booking_trends': booking_trends,
-            'category_distribution': category_distribution,
-            'status_distribution': status_distribution,
-            'popular_resources': popular_resources,
-            'recent_bookings': recent_bookings,
+            'total_revenue': float(total_revenue),
+            'avg_rating': round(float(avg_rating), 1),
+            'booking_growth': booking_growth,
+            'user_growth': user_growth,
+            'revenue_growth': 12,  # Placeholder
+            'recent_activities': recent_activities,
         }
-
+    
+    @staticmethod
+    def _calculate_growth(current, previous):
+        """Calculate growth percentage between two numbers"""
+        if previous == 0:
+            return 100 if current > 0 else 0
+        return round(((current - previous) / previous) * 100)
+    
+    @staticmethod
+    def _get_recent_activities(limit=10):
+        """Get recent activities from analytics events"""
+        events = AnalyticsEvent.objects.all().order_by('-created_at')[:limit]
+        activities = []
+        
+        for event in events:
+            activity = {
+                'icon': 'circle',
+                'text': f"{event.get_event_type_display()}",
+                'time': event.created_at
+            }
+            
+            if event.user:
+                activity['text'] = f"{event.user.username} {activity['text'].lower()}"
+            
+            if event.metadata and 'resource_name' in event.metadata:
+                activity['text'] += f" - {event.metadata['resource_name']}"
+            
+            activities.append(activity)
+        
+        return activities
+    
     @staticmethod
     def get_booking_analytics(period='month'):
         """Get booking analytics for charts"""
-        # Simplified version - expand as needed
+        now = timezone.now()
+        
+        if period == '7d':
+            start_date = now - timedelta(days=7)
+            days = 7
+        elif period == '90d':
+            start_date = now - timedelta(days=90)
+            days = 90
+        else:  # 30d default
+            start_date = now - timedelta(days=30)
+            days = 30
+        
+        # Get bookings grouped by date
+        bookings = Booking.objects.filter(
+            created_at__gte=start_date
+        ).extra(
+            select={'date': 'date(created_at)'}
+        ).values('date').annotate(
+            count=Count('id')
+        ).order_by('date')
+        
+        # Create labels and data
+        labels = []
+        data = []
+        
+        for i in range(days):
+            date = start_date + timedelta(days=i)
+            date_str = date.strftime('%Y-%m-%d')
+            labels.append(date.strftime('%b %d'))
+            
+            booking_count = next(
+                (b['count'] for b in bookings if b['date'].strftime('%Y-%m-%d') == date_str),
+                0
+            )
+            data.append(booking_count)
+        
         return {
-            'period': period,
-            'data': []
+            'labels': labels,
+            'data': data
         }
-
+    
     @staticmethod
-    def get_user_analytics():
-        """Get user analytics"""
-        return {
-            'total_users': UserProfile.objects.count(),
-            'active_users': 0,
-            'inactive_users': 0,
-            'new_users_trend': [],
-            'users_with_bookings': 0,
-            'users_with_resources': 0,
-            'engagement_rate': 0,
-            'top_users': []
+    def get_status_distribution():
+        """Get booking status distribution"""
+        statuses = Booking.objects.values('status').annotate(
+            count=Count('id')
+        ).order_by('-count')
+        
+        status_labels = {
+            'PENDING': 'Pending',
+            'CONFIRMED': 'Confirmed',
+            'COMPLETED': 'Completed',
+            'CANCELLED': 'Cancelled',
         }
-
-    @staticmethod
-    def get_resource_analytics():
-        """Get resource analytics"""
+        
+        labels = []
+        data = []
+        
+        for status in statuses:
+            labels.append(status_labels.get(status['status'], status['status']))
+            data.append(status['count'])
+        
         return {
-            'resource_popularity': [],
-            'category_counts': [],
-            'status_counts': [],
-            'popular_hours': {}
+            'labels': labels,
+            'data': data
         }
-
+    
     @staticmethod
     def get_hourly_patterns():
         """Get hourly booking patterns"""
-        return {}
-
+        # Get bookings grouped by hour
+        bookings = Booking.objects.extra(
+            select={'hour': "strftime('%H', start_time)"}
+        ).values('hour').annotate(
+            count=Count('id')
+        ).order_by('hour')
+        
+        # Create full 24-hour data
+        hours = [str(i).zfill(2) + ':00' for i in range(24)]
+        counts = [0] * 24
+        
+        for booking in bookings:
+            hour = int(booking['hour'])
+            if 0 <= hour < 24:
+                counts[hour] = booking['count']
+        
+        return {
+            'labels': hours,
+            'data': counts
+        }
+    
+    @staticmethod
+    def get_resource_analytics():
+        """Get resource analytics"""
+        # Get popular resources
+        popular_resources = Resource.objects.annotate(
+            booking_count=Count('bookings')
+        ).filter(
+            booking_count__gt=0
+        ).order_by('-booking_count')[:10]
+        
+        popularity = []
+        for resource in popular_resources:
+            popularity.append({
+                'name': resource.name,
+                'count': resource.booking_count
+            })
+        
+        # Category distribution
+        category_distribution = Resource.objects.values('category__name').annotate(
+            count=Count('id')
+        ).order_by('-count')
+        
+        categories = []
+        for cat in category_distribution:
+            categories.append({
+                'name': cat['category__name'] or 'Uncategorized',
+                'count': cat['count']
+            })
+        
+        return {
+            'popularity': popularity,
+            'categories': categories
+        }
+    
+    @staticmethod
+    def get_user_analytics():
+        """Get user analytics"""
+        total_users = UserProfile.objects.count()
+        active_users = UserProfile.objects.filter(
+            last_activity__gte=timezone.now() - timedelta(days=30)
+        ).count()
+        
+        # Users with bookings
+        users_with_bookings = UserProfile.objects.filter(
+            user__booking__isnull=False
+        ).distinct().count()
+        
+        # New users trend (last 30 days)
+        now = timezone.now()
+        start_date = now - timedelta(days=30)
+        
+        new_users_trend = UserProfile.objects.filter(
+            created_at__gte=start_date
+        ).extra(
+            select={'date': 'date(created_at)'}
+        ).values('date').annotate(
+            count=Count('id')
+        ).order_by('date')
+        
+        trend_data = []
+        for i in range(30):
+            date = start_date + timedelta(days=i)
+            date_str = date.strftime('%Y-%m-%d')
+            count = next(
+                (u['count'] for u in new_users_trend if u['date'].strftime('%Y-%m-%d') == date_str),
+                0
+            )
+            trend_data.append({
+                'date': date.strftime('%b %d'),
+                'count': count
+            })
+        
+        return {
+            'total_users': total_users,
+            'active_users': active_users,
+            'inactive_users': total_users - active_users,
+            'users_with_bookings': users_with_bookings,
+            'new_users_trend': trend_data,
+            'engagement_rate': round((users_with_bookings / total_users * 100) if total_users > 0 else 0, 1)
+        }
+    
     @staticmethod
     def get_weekly_trends():
         """Get weekly booking trends"""
-        return {}
-
-    @staticmethod
-    def get_status_distribution():
-        """Get status distribution"""
-        return {}
-
+        now = timezone.now()
+        weeks = 8
+        start_date = now - timedelta(weeks=weeks)
+        
+        trends = []
+        for i in range(weeks):
+            week_start = start_date + timedelta(weeks=i)
+            week_end = week_start + timedelta(days=7)
+            
+            count = Booking.objects.filter(
+                created_at__gte=week_start,
+                created_at__lt=week_end
+            ).count()
+            
+            trends.append({
+                'week': f"Week {i+1}",
+                'count': count,
+                'start_date': week_start,
+                'end_date': week_end
+            })
+        
+        return {
+            'labels': [t['week'] for t in trends],
+            'data': [t['count'] for t in trends]
+        }
+    
     @staticmethod
     def get_monthly_trends():
         """Get monthly booking trends"""
-        return {}
-
-    @staticmethod
-    def export_bookings_csv():
-        """Export bookings as CSV"""
-        import csv
-        from io import StringIO
+        now = timezone.now()
+        months = 12
+        start_date = now - timedelta(days=365)
         
-        output = StringIO()
-        writer = csv.writer(output)
-        writer.writerow(['ID', 'Resource', 'Customer', 'Start Time', 'End Time', 'Status', 'Created At'])
+        trends = []
+        for i in range(months):
+            month_start = start_date + timedelta(days=30*i)
+            month_end = month_start + timedelta(days=30)
+            
+            count = Booking.objects.filter(
+                created_at__gte=month_start,
+                created_at__lt=month_end
+            ).count()
+            
+            trends.append({
+                'month': month_start.strftime('%B %Y'),
+                'count': count
+            })
         
-        for booking in Booking.objects.all():
-            writer.writerow([
-                booking.id,
-                booking.resource.name,
-                booking.customer.username,
-                booking.start_time.strftime('%Y-%m-%d %H:%M'),
-                booking.end_time.strftime('%Y-%m-%d %H:%M'),
-                booking.get_status_display(),
-                booking.created_at.strftime('%Y-%m-%d %H:%M')
-            ])
-        
-        return output.getvalue()
-
-    @staticmethod
-    def export_users_csv():
-        """Export users as CSV"""
-        import csv
-        from io import StringIO
-        
-        output = StringIO()
-        writer = csv.writer(output)
-        writer.writerow(['Username', 'Email', 'Date Joined', 'Last Login', 'Is Staff'])
-        
-        for profile in UserProfile.objects.all():
-            user = profile.user
-            writer.writerow([
-                user.username,
-                user.email,
-                user.date_joined.strftime('%Y-%m-%d %H:%M'),
-                user.last_login.strftime('%Y-%m-%d %H:%M') if user.last_login else '',
-                'Yes' if user.is_staff else 'No'
-            ])
-        
-        return output.getvalue()
-
-    @staticmethod
-    def export_resources_csv():
-        """Export resources as CSV"""
-        import csv
-        from io import StringIO
-        
-        output = StringIO()
-        writer = csv.writer(output)
-        writer.writerow(['ID', 'Name', 'Description', 'Status', 'Owner', 'Created At'])
-        
-        for resource in Resource.objects.all():
-            writer.writerow([
-                resource.id,
-                resource.name,
-                resource.description,
-                resource.get_status_display(),
-                resource.owner.username if resource.owner else '',
-                resource.created_at.strftime('%Y-%m-%d %H:%M')
-            ])
-        
-        return output.getvalue()
+        return {
+            'labels': [t['month'] for t in trends],
+            'data': [t['count'] for t in trends]
+        }

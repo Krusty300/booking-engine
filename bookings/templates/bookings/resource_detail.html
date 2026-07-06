@@ -5,26 +5,26 @@
 <!-- Resource Image and Header -->
 <div style="display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 20px;">
     <!-- Image -->
-    <div style="flex: 0 0 500px; max-width: 100%;">
-        <div style="background: #ffffff; overflow: hidden; position: relative; min-height: 200px;">
+    <div style="flex: 0 0 500px; max-width: 100%; width: 100%;">
+        <div style="background: #ffffff; overflow: hidden; position: relative; min-height: 200px; width: 100%;">
             <!-- Priority: room_photo for meeting rooms, then image, then image_url, then default -->
             {% if resource.is_meeting_room and resource.meeting_room.room_photo %}
                 <img src="{{ resource.meeting_room.room_photo.url }}" alt="{{ resource.name }}" 
-                     style="width: 100%; height: 100%; object-fit: cover; min-height: 200px;">
+                     style="width: 100%; height: auto; object-fit: cover; min-height: 200px; max-height: 400px;">
             {% elif resource.image %}
                 <img src="{{ resource.image.url }}" alt="{{ resource.name }}" 
-                     style="width: 100%; height: 100%; object-fit: cover; min-height: 200px;">
+                     style="width: 100%; height: auto; object-fit: cover; min-height: 200px; max-height: 400px;">
             {% elif resource.image_url %}
                 <img src="{{ resource.image_url }}" alt="{{ resource.name }}" 
-                     style="width: 100%; height: 100%; object-fit: cover; min-height: 200px;">
+                     style="width: 100%; height: auto; object-fit: cover; min-height: 200px; max-height: 400px;">
             {% else %}
                 <img src="/static/bookings/images/default-resource.png" alt="No image available" 
-                     style="width: 100%; height: 100%; object-fit: cover; min-height: 200px;">
+                     style="width: 100%; height: auto; object-fit: cover; min-height: 200px; max-height: 400px;">
             {% endif %}
             
             <!-- Category Badge on Image -->
             {% if resource.category %}
-                <div style="position: absolute; bottom: 10px; left: 10px; background: {{ resource.category.color }}; color: white; padding: 4px 14px; font-size: 0.7rem; font-weight: 600; opacity: 0.95;">
+                <div style="position: absolute; bottom: 10px; left: 10px; background: {{ resource.category.color }}; color: white; padding: 4px 14px; font-size: 0.7rem; font-weight: 600; opacity: 0.95; max-width: calc(100% - 20px);">
                     {% if resource.category.icon %}<i class="{{ resource.category.icon }}"></i> {% endif %}{{ resource.category.name }}
                 </div>
             {% endif %}
@@ -46,25 +46,25 @@
     </div>
     
     <!-- Resource Info -->
-    <div style="flex: 1; min-width: 600px;">
-        <h1 style="font-size: 1.6rem; font-weight: 800; margin: 0 0 5px 0;">{{ resource.name }}</h1>
-        <p style="font-size: 0.9rem; color: #6c757d; margin: 0 0 10px 0;">{{ resource.description }}</p>
+    <div style="flex: 1; min-width: 280px; width: 100%;">
+        <h1 style="font-size: 1.6rem; font-weight: 800; margin: 0 0 5px 0; word-wrap: break-word;">{{ resource.name }}</h1>
+        <p style="font-size: 0.9rem; color: #6c757d; margin: 0 0 10px 0; word-wrap: break-word;">{{ resource.description }}</p>
         
         <!-- Category Display -->
         {% if resource.category %}
-            <div style="margin: 8px 0 12px 0;">
-                <span style="background: {{ resource.category.color }}; color: white; padding: 3px 14px; font-size: 0.75rem; font-weight: 600; display: inline-block;">
+            <div style="margin: 8px 0 12px 0; word-wrap: break-word;">
+                <span style="background: {{ resource.category.color }}; color: white; padding: 3px 14px; font-size: 0.75rem; font-weight: 600; display: inline-block; max-width: 100%;">
                     {% if resource.category.icon %}<i class="{{ resource.category.icon }}"></i> {% endif %}
                     {{ resource.category.name }}
                 </span>
                 {% if resource.category.description %}
-                    <span style="font-size: 0.75rem; color: #6c757d; margin-left: 8px;">- {{ resource.category.description }}</span>
+                    <span style="font-size: 0.75rem; color: #6c757d; margin-left: 8px; display: inline-block;">- {{ resource.category.description }}</span>
                 {% endif %}
             </div>
         {% endif %}
         
         {% if resource.location %}
-            <p style="font-size: 0.85rem; margin: 5px 0;"><strong>Location:</strong> {{ resource.location }}</p>
+            <p style="font-size: 0.85rem; margin: 5px 0; word-wrap: break-word;"><strong>Location:</strong> {{ resource.location }}</p>
         {% endif %}
         
         {% if resource.max_capacity %}
@@ -79,9 +79,9 @@
         
         <!-- Category Rules Display -->
         {% if category_rules %}
-            <div style="margin: 12px 0; padding: 12px; background: #f8f9fa; font-size: 0.8rem; border-left: 3px solid {{ resource.category.color }};">
+            <div style="margin: 12px 0; padding: 12px; background: #f8f9fa; font-size: 0.8rem; border-left: 3px solid {{ resource.category.color }}; overflow-wrap: break-word;">
                 <strong style="font-size: 0.8rem;">Booking Rules:</strong>
-                <ul style="margin: 5px 0 0 18px; color: #6c757d;">
+                <ul style="margin: 5px 0 0 18px; color: #6c757d; padding-left: 20px;">
                     {% if category_rules.min_duration %}
                         <li>Minimum duration: <strong>{{ category_rules.min_duration }} hour(s)</strong></li>
                     {% endif %}
@@ -98,7 +98,7 @@
             </div>
         {% endif %}
         
-        <p style="font-size: 0.75rem; color: #999; margin-top: 10px;">
+        <p style="font-size: 0.75rem; color: #999; margin-top: 10px; word-wrap: break-word;">
             Created: {{ resource.created_at|date:"M d, Y" }} by {{ resource.owner.username }}
         </p>
     </div>
@@ -106,8 +106,8 @@
 
 <!-- Meeting Room Details Section -->
 {% if resource.is_meeting_room %}
-    <div style="margin: 15px 0 25px 0; padding: 20px; background: var(--bg-card); border: 1px solid var(--border-color);">
-        <h4 style="font-size: 1rem; font-weight: 700; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+    <div style="margin: 15px 0 25px 0; padding: 20px; background: var(--bg-card); border: 1px solid var(--border-color); overflow-wrap: break-word;">
+        <h4 style="font-size: 1rem; font-weight: 700; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
             Meeting Room Details
             {% if resource.meeting_room.room_number %}
                 <span style="font-size: 0.85rem; font-weight: 400; color: var(--text-secondary);">
@@ -119,9 +119,9 @@
         <!-- Floor Plan (Room photo is already shown as main image) -->
         {% if resource.meeting_room.floor_plan %}
             <div style="margin-bottom: 15px;">
-                <div style="position: relative; display: inline-block;">
+                <div style="position: relative; display: inline-block; max-width: 100%;">
                     <img src="{{ resource.meeting_room.floor_plan.url }}" alt="Floor plan" 
-                         style="max-width: 350px; max-height: 220px; object-fit: cover; border: 1px solid var(--border-color);">
+                         style="max-width: 100%; max-height: 220px; object-fit: cover; border: 1px solid var(--border-color); height: auto;">
                     <span style="position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,0.7); color: white; padding: 2px 10px; font-size: 0.65rem;">📐 Floor Plan</span>
                 </div>
             </div>
@@ -130,7 +130,7 @@
         <!-- Room Identification -->
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 12px; padding: 10px; background: var(--bg-hover);">
             {% if resource.meeting_room.building_name %}
-                <div><strong>Building:</strong> {{ resource.meeting_room.building_name }}</div>
+                <div style="word-wrap: break-word;"><strong>Building:</strong> {{ resource.meeting_room.building_name }}</div>
             {% endif %}
             {% if resource.meeting_room.floor_number %}
                 <div><strong>Floor:</strong> {{ resource.meeting_room.floor_number }}</div>
@@ -148,22 +148,22 @@
             <strong style="display: block; margin-bottom: 5px;">Capacities:</strong>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px;">
                 {% if resource.meeting_room.seating_capacity %}
-                    <div style="padding: 6px 12px; background: var(--bg-hover); font-size: 0.85rem;">
+                    <div style="padding: 6px 12px; background: var(--bg-hover); font-size: 0.85rem; word-wrap: break-word;">
                         Seating: <strong>{{ resource.meeting_room.seating_capacity }}</strong>
                     </div>
                 {% endif %}
                 {% if resource.meeting_room.standing_capacity %}
-                    <div style="padding: 6px 12px; background: var(--bg-hover); font-size: 0.85rem;">
+                    <div style="padding: 6px 12px; background: var(--bg-hover); font-size: 0.85rem; word-wrap: break-word;">
                         Standing: <strong>{{ resource.meeting_room.standing_capacity }}</strong>
                     </div>
                 {% endif %}
                 {% if resource.meeting_room.classroom_capacity %}
-                    <div style="padding: 6px 12px; background: var(--bg-hover); font-size: 0.85rem;">
+                    <div style="padding: 6px 12px; background: var(--bg-hover); font-size: 0.85rem; word-wrap: break-word;">
                         Classroom: <strong>{{ resource.meeting_room.classroom_capacity }}</strong>
                     </div>
                 {% endif %}
                 {% if resource.meeting_room.theater_capacity %}
-                    <div style="padding: 6px 12px; background: var(--bg-hover); font-size: 0.85rem;">
+                    <div style="padding: 6px 12px; background: var(--bg-hover); font-size: 0.85rem; word-wrap: break-word;">
                         Theater: <strong>{{ resource.meeting_room.theater_capacity }}</strong>
                     </div>
                 {% endif %}
@@ -175,37 +175,37 @@
             <strong style="display: block; margin-bottom: 5px;">Features:</strong>
             <div style="display: flex; flex-wrap: wrap; gap: 6px;">
                 {% if resource.meeting_room.has_projector %}
-                    <span style="background: var(--bg-hover); padding: 4px 12px; font-size: 0.75rem; border-left: 3px solid #007bff;">Projector</span>
+                    <span style="background: var(--bg-hover); padding: 4px 12px; font-size: 0.75rem; border-left: 3px solid #007bff; word-wrap: break-word;">Projector</span>
                 {% endif %}
                 {% if resource.meeting_room.has_whiteboard %}
-                    <span style="background: var(--bg-hover); padding: 4px 12px; font-size: 0.75rem; border-left: 3px solid #28a745;">Whiteboard</span>
+                    <span style="background: var(--bg-hover); padding: 4px 12px; font-size: 0.75rem; border-left: 3px solid #28a745; word-wrap: break-word;">Whiteboard</span>
                 {% endif %}
                 {% if resource.meeting_room.has_video_conferencing %}
-                    <span style="background: var(--bg-hover); padding: 4px 12px; font-size: 0.75rem; border-left: 3px solid #17a2b8;">Video Conferencing</span>
+                    <span style="background: var(--bg-hover); padding: 4px 12px; font-size: 0.75rem; border-left: 3px solid #17a2b8; word-wrap: break-word;">Video Conferencing</span>
                 {% endif %}
                 {% if resource.meeting_room.has_phone %}
-                    <span style="background: var(--bg-hover); padding: 4px 12px; font-size: 0.75rem; border-left: 3px solid #6c757d;">Phone</span>
+                    <span style="background: var(--bg-hover); padding: 4px 12px; font-size: 0.75rem; border-left: 3px solid #6c757d; word-wrap: break-word;">Phone</span>
                 {% endif %}
                 {% if resource.meeting_room.has_smart_tv %}
-                    <span style="background: var(--bg-hover); padding: 4px 12px; font-size: 0.75rem; border-left: 3px solid #dc3545;">Smart TV</span>
+                    <span style="background: var(--bg-hover); padding: 4px 12px; font-size: 0.75rem; border-left: 3px solid #dc3545; word-wrap: break-word;">Smart TV</span>
                 {% endif %}
                 {% if resource.meeting_room.has_audio_system %}
-                    <span style="background: var(--bg-hover); padding: 4px 12px; font-size: 0.75rem; border-left: 3px solid #ffc107;">Audio System</span>
+                    <span style="background: var(--bg-hover); padding: 4px 12px; font-size: 0.75rem; border-left: 3px solid #ffc107; word-wrap: break-word;">Audio System</span>
                 {% endif %}
                 {% if resource.meeting_room.has_wifi %}
-                    <span style="background: var(--bg-hover); padding: 4px 12px; font-size: 0.75rem; border-left: 3px solid #20c997;">WiFi</span>
+                    <span style="background: var(--bg-hover); padding: 4px 12px; font-size: 0.75rem; border-left: 3px solid #20c997; word-wrap: break-word;">WiFi</span>
                 {% endif %}
                 {% if resource.meeting_room.has_air_conditioning %}
-                    <span style="background: var(--bg-hover); padding: 4px 12px; font-size: 0.75rem; border-left: 3px solid #6610f2;">Air Conditioning</span>
+                    <span style="background: var(--bg-hover); padding: 4px 12px; font-size: 0.75rem; border-left: 3px solid #6610f2; word-wrap: break-word;">Air Conditioning</span>
                 {% endif %}
                 {% if resource.meeting_room.is_accessible %}
-                    <span style="background: var(--bg-hover); padding: 4px 12px; font-size: 0.75rem; border-left: 3px solid #28a745;">Accessible</span>
+                    <span style="background: var(--bg-hover); padding: 4px 12px; font-size: 0.75rem; border-left: 3px solid #28a745; word-wrap: break-word;">Accessible</span>
                 {% endif %}
                 {% if resource.meeting_room.natural_light %}
-                    <span style="background: var(--bg-hover); padding: 4px 12px; font-size: 0.75rem; border-left: 3px solid #ffc107;">Natural Light</span>
+                    <span style="background: var(--bg-hover); padding: 4px 12px; font-size: 0.75rem; border-left: 3px solid #ffc107; word-wrap: break-word;">Natural Light</span>
                 {% endif %}
                 {% if resource.meeting_room.has_window %}
-                    <span style="background: var(--bg-hover); padding: 4px 12px; font-size: 0.75rem; border-left: 3px solid #17a2b8;">Window</span>
+                    <span style="background: var(--bg-hover); padding: 4px 12px; font-size: 0.75rem; border-left: 3px solid #17a2b8; word-wrap: break-word;">Window</span>
                 {% endif %}
             </div>
         </div>
@@ -216,7 +216,7 @@
                 <strong style="display: block; margin-bottom: 5px;">Amenities:</strong>
                 <div style="display: flex; flex-wrap: wrap; gap: 6px;">
                     {% for amenity in resource.meeting_room.amenities.all %}
-                        <span style="background: var(--bg-hover); padding: 4px 12px; font-size: 0.75rem; border-left: 3px solid #007bff;">
+                        <span style="background: var(--bg-hover); padding: 4px 12px; font-size: 0.75rem; border-left: 3px solid #007bff; word-wrap: break-word;">
                             {% if amenity.icon %}{{ amenity.icon }}{% else %}📌{% endif %} {{ amenity.name }}
                         </span>
                     {% endfor %}
@@ -233,7 +233,7 @@
                 <span>Teardown: <strong>{{ resource.meeting_room.default_teardown_time }} min</strong></span>
             {% endif %}
             {% if resource.meeting_room.notes %}
-                <span>{{ resource.meeting_room.notes }}</span>
+                <span style="word-wrap: break-word;">{{ resource.meeting_room.notes }}</span>
             {% endif %}
         </div>
     </div>
@@ -246,9 +246,9 @@
         {% if resource.status == 'PENDING' %}#fff3cd; border-left: 4px solid #ffc107;{% endif %}
         {% if resource.status == 'REJECTED' %}#f8d7da; border-left: 4px solid #dc3545;{% endif %}
         {% if resource.status == 'INACTIVE' %}#e9ecef; border-left: 4px solid #6c757d;{% endif %}
-        display: flex; justify-content: space-between; align-items: center; transition: all 0.5s ease;">
+        display: flex; justify-content: space-between; align-items: center; transition: all 0.5s ease; flex-wrap: wrap; gap: 10px;">
         
-        <div>
+        <div style="word-wrap: break-word; flex: 1;">
             <strong>Status:</strong> 
             {% if resource.status == 'PENDING' %}
                 <span style="color: #856404;">Pending - Waiting for admin approval</span>
@@ -260,7 +260,7 @@
         </div>
         
         <button onclick="dismissStatus()" 
-                style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #6c757d; padding: 0 5px;"
+                style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #6c757d; padding: 0 5px; flex-shrink: 0;"
                 onmouseover="this.style.color='#333'"
                 onmouseout="this.style.color='#6c757d'">
             &times;
@@ -270,7 +270,7 @@
 
 <!-- For approved resources, show a subtle "Available" badge to everyone -->
 {% if resource.status == 'APPROVED' %}
-    <div style="margin: 10px 0 20px 0; padding: 8px 15px; background: #d4edda; border-left: 4px solid #28a745; display: flex; align-items: center;">
+    <div style="margin: 10px 0 20px 0; padding: 8px 15px; background: #d4edda; border-left: 4px solid #28a745; display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
         <span style="color: #28a745; font-weight: 400;">Ready and Available for booking</span>
     </div>
 {% endif %}
@@ -284,7 +284,7 @@
                 {% elif message.tags == 'error' %}background: #f8d7da; border-left: 4px solid #dc3545; color: #721c24;
                 {% elif message.tags == 'warning' %}background: #fff3cd; border-left: 4px solid #ffc107; color: #856404;
                 {% else %}background: #d1ecf1; border-left: 4px solid #17a2b8; color: #0c5460;{% endif %}
-                position: relative; transition: all 0.5s ease;">
+                position: relative; transition: all 0.5s ease; word-wrap: break-word;">
                 {{ message }}
                 <button onclick="dismissMessage(this)" 
                         class="message-dismiss"
@@ -300,18 +300,18 @@
 </div>
 
 <div style="margin: 20px 0; padding: 18px; background: #f8f9fa;">
-    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 12px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 12px; gap: 8px;">
         <h3 style="font-size: 1rem; font-weight: 700; margin: 0;">Check Availability</h3>
         <span style="font-size: 0.7rem; color: #6c757d; background: #e9ecef; padding: 3px 10px; font-weight: 600;">
             Nairobi (UTC+3)
         </span>
     </div>
     <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-        <label for="datepicker" style="font-size: 0.85rem; font-weight: 600;">Select Date:</label>
+        <label for="datepicker" style="font-size: 0.85rem; font-weight: 600; min-width: 80px;">Select Date:</label>
         <input type="date" id="datepicker" value="{{ today|date:'Y-m-d' }}" min="{{ today|date:'Y-m-d' }}"
-               style="padding: 8px 12px; border: 2px solid #e9ecef; font-size: 0.85rem;">
+               style="flex: 1; min-width: 150px; padding: 8px 12px; border: 2px solid #e9ecef; font-size: 0.85rem; box-sizing: border-box;">
         <button onclick="loadSlots()" 
-                style="padding: 8px 18px; background: #007bff; color: white; border: none; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease;"
+                style="flex: 0 1 auto; padding: 8px 18px; background: #007bff; color: white; border: none; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; white-space: nowrap;"
                 onmouseover="this.style.background='#0056b3'"
                 onmouseout="this.style.background='#007bff'">
             Check Availability
@@ -319,11 +319,11 @@
     </div>
 </div>
 
-<div id="slots-container" style="margin: 20px 0;">
+<div id="slots-container" style="margin: 20px 0; overflow-wrap: break-word;">
     <p style="font-size: 0.85rem; color: #6c757d;">Select a date to see available time slots.</p>
 </div>
 
-<div id="booking-message"></div>
+<div id="booking-message" style="word-wrap: break-word;"></div>
 
 {% if booking.status == 'CONFIRMED' and not booking.is_paid %}
     <a href="{% url 'bookings:initiate_payment' booking.id %}" class="btn btn-success">
@@ -332,15 +332,15 @@
 {% endif %}
 
 <!-- Reviews Section -->
-<div style="margin: 30px 0; padding: 20px; background: var(--bg-card); border: 1px solid var(--border-color);">
-    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 15px;">
+<div style="margin: 30px 0; padding: 20px; background: var(--bg-card); border: 1px solid var(--border-color); overflow-wrap: break-word;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 15px; gap: 10px;">
         <h3 style="font-size: 1.1rem; font-weight: 700; margin: 0;">
             Reviews
             <span style="font-size: 0.85rem; font-weight: 400; color: var(--text-secondary);">
                 ({{ resource.get_rating_count }} reviews)
             </span>
         </h3>
-        <a href="{% url 'bookings:write_review' resource.id %}" style="background: #28a745; color: white; padding: 6px 16px; text-decoration: none; font-size: 0.8rem; font-weight: 600; transition: all 0.2s ease;"
+        <a href="{% url 'bookings:write_review' resource.id %}" style="background: #28a745; color: white; padding: 6px 16px; text-decoration: none; font-size: 0.8rem; font-weight: 600; transition: all 0.2s ease; white-space: nowrap;"
            onmouseover="this.style.background='#218838'"
            onmouseout="this.style.background='#28a745'">
             Write Review
@@ -350,7 +350,7 @@
     <!-- Average Rating -->
     {% if resource.get_rating_count > 0 %}
         <div style="display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 20px; padding: 15px; background: var(--bg-hover);">
-            <div style="text-align: center;">
+            <div style="text-align: center; flex: 0 0 auto;">
                 <div style="font-size: 2.5rem; font-weight: 800; color: var(--text-primary);">{{ resource.get_average_rating }}</div>
                 <div style="font-size: 1.2rem; letter-spacing: 2px;">
                     {% for i in "12345"|make_list %}
@@ -364,12 +364,12 @@
                 <div style="font-size: 0.8rem; color: var(--text-secondary);">{{ resource.get_rating_count }} reviews</div>
             </div>
             
-            <div style="flex: 1;">
+            <div style="flex: 1; min-width: 150px;">
                 {% for i in "54321"|make_list %}
                     {% with rating=i|add:0 %}
-                        <div style="display: flex; align-items: center; gap: 10px; font-size: 0.8rem;">
+                        <div style="display: flex; align-items: center; gap: 10px; font-size: 0.8rem; flex-wrap: wrap;">
                             <span style="min-width: 30px;">{{ rating }}⭐</span>
-                            <div style="flex: 1; height: 8px; background: #e9ecef; overflow: hidden;">
+                            <div style="flex: 1; height: 8px; background: #e9ecef; overflow: hidden; min-width: 50px;">
                                 {% with count=distribution|get_item:rating %}
                                     {% with total=resource.get_rating_count %}
                                         <div style="width: {% if total > 0 %}{{ count|floatformat:0|add:0|divisibleby:total|yesno:'100,0' }}{% endif %}%; height: 100%; background: #ffc107;"></div>
@@ -388,8 +388,8 @@
     <div style="display: flex; flex-direction: column; gap: 12px;">
         {% if resource.get_rating_count > 0 %}
             {% for review in resource.get_recent_reviews %}
-                <div style="padding: 12px; background: var(--bg-hover); border-left: 3px solid #007bff;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+                <div style="padding: 12px; background: var(--bg-hover); border-left: 3px solid #007bff; overflow-wrap: break-word;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px;">
                         <div>
                             <div style="font-size: 0.9rem; letter-spacing: 1px;">
                                 {% for i in "12345"|make_list %}
@@ -397,17 +397,17 @@
                                 {% endfor %}
                             </div>
                             {% if review.title %}
-                                <strong style="font-size: 0.9rem;">{{ review.title }}</strong>
+                                <strong style="font-size: 0.9rem; word-wrap: break-word;">{{ review.title }}</strong>
                             {% endif %}
                         </div>
-                        <div style="font-size: 0.7rem; color: var(--text-secondary);">
+                        <div style="font-size: 0.7rem; color: var(--text-secondary); text-align: right;">
                             {{ review.created_at|date:"M d, Y" }} by {{ review.user.username }}
                             {% if review.is_verified %}
-                                <span style="background: #28a745; color: white; padding: 1px 6px; font-size: 0.6rem;">Verified</span>
+                                <span style="background: #28a745; color: white; padding: 1px 6px; font-size: 0.6rem; display: inline-block;">Verified</span>
                             {% endif %}
                         </div>
                     </div>
-                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 5px 0 0 0;">
+                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 5px 0 0 0; word-wrap: break-word;">
                         {{ review.comment|truncatewords:25 }}
                     </p>
                     <div style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 5px;">
@@ -417,12 +417,12 @@
             {% endfor %}
             
             {% if resource.get_rating_count > 5 %}
-                <a href="{% url 'bookings:resource_reviews' resource.id %}" style="text-align: center; color: #007bff; text-decoration: none; font-size: 0.85rem; font-weight: 600;">
+                <a href="{% url 'bookings:resource_reviews' resource.id %}" style="text-align: center; color: #007bff; text-decoration: none; font-size: 0.85rem; font-weight: 600; display: block; word-wrap: break-word;">
                     View all {{ resource.get_rating_count }} reviews →
                 </a>
             {% endif %}
         {% else %}
-            <p style="text-align: center; color: var(--text-secondary); font-size: 0.9rem; padding: 20px 0;">
+            <p style="text-align: center; color: var(--text-secondary); font-size: 0.9rem; padding: 20px 0; word-wrap: break-word;">
                 No reviews yet. Be the first to review this resource!
             </p>
         {% endif %}
@@ -492,11 +492,11 @@ function loadSlots() {
         .then(response => response.json())
         .then(data => {
             if (data.error) {
-                document.getElementById('slots-container').innerHTML = `<p class="error" style="font-size: 0.85rem;">${data.error}</p>`;
+                document.getElementById('slots-container').innerHTML = `<p class="error" style="font-size: 0.85rem; word-wrap: break-word;">${data.error}</p>`;
                 return;
             }
             
-            let html = '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap;">';
+            let html = '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">';
             html += '<h3 style="font-size: 1rem; font-weight: 700; margin: 0;">Available Time Slots</h3>';
             html += '<span style="font-size: 0.65rem; color: #6c757d; background: #e9ecef; padding: 2px 10px; font-weight: 600;">Nairobi (UTC+3)</span>';
             html += '</div>';
@@ -534,24 +534,24 @@ function loadSlots() {
                 }
                 
                 const clickHandler = clickable ? `onclick="selectSlot('${slot.start}', '${slot.end}')"` : '';
-                html += `<div class="slot ${status}" ${clickHandler} data-start="${slot.start}" style="font-size: 0.8rem; padding: 8px 12px;">
+                html += `<div class="slot ${status}" ${clickHandler} data-start="${slot.start}" style="font-size: 0.8rem; padding: 8px 12px; flex: 1 0 auto; min-width: 120px; max-width: 100%;">
                     ${displayText}
                 </div>`;
             });
             html += '</div>';
             
             if (!hasAvailable) {
-                html += '<p style="margin-top: 15px; font-size: 0.85rem; color: #6c757d;">No available slots on this date. Please try another day.</p>';
+                html += '<p style="margin-top: 15px; font-size: 0.85rem; color: #6c757d; word-wrap: break-word;">No available slots on this date. Please try another day.</p>';
             }
             
             html += `
                 <div id="booking-actions" style="margin-top: 20px; display: none; padding: 15px; background: #e8f4f8;">
-                    <p style="font-size: 0.85rem; font-weight: 600; margin: 0 0 10px 0;"><strong>Selected:</strong> <span id="selected-slot-display"></span></p>
+                    <p style="font-size: 0.85rem; font-weight: 600; margin: 0 0 10px 0; word-wrap: break-word;"><strong>Selected:</strong> <span id="selected-slot-display"></span></p>
                     
                     <div style="margin: 12px 0;">
                         <label for="booking_notes" style="display: block; margin-bottom: 4px; font-weight: 600; font-size: 0.8rem;">Booking Notes (Optional):</label>
                         <textarea id="booking_notes" 
-                                  style="width: 100%; padding: 8px 12px; border: 2px solid #e9ecef; font-size: 0.8rem; font-family: 'Mona Sans', sans-serif; min-height: 50px; resize: vertical;"
+                                  style="width: 100%; padding: 8px 12px; border: 2px solid #e9ecef; font-size: 0.8rem; font-family: 'Mona Sans', sans-serif; min-height: 50px; resize: vertical; box-sizing: border-box;"
                                   placeholder="Add any special requests or notes for this booking..."
                                   onfocus="this.style.borderColor='#007bff'"
                                   onblur="this.style.borderColor='#e9ecef'"></textarea>
@@ -559,13 +559,13 @@ function loadSlots() {
                     
                     <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                         <button onclick="confirmBooking()" 
-                                style="padding: 8px 20px; background: #28a745; color: white; border: none; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease;"
+                                style="flex: 1 0 auto; padding: 8px 20px; background: #28a745; color: white; border: none; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; min-width: 120px;"
                                 onmouseover="this.style.background='#218838'"
                                 onmouseout="this.style.background='#28a745'">
                             Confirm Booking
                         </button>
                         <button onclick="cancelSelection()" 
-                                style="padding: 8px 20px; background: #dc3545; color: white; border: none; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease;"
+                                style="flex: 1 0 auto; padding: 8px 20px; background: #dc3545; color: white; border: none; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; min-width: 120px;"
                                 onmouseover="this.style.background='#c82333'"
                                 onmouseout="this.style.background='#dc3545'">
                             Cancel
@@ -577,7 +577,7 @@ function loadSlots() {
             document.getElementById('slots-container').innerHTML = html;
         })
         .catch(error => {
-            document.getElementById('slots-container').innerHTML = `<p class="error" style="font-size: 0.85rem;">Error loading slots: ${error.message}</p>`;
+            document.getElementById('slots-container').innerHTML = `<p class="error" style="font-size: 0.85rem; word-wrap: break-word;">Error loading slots: ${error.message}</p>`;
         });
 }
 
@@ -659,12 +659,12 @@ function confirmBooking() {
     .then(data => {
         if (data.error) {
             if (messageDiv) {
-                messageDiv.innerHTML = `<p class="error" style="font-size: 0.85rem;">Error ${data.error}</p>`;
+                messageDiv.innerHTML = `<p class="error" style="font-size: 0.85rem; word-wrap: break-word;">Error ${data.error}</p>`;
             }
             loadSlots();
         } else {
             if (messageDiv) {
-                messageDiv.innerHTML = `<p class="success" style="font-size: 0.85rem;">Success ${data.message}</p>`;
+                messageDiv.innerHTML = `<p class="success" style="font-size: 0.85rem; word-wrap: break-word;">Success ${data.message}</p>`;
             }
             loadSlots();
             selectedSlot = null;
@@ -680,7 +680,7 @@ function confirmBooking() {
     })
     .catch(error => {
         if (messageDiv) {
-            messageDiv.innerHTML = `<p class="error" style="font-size: 0.85rem;">Error: ${error.message}</p>`;
+            messageDiv.innerHTML = `<p class="error" style="font-size: 0.85rem; word-wrap: break-word;">Error: ${error.message}</p>`;
         }
     });
 }
@@ -707,6 +707,9 @@ document.addEventListener('DOMContentLoaded', loadSlots);
         cursor: pointer;
         border: 1px solid #ddd;
         border-radius: 0;
+        word-wrap: break-word;
+        max-width: 100%;
+        box-sizing: border-box;
     }
     .slot.available {
         background: #d4edda;
@@ -738,19 +741,57 @@ document.addEventListener('DOMContentLoaded', loadSlots);
     
     #datepicker {
         box-sizing: border-box;
+        width: auto;
+        min-width: 150px;
     }
     
     .message-container {
         transition: all 0.5s ease;
+        position: relative;
+        word-wrap: break-word;
     }
     .message-container.fade-out {
         opacity: 0;
         transform: translateY(-10px);
     }
     
+    /* Enhanced Responsive Styles */
     @media (max-width: 768px) {
         .resource-image {
             flex: 0 0 100% !important;
+            width: 100% !important;
+        }
+        
+        div[style*="flex: 0 0 500px;"] {
+            flex: 0 0 100% !important;
+            max-width: 100% !important;
+        }
+        
+        div[style*="flex: 1; min-width: 600px;"] {
+            min-width: 100% !important;
+            flex: 1 1 100% !important;
+        }
+        
+        .slot {
+            flex: 1 1 100% !important;
+            min-width: unset !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            box-sizing: border-box;
+        }
+        
+        #booking-actions div[style*="display: flex; gap: 10px; flex-wrap: wrap;"] button {
+            flex: 1 1 100% !important;
+            width: 100% !important;
+            min-width: unset !important;
+        }
+        
+        .meeting-room-details-grid {
+            grid-template-columns: 1fr !important;
+        }
+        
+        .capacity-grid {
+            grid-template-columns: 1fr 1fr !important;
         }
     }
     
@@ -765,13 +806,109 @@ document.addEventListener('DOMContentLoaded', loadSlots);
         #booking-actions {
             padding: 12px !important;
         }
+        
+        /* Fix flex containers on mobile */
         div[style*="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;"] {
             flex-direction: column;
             align-items: stretch;
+            width: 100%;
         }
+        
         div[style*="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;"] input,
+        div[style*="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;"] button,
+        div[style*="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;"] label {
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
         div[style*="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;"] button {
             width: 100%;
+        }
+        
+        /* Fix grid layouts */
+        div[style*="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));"] {
+            grid-template-columns: 1fr !important;
+        }
+        
+        div[style*="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));"] {
+            grid-template-columns: 1fr 1fr !important;
+        }
+        
+        /* Status indicator */
+        #statusIndicator {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+        }
+        
+        /* Reviews section */
+        div[style*="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;"] {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 8px;
+        }
+        
+        /* Timezone label */
+        div[style*="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap;"] {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 6px;
+        }
+        
+        /* Review items */
+        div[style*="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px;"] {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        
+        div[style*="text-align: right;"] {
+            text-align: left !important;
+        }
+    }
+    
+    /* Extra small devices */
+    @media (max-width: 360px) {
+        div[style*="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));"] {
+            grid-template-columns: 1fr !important;
+        }
+        
+        .capacity-grid {
+            grid-template-columns: 1fr !important;
+        }
+        
+        .slot {
+            font-size: 0.7rem !important;
+            padding: 5px 8px !important;
+        }
+        
+        #datepicker {
+            min-width: 100% !important;
+        }
+        
+        .feature-tags {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        
+        .feature-tags span {
+            width: 100%;
+            box-sizing: border-box;
+        }
+    }
+    
+    /* Fix image container on mobile */
+    @media (max-width: 768px) {
+        div[style*="flex: 0 0 500px; max-width: 100%;"] {
+            flex: 0 0 100% !important;
+            max-width: 100% !important;
+        }
+        
+        div[style*="background: #ffffff; overflow: hidden; position: relative; min-height: 200px;"] {
+            min-height: 150px !important;
+        }
+        
+        img[style*="width: 100%; height: 100%; object-fit: cover; min-height: 200px;"] {
+            min-height: 150px !important;
+            max-height: 300px !important;
         }
     }
 </style>

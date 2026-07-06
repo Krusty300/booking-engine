@@ -1178,6 +1178,350 @@ def export_report(request):
     
     return HttpResponse('Invalid format', status=400)
 
+# ============ EXPORT FUNCTIONS ============
+
+@staff_member_required
+def export_data(request):
+    """Export data in various formats"""
+    export_type = request.GET.get('type', 'resources')
+    format_type = request.GET.get('format', 'csv')
+    
+    # Get data based on type
+    if export_type == 'resources':
+        data = get_resources_export_data(request)
+        filename = f'resources_export_{timezone.now().strftime("%Y%m%d_%H%M%S")}'
+    elif export_type == 'bookings':
+        data = get_bookings_export_data(request)
+        filename = f'bookings_export_{timezone.now().strftime("%Y%m%d_%H%M%S")}'
+    elif export_type == 'users':
+        data = get_users_export_data(request)
+        filename = f'users_export_{timezone.now().strftime("%Y%m%d_%H%M%S")}'
+    elif export_type == 'equipment':
+        data = get_equipment_export_data(request)
+        filename = f'equipment_export_{timezone.now().strftime("%Y%m%d_%H%M%S")}'
+    elif export_type == 'reviews':
+        data = get_reviews_export_data(request)
+        filename = f'reviews_export_{timezone.now().strftime("%Y%m%d_%H%M%S")}'
+    else:
+        return JsonResponse({'error': 'Invalid export type'}, status=400)
+    
+    if format_type == 'csv':
+        return export_csv(data, filename)
+    elif format_type == 'excel':
+        return export_excel(data, filename)
+    elif format_type == 'pdf':
+        return export_pdf(data, filename)
+    elif format_type == 'json':
+        return export_json(data, filename)
+    else:
+        return JsonResponse({'error': 'Invalid format'}, status=400)
+
+def get_resources_export_data(request):
+    """Get resource data for export"""
+    resources = Resource.objects.all().order_by('-created_at')
+    
+    # Apply filters if provided
+    status_filter = request.GET.get('status')
+    if status_filter:
+        resources = resources.filter(status=status_filter)
+    
+    category_filter = request.GET.get('category')
+    if category_filter:
+        resources = resources.filter(category_id=category_filter)
+    
+    data = []
+    for resource in resources:
+        data.append({
+            'ID': resource.id,
+            'Name': resource.name,
+            'Description': resource.description[:200] + '...' if resource.description and len(resource.description) > 200 else resource.description,
+            'Category': resource.category.name if resource.category else 'Uncategorized',
+            'Owner': resource.owner.username if resource.owner else 'No owner',
+            'Owner Email': resource.owner.email if resource.owner else 'No email',
+            'Status': resource.get_status_display(),
+            'Location': resource.location or 'Not specified',
+            'Price per Hour': str(resource.price_per_hour) if resource.price_per_hour else 'Free',
+            'Max Capacity': resource.max_capacity,
+            'Meeting Room': 'Yes' if resource.is_meeting_room() else 'No',
+            'Total Bookings': resource.bookings.count(),
+            'Average Rating': resource.get_average_rating(),
+            'Created': resource.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+            'Last Updated': resource.updated_at.strftime('%Y-%m-%d %H:%M:%S'),
+        })
+    return data
+
+def get_bookings_export_data(request):
+    """Get booking data for export"""
+    bookings = Booking.objects.all().order_by('-created_at')
+    
+    # Apply filters if provided
+    status_filter = request.GET.get('status')
+    if status_filter:
+        bookings = bookings.filter(status=status_filter)
+    
+    date_from = request.GET.get('date_from')
+    if date_from:
+        bookings = bookings.filter(created_at__gte=date_from)
+    
+    date_to = request.GET.get('date_to')
+    if date_to:
+        bookings = bookings.filter(created_at__lte=date_to)
+    
+    data = []
+    for booking in bookings:
+        data.append({
+            'ID': booking.id,
+            'Resource': booking.resource.name,
+            'Resource Category': booking.resource.category.name if booking.resource.category else 'Uncategorized',
+            'Customer': booking.customer.username,
+            'Customer Email': booking.customer.email,
+            'Start Time': booking.start_time.strftime('%Y-%m-%d %H:%M:%S'),
+            'End Time': booking.end_time.strftime('%Y-%m-%d %H:%M:%S'),
+            'Duration (hours)': booking.get_duration(),
+            'Status': booking.get_status_display(),
+            'Notes': booking.notes or '',
+            'Created At': booking.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+        })
+    return data
+
+def get_users_export_data(request):
+    """Get user data for export"""
+    users = UserProfile.objects.select_related('user').all().order_by('-created_at')
+    
+    data = []
+    for profile in users:
+        booking_count = Booking.objects.filter(customer=profile.user).count()
+        data.append({
+            'ID': profile.user.id,
+            'Username': profile.user.username,
+            'Email': profile.user.email,
+            'First Name': profile.user.first_name or '',
+            'Last Name': profile.user.last_name or '',
+            'Full Name': profile.get_full_name(),
+            'Phone': profile.phone_number or '',
+            'Location': profile.location or '',
+            'Bio': profile.bio[:100] + '...' if profile.bio and len(profile.bio) > 100 else profile.bio,
+            'Total Bookings': booking_count,
+            'Joined Date': profile.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+            'Last Activity': profile.last_activity.strftime('%Y-%m-%d %H:%M:%S') if profile.last_activity else 'Never',
+            'Email Notifications': 'Yes' if profile.email_notifications else 'No',
+        })
+    return data
+
+def get_equipment_export_data(request):
+    """Get equipment data for export"""
+    equipment_list = Equipment.objects.all().order_by('-created_at')
+    
+    # Apply filters if provided
+    status_filter = request.GET.get('status')
+    if status_filter:
+        equipment_list = equipment_list.filter(status=status_filter)
+    
+    category_filter = request.GET.get('category')
+    if category_filter:
+        equipment_list = equipment_list.filter(category_id=category_filter)
+    
+    data = []
+    for equipment in equipment_list:
+        data.append({
+            'ID': equipment.id,
+            'Name': equipment.name,
+            'Serial Number': equipment.serial_number,
+            'Asset Tag': equipment.asset_tag or 'Not assigned',
+            'Category': equipment.category.name if equipment.category else 'Uncategorized',
+            'Status': equipment.get_status_display(),
+            'Condition': equipment.get_condition_display(),
+            'Location': equipment.location or 'Not specified',
+            'Owner': equipment.owner.username if equipment.owner else 'No owner',
+            'Owner Email': equipment.owner.email if equipment.owner else 'No email',
+            'Purchase Date': equipment.purchase_date.strftime('%Y-%m-%d') if equipment.purchase_date else 'Not recorded',
+            'Purchase Price': str(equipment.purchase_price) if equipment.purchase_price else 'Not recorded',
+            'Warranty Expiry': equipment.warranty_expiry.strftime('%Y-%m-%d') if equipment.warranty_expiry else 'Not recorded',
+            'Has Image': 'Yes' if equipment.has_image() else 'No',
+            'Created': equipment.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+            'Last Updated': equipment.updated_at.strftime('%Y-%m-%d %H:%M:%S'),
+        })
+    return data
+
+def get_reviews_export_data(request):
+    """Get review data for export"""
+    reviews = Review.objects.all().order_by('-created_at')
+    
+    # Apply filters if provided
+    status_filter = request.GET.get('status')
+    if status_filter:
+        reviews = reviews.filter(status=status_filter)
+    
+    rating_filter = request.GET.get('rating')
+    if rating_filter:
+        reviews = reviews.filter(rating=rating_filter)
+    
+    data = []
+    for review in reviews:
+        data.append({
+            'ID': review.id,
+            'Resource': review.resource.name,
+            'User': review.user.username,
+            'User Email': review.user.email,
+            'Rating': review.rating,
+            'Title': review.title or '',
+            'Comment': review.comment[:200] + '...' if review.comment and len(review.comment) > 200 else review.comment,
+            'Status': review.get_status_display(),
+            'Verified': 'Yes' if review.is_verified else 'No',
+            'Helpful Count': review.helpful_count,
+            'Created': review.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+            'Moderated': review.moderated_at.strftime('%Y-%m-%d %H:%M:%S') if review.moderated_at else 'Pending',
+        })
+    return data
+
+def export_json(data, filename):
+    """Export data as JSON"""
+    import json
+    from django.http import HttpResponse
+    
+    response = HttpResponse(
+        json.dumps(data, indent=2, default=str),
+        content_type='application/json'
+    )
+    response['Content-Disposition'] = f'attachment; filename="{filename}.json"'
+    return response
+
+def export_csv(data, filename):
+    """Export data as CSV"""
+    import csv
+    from django.http import HttpResponse
+    
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="{filename}.csv"'
+    
+    if data:
+        writer = csv.DictWriter(response, fieldnames=data[0].keys())
+        writer.writeheader()
+        writer.writerows(data)
+    
+    return response
+
+def export_excel(data, filename):
+    """Export data as Excel"""
+    try:
+        import openpyxl
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+        from openpyxl.utils import get_column_letter
+        from django.http import HttpResponse
+        
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Data Export"
+        
+        # Define styles
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill(start_color="007bff", end_color="007bff", fill_type="solid")
+        header_alignment = Alignment(horizontal="center", vertical="center")
+        border = Border(
+            left=Side(style='thin'),
+            right=Side(style='thin'),
+            top=Side(style='thin'),
+            bottom=Side(style='thin')
+        )
+        
+        # Write headers
+        if data:
+            headers = list(data[0].keys())
+            for col, header in enumerate(headers, 1):
+                cell = ws.cell(row=1, column=col, value=header)
+                cell.font = header_font
+                cell.fill = header_fill
+                cell.alignment = header_alignment
+                cell.border = border
+                ws.column_dimensions[get_column_letter(col)].width = 20
+        
+        # Write data
+        for row_idx, item in enumerate(data, 2):
+            for col_idx, key in enumerate(headers, 1):
+                cell = ws.cell(row=row_idx, column=col_idx, value=item.get(key, ''))
+                cell.border = border
+                cell.alignment = Alignment(vertical="center")
+        
+        # Freeze header row
+        ws.freeze_panes = 'A2'
+        
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = f'attachment; filename="{filename}.xlsx"'
+        wb.save(response)
+        return response
+        
+    except ImportError:
+        return export_csv(data, filename)
+
+def export_pdf(data, filename):
+    """Export data as PDF"""
+    try:
+        from reportlab.lib import colors
+        from reportlab.lib.pagesizes import landscape, letter
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.units import inch
+        from django.http import HttpResponse
+        
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{filename}.pdf"'
+        
+        doc = SimpleDocTemplate(response, pagesize=landscape(letter))
+        styles = getSampleStyleSheet()
+        elements = []
+        
+        # Title
+        title_style = styles['Title']
+        elements.append(Paragraph(f"{filename.replace('_', ' ').title()}", title_style))
+        elements.append(Spacer(1, 0.2*inch))
+        
+        # Summary info
+        summary_style = styles['Normal']
+        elements.append(Paragraph(f"Total Records: {len(data)}", summary_style))
+        elements.append(Paragraph(f"Generated on: {timezone.now().strftime('%B %d, %Y at %H:%M')}", summary_style))
+        elements.append(Spacer(1, 0.2*inch))
+        
+        # Table data
+        if data:
+            headers = list(data[0].keys())
+            # Limit columns for PDF readability (max 8 columns)
+            display_headers = headers[:8]
+            header_indices = [headers.index(h) for h in display_headers if h in headers]
+            
+            table_data = [display_headers]
+            for item in data:
+                row = []
+                for idx in header_indices:
+                    value = list(item.values())[idx]
+                    if isinstance(value, str) and len(value) > 30:
+                        value = value[:27] + '...'
+                    row.append(str(value) if value is not None else '')
+                table_data.append(row)
+            
+            table = Table(table_data, repeatRows=1)
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#007bff')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                ('FONTSIZE', (0, 1), (-1, -1), 8),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ]))
+            
+            elements.append(table)
+        
+        doc.build(elements)
+        return response
+        
+    except ImportError:
+        return export_csv(data, filename)
+
 # ============ CALENDAR VIEW ============
 
 class CalendarView(TemplateView):

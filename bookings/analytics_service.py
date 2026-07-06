@@ -1,270 +1,564 @@
-from django.db.models import Count, Sum, Q, Avg
+from django.db import models
+from django.db.models import Sum, Count, Avg, Q, F, ExpressionWrapper, DecimalField, Value
+from django.db.models.functions import Coalesce
 from django.utils import timezone
-from datetime import datetime, timedelta
+from datetime import timedelta
 from decimal import Decimal
-from .models import Booking, Resource, UserProfile, AnalyticsEvent, DailyAnalytics
-from django.contrib.auth.models import User
-import json
-import calendar
+from bookings.models import Booking, Resource, UserProfile, Review, AnalyticsEvent
 
 class AnalyticsService:
-    """Service for generating analytics data"""
+    """Service for handling analytics and statistics"""
     
     @staticmethod
     def get_dashboard_stats(request=None):
-        """Get main dashboard statistics"""
+        """Get all dashboard statistics"""
         now = timezone.now()
-        thirty_days_ago = now - timedelta(days=30)
+        last_30_days = now - timedelta(days=30)
+        last_7_days = now - timedelta(days=7)
         
-        # Booking statistics
+        # --- Bookings ---
         total_bookings = Booking.objects.count()
-        confirmed_bookings = Booking.objects.filter(status='CONFIRMED').count()
-        cancelled_bookings = Booking.objects.filter(status='CANCELLED').count()
-        completed_bookings = Booking.objects.filter(status='COMPLETED').count()
+        recent_bookings = Booking.objects.filter(created_at__gte=last_30_days).count()
+        recent_7_days = Booking.objects.filter(created_at__gte=last_7_days).count()
         
-        # Revenue calculation (if you have price fields)
-        total_revenue = 0
-        try:
-            # If you have a price field on Booking
-            # total_revenue = Booking.objects.filter(status='COMPLETED').aggregate(Sum('price'))['price__sum'] or 0
-            pass
-        except:
-            total_revenue = 0
+        # --- Users ---
+        total_users = UserProfile.objects.count()
+        new_users = UserProfile.objects.filter(created_at__gte=last_30_days).count()
         
-        # Recent bookings
-        recent_bookings = Booking.objects.order_by('-created_at')[:10]
+        # ============================================================
+        # ✅ REVENUE CALCULATION - Price per hour * Duration
+        # ============================================================
+        # Calculate total revenue for confirmed bookings
+        total_revenue = Booking.objects.filter(
+            status='CONFIRMED',
+            resource__price_per_hour__isnull=False,
+            resource__price_per_hour__gt=0
+        ).annotate(
+            duration_hours=ExpressionWrapper(
+                (F('end_time') - F('start_time')) / timedelta(hours=1),
+                output_field=DecimalField(max_digits=10, decimal_places=2)
+            )
+        ).aggregate(
+            total=Coalesce(
+                Sum(
+                    F('resource__price_per_hour') * F('duration_hours')
+                ),
+                Value(Decimal('0.00'))
+            )
+        )['total'] or Decimal('0.00')
         
-        # Popular resources
-        popular_resources = Resource.objects.annotate(
-            booking_count=Count('bookings')
-        ).filter(booking_count__gt=0).order_by('-booking_count')[:10]
+        # ============================================================
+        # ✅ REVENUE GROWTH CALCULATION
+        # ============================================================
+        prev_30_days = now - timedelta(days=60)
+        prev_30_revenue = Booking.objects.filter(
+            status='CONFIRMED',
+            resource__price_per_hour__isnull=False,
+            resource__price_per_hour__gt=0,
+            created_at__gte=prev_30_days,
+            created_at__lt=last_30_days
+        ).annotate(
+            duration_hours=ExpressionWrapper(
+                (F('end_time') - F('start_time')) / timedelta(hours=1),
+                output_field=DecimalField(max_digits=10, decimal_places=2)
+            )
+        ).aggregate(
+            total=Coalesce(
+                Sum(
+                    F('resource__price_per_hour') * F('duration_hours')
+                ),
+                Value(Decimal('0.00'))
+            )
+        )['total'] or Decimal('0.00')
         
-        # User statistics
-        total_users = User.objects.count()
-        active_users = User.objects.filter(
-            last_login__gte=thirty_days_ago
-        ).count()
-        new_users = User.objects.filter(
-            date_joined__gte=thirty_days_ago
-        ).count()
+        revenue_growth = AnalyticsService._calculate_growth(
+            float(total_revenue), 
+            float(prev_30_revenue)
+        )
         
-        # Booking trends (last 30 days)
-        booking_trends = []
-        for i in range(30):
-            date = now - timedelta(days=i)
-            day_start = date.replace(hour=0, minute=0, second=0, microsecond=0)
-            day_end = date.replace(hour=23, minute=59, second=59, microsecond=999999)
-            count = Booking.objects.filter(
-                created_at__gte=day_start,
-                created_at__lte=day_end
-            ).count()
-            booking_trends.append({
-                'date': date.strftime('%Y-%m-%d'),
-                'count': count
+        # ============================================================
+        # ✅ ADDITIONAL REVENUE STATS
+        # ============================================================
+        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        
+        # Revenue this month
+        revenue_this_month = Booking.objects.filter(
+            status='CONFIRMED',
+            resource__price_per_hour__isnull=False,
+            resource__price_per_hour__gt=0,
+            created_at__gte=month_start
+        ).annotate(
+            duration_hours=ExpressionWrapper(
+                (F('end_time') - F('start_time')) / timedelta(hours=1),
+                output_field=DecimalField(max_digits=10, decimal_places=2)
+            )
+        ).aggregate(
+            total=Coalesce(
+                Sum(
+                    F('resource__price_per_hour') * F('duration_hours')
+                ),
+                Value(Decimal('0.00'))
+            )
+        )['total'] or Decimal('0.00')
+        
+        # Revenue last month
+        last_month_start = (month_start - timedelta(days=1)).replace(day=1)
+        revenue_last_month = Booking.objects.filter(
+            status='CONFIRMED',
+            resource__price_per_hour__isnull=False,
+            resource__price_per_hour__gt=0,
+            created_at__gte=last_month_start,
+            created_at__lt=month_start
+        ).annotate(
+            duration_hours=ExpressionWrapper(
+                (F('end_time') - F('start_time')) / timedelta(hours=1),
+                output_field=DecimalField(max_digits=10, decimal_places=2)
+            )
+        ).aggregate(
+            total=Coalesce(
+                Sum(
+                    F('resource__price_per_hour') * F('duration_hours')
+                ),
+                Value(Decimal('0.00'))
+            )
+        )['total'] or Decimal('0.00')
+        
+        # Revenue this week
+        week_start = now - timedelta(days=now.weekday())
+        revenue_this_week = Booking.objects.filter(
+            status='CONFIRMED',
+            resource__price_per_hour__isnull=False,
+            resource__price_per_hour__gt=0,
+            created_at__gte=week_start
+        ).annotate(
+            duration_hours=ExpressionWrapper(
+                (F('end_time') - F('start_time')) / timedelta(hours=1),
+                output_field=DecimalField(max_digits=10, decimal_places=2)
+            )
+        ).aggregate(
+            total=Coalesce(
+                Sum(
+                    F('resource__price_per_hour') * F('duration_hours')
+                ),
+                Value(Decimal('0.00'))
+            )
+        )['total'] or Decimal('0.00')
+        
+        # ============================================================
+        # ✅ MONTHLY REVENUE TREND (Last 6 months)
+        # ============================================================
+        monthly_revenue = []
+        current_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        
+        # Generate data for the last 6 months (oldest to newest)
+        for i in range(5, -1, -1):
+            # Calculate month start and end
+            month_end = current_month - timedelta(days=30 * i)
+            month_start_date = month_end.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            month_end_date = (month_start_date + timedelta(days=32)).replace(day=1)
+            
+            # Get revenue for this month
+            month_revenue = Booking.objects.filter(
+                status='CONFIRMED',
+                resource__price_per_hour__isnull=False,
+                resource__price_per_hour__gt=0,
+                created_at__gte=month_start_date,
+                created_at__lt=month_end_date
+            ).annotate(
+                duration_hours=ExpressionWrapper(
+                    (F('end_time') - F('start_time')) / timedelta(hours=1),
+                    output_field=DecimalField(max_digits=10, decimal_places=2)
+                )
+            ).aggregate(
+                total=Coalesce(
+                    Sum(
+                        F('resource__price_per_hour') * F('duration_hours')
+                    ),
+                    Value(Decimal('0.00'))
+                )
+            )['total'] or Decimal('0.00')
+            
+            monthly_revenue.append({
+                'month': month_start_date.strftime('%B %Y'),
+                'revenue': float(month_revenue)
             })
-        booking_trends.reverse()
         
-        # Category distribution
-        category_distribution = []
-        for category in Resource.objects.values('category__name').annotate(
-            count=Count('id')
-        ).order_by('-count'):
-            if category['category__name']:
-                category_distribution.append({
-                    'name': category['category__name'],
-                    'count': category['count']
-                })
+        # --- Average Rating ---
+        avg_rating = Review.objects.filter(status='APPROVED').aggregate(
+            avg=Avg('rating')
+        )['avg'] or 0
         
-        # Status distribution
-        status_distribution = []
-        for status, label in Booking.STATUS_CHOICES:
-            count = Booking.objects.filter(status=status).count()
-            status_distribution.append({
-                'status': label,
-                'count': count
-            })
+        # --- Growth Calculations for Bookings ---
+        prev_30_booking_count = Booking.objects.filter(
+            created_at__gte=prev_30_days,
+            created_at__lt=last_30_days
+        ).count()
+        booking_growth = AnalyticsService._calculate_growth(recent_bookings, prev_30_booking_count)
+        
+        # --- Growth Calculations for Users ---
+        prev_30_user_count = UserProfile.objects.filter(
+            created_at__gte=prev_30_days,
+            created_at__lt=last_30_days
+        ).count()
+        user_growth = AnalyticsService._calculate_growth(new_users, prev_30_user_count)
+        
+        # --- Recent Activities ---
+        recent_activities = AnalyticsService._get_recent_activities(limit=10)
+        
+        # --- Status Counts ---
+        pending_count = Booking.objects.filter(status='PENDING').count()
+        confirmed_count = Booking.objects.filter(status='CONFIRMED').count()
+        completed_count = Booking.objects.filter(status='COMPLETED').count()
+        cancelled_count = Booking.objects.filter(status='CANCELLED').count()
+        
+        # --- Average Booking Value ---
+        total_bookings_count = Booking.objects.filter(status='CONFIRMED').count()
+        avg_booking_value = float(total_revenue) / total_bookings_count if total_bookings_count > 0 else 0
         
         return {
+            # Basic stats
             'total_bookings': total_bookings,
-            'confirmed_bookings': confirmed_bookings,
-            'cancelled_bookings': cancelled_bookings,
-            'completed_bookings': completed_bookings,
-            'total_revenue': total_revenue,
-            'recent_bookings': recent_bookings,
-            'popular_resources': popular_resources,
             'total_users': total_users,
-            'active_users': active_users,
+            'total_revenue': float(total_revenue),
+            'avg_rating': round(float(avg_rating), 1),
+            
+            # Growth percentages
+            'booking_growth': booking_growth,
+            'user_growth': user_growth,
+            'revenue_growth': revenue_growth,
+            
+            # Additional revenue stats
+            'revenue_this_month': float(revenue_this_month),
+            'revenue_last_month': float(revenue_last_month),
+            'revenue_this_week': float(revenue_this_week),
+            'avg_booking_value': round(avg_booking_value, 2),
+            'monthly_revenue': monthly_revenue,  # ✅ Added monthly revenue trend
+            
+            # Additional stats
+            'recent_7_days': recent_7_days,
+            'recent_30_days': recent_bookings,
             'new_users': new_users,
-            'booking_trends': booking_trends,
-            'category_distribution': category_distribution,
-            'status_distribution': status_distribution,
+            'pending_count': pending_count,
+            'confirmed_count': confirmed_count,
+            'completed_count': completed_count,
+            'cancelled_count': cancelled_count,
+            
+            # Recent activities
+            'recent_activities': recent_activities,
         }
+    
+    @staticmethod
+    def _calculate_growth(current, previous):
+        """
+        Calculate growth percentage between two numbers.
+        Handles edge cases like division by zero.
+        """
+        # If both are 0, growth is 0%
+        if current == 0 and previous == 0:
+            return 0
+        # If previous is 0 and current > 0, growth is 100%
+        if previous == 0:
+            return 100 if current > 0 else 0
+        # Calculate percentage change
+        growth = ((current - previous) / previous) * 100
+        return round(growth, 1)
+    
+    @staticmethod
+    def _get_recent_activities(limit=10):
+        """Get recent activities from analytics events"""
+        events = AnalyticsEvent.objects.all().order_by('-created_at')[:limit]
+        activities = []
+        
+        if not events.exists():
+            return [
+                {
+                    'icon': 'circle',
+                    'text': 'No recent activity',
+                    'time': timezone.now()
+                }
+            ]
+        
+        for event in events:
+            activity = {
+                'icon': 'circle',
+                'text': f"{event.get_event_type_display()}",
+                'time': event.created_at
+            }
+            
+            if event.user:
+                activity['text'] = f"{event.user.username} {activity['text'].lower()}"
+            
+            if event.metadata and 'resource_name' in event.metadata:
+                activity['text'] += f" - {event.metadata['resource_name']}"
+            
+            activities.append(activity)
+        
+        return activities
     
     @staticmethod
     def get_booking_analytics(period='month'):
-        """Get detailed booking analytics"""
+        """Get booking analytics for charts"""
         now = timezone.now()
         
-        if period == 'week':
+        if period == '7d':
             start_date = now - timedelta(days=7)
-        elif period == 'month':
-            start_date = now - timedelta(days=30)
-        elif period == 'year':
-            start_date = now - timedelta(days=365)
+            days = 7
+        elif period == '90d':
+            start_date = now - timedelta(days=90)
+            days = 90
         else:
             start_date = now - timedelta(days=30)
+            days = 30
         
-        # Daily bookings
-        daily_data = []
-        for i in range(30):
+        # Get bookings grouped by date
+        bookings = Booking.objects.filter(
+            created_at__gte=start_date
+        ).extra(
+            select={'date': 'date(created_at)'}
+        ).values('date').annotate(
+            count=Count('id')
+        ).order_by('date')
+        
+        labels = []
+        data = []
+        
+        for i in range(days):
             date = start_date + timedelta(days=i)
-            if date > now:
-                break
-            day_start = date.replace(hour=0, minute=0, second=0, microsecond=0)
-            day_end = date.replace(hour=23, minute=59, second=59, microsecond=999999)
-            count = Booking.objects.filter(
-                created_at__gte=day_start,
-                created_at__lte=day_end
-            ).count()
-            daily_data.append({
-                'date': date.strftime('%b %d'),
-                'bookings': count
-            })
-        
-        # Hourly distribution
-        hourly_data = []
-        for hour in range(24):
-            count = Booking.objects.filter(
-                created_at__hour=hour
-            ).count()
-            hourly_data.append({
-                'hour': f'{hour:02d}:00',
-                'count': count
-            })
-        
-        # Weekly patterns (day of week)
-        weekly_data = []
-        days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-        for i, day in enumerate(days):
-            count = Booking.objects.filter(
-                created_at__week_day=i+1 if i < 6 else 7
-            ).count()
-            weekly_data.append({
-                'day': day,
-                'count': count
-            })
+            date_str = date.strftime('%Y-%m-%d')
+            labels.append(date.strftime('%b %d'))
+            
+            booking_count = next(
+                (b['count'] for b in bookings if str(b['date']) == date_str),
+                0
+            )
+            data.append(booking_count)
         
         return {
-            'daily_data': daily_data,
-            'hourly_data': hourly_data,
-            'weekly_data': weekly_data,
-            'total_period_bookings': sum(d['bookings'] for d in daily_data),
+            'labels': labels,
+            'data': data
         }
     
     @staticmethod
-    def get_user_analytics():
-        """Get user behavior analytics"""
-        now = timezone.now()
-        thirty_days_ago = now - timedelta(days=30)
+    def get_status_distribution():
+        """Get booking status distribution"""
+        statuses = Booking.objects.values('status').annotate(
+            count=Count('id')
+        ).order_by('-count')
         
-        # User activity
-        active_users = User.objects.filter(
-            last_login__gte=thirty_days_ago
-        ).count()
-        inactive_users = User.objects.filter(
-            last_login__lt=thirty_days_ago
-        ).count()
+        status_labels = {
+            'PENDING': 'Pending',
+            'CONFIRMED': 'Confirmed',
+            'COMPLETED': 'Completed',
+            'CANCELLED': 'Cancelled',
+        }
         
-        # New users trend
-        new_users_trend = []
-        for i in range(30):
-            date = now - timedelta(days=i)
-            day_start = date.replace(hour=0, minute=0, second=0, microsecond=0)
-            day_end = date.replace(hour=23, minute=59, second=59, microsecond=999999)
-            count = User.objects.filter(
-                date_joined__gte=day_start,
-                date_joined__lte=day_end
-            ).count()
-            new_users_trend.append({
-                'date': date.strftime('%Y-%m-%d'),
-                'count': count
-            })
-        new_users_trend.reverse()
+        colors = {
+            'PENDING': '#ffc107',
+            'CONFIRMED': '#28a745',
+            'COMPLETED': '#17a2b8',
+            'CANCELLED': '#dc3545',
+        }
         
-        # Top users by bookings
-        top_users = User.objects.annotate(
-            booking_count=Count('booking')
-        ).filter(booking_count__gt=0).order_by('-booking_count')[:10]
+        labels = []
+        data = []
+        color_list = []
         
-        # User engagement metrics
-        total_users = User.objects.count()
-        users_with_bookings = User.objects.filter(booking__isnull=False).distinct().count()
-        # FIXED: Use 'resources' (plural) instead of 'resource'
-        users_with_resources = User.objects.filter(resources__isnull=False).distinct().count()
+        for status in statuses:
+            status_key = status['status']
+            labels.append(status_labels.get(status_key, status_key))
+            data.append(status['count'])
+            color_list.append(colors.get(status_key, '#6c757d'))
         
         return {
-            'active_users': active_users,
-            'inactive_users': inactive_users,
-            'new_users_trend': new_users_trend,
-            'top_users': top_users,
-            'total_users': total_users,
-            'users_with_bookings': users_with_bookings,
-            'users_with_resources': users_with_resources,
-            'engagement_rate': (users_with_bookings / total_users * 100) if total_users > 0 else 0,
+            'labels': labels,
+            'data': data,
+            'colors': color_list
+        }
+    
+    @staticmethod
+    def get_hourly_patterns():
+        """Get hourly booking patterns"""
+        bookings = Booking.objects.extra(
+            select={'hour': "strftime('%H', start_time)"}
+        ).values('hour').annotate(
+            count=Count('id')
+        ).order_by('hour')
+        
+        hours = [str(i).zfill(2) + ':00' for i in range(24)]
+        counts = [0] * 24
+        
+        for booking in bookings:
+            try:
+                hour = int(booking['hour'])
+                if 0 <= hour < 24:
+                    counts[hour] = booking['count']
+            except (ValueError, TypeError):
+                pass
+        
+        return {
+            'labels': hours,
+            'data': counts
         }
     
     @staticmethod
     def get_resource_analytics():
         """Get resource analytics"""
-        # Resource popularity
-        resource_popularity = Resource.objects.annotate(
+        # Get popular resources
+        popular_resources = Resource.objects.annotate(
             booking_count=Count('bookings')
+        ).filter(
+            booking_count__gt=0
         ).order_by('-booking_count')[:10]
         
-        # Resource by category
-        category_counts = Resource.objects.values('category__name').annotate(
+        popularity = []
+        for resource in popular_resources:
+            popularity.append({
+                'name': resource.name,
+                'count': resource.booking_count
+            })
+        
+        # Category distribution
+        category_distribution = Resource.objects.values('category__name').annotate(
             count=Count('id')
         ).order_by('-count')
         
-        # Resource status distribution
-        status_counts = Resource.objects.values('status').annotate(
-            count=Count('id')
-        )
-        
-        # Most booked resources (by hour)
-        popular_hours = {}
-        for resource in Resource.objects.annotate(booking_count=Count('bookings')).filter(booking_count__gt=0)[:5]:
-            hours = Booking.objects.filter(resource=resource).values('start_time__hour').annotate(
-                count=Count('id')
-            ).order_by('-count')[:3]
-            popular_hours[resource.name] = [
-                {'hour': h['start_time__hour'], 'count': h['count']} for h in hours
-            ]
+        categories = []
+        for cat in category_distribution:
+            categories.append({
+                'name': cat['category__name'] or 'Uncategorized',
+                'count': cat['count']
+            })
         
         return {
-            'resource_popularity': resource_popularity,
-            'category_counts': category_counts,
-            'status_counts': status_counts,
-            'popular_hours': popular_hours,
+            'popularity': popularity,
+            'categories': categories
+        }
+    
+    @staticmethod
+    def get_user_analytics():
+        """Get user analytics"""
+        total_users = UserProfile.objects.count()
+        active_users = UserProfile.objects.filter(
+            last_activity__gte=timezone.now() - timedelta(days=30)
+        ).count()
+        
+        users_with_bookings = UserProfile.objects.filter(
+            user__booking__isnull=False
+        ).distinct().count()
+        
+        now = timezone.now()
+        start_date = now - timedelta(days=30)
+        
+        new_users_trend = UserProfile.objects.filter(
+            created_at__gte=start_date
+        ).extra(
+            select={'date': 'date(created_at)'}
+        ).values('date').annotate(
+            count=Count('id')
+        ).order_by('date')
+        
+        trend_data = []
+        for i in range(30):
+            date = start_date + timedelta(days=i)
+            date_str = date.strftime('%Y-%m-%d')
+            count = next(
+                (u['count'] for u in new_users_trend if str(u['date']) == date_str),
+                0
+            )
+            trend_data.append({
+                'date': date.strftime('%b %d'),
+                'count': count
+            })
+        
+        engagement_rate = round((users_with_bookings / total_users * 100) if total_users > 0 else 0, 1)
+        
+        return {
+            'total_users': total_users,
+            'active_users': active_users,
+            'inactive_users': total_users - active_users,
+            'users_with_bookings': users_with_bookings,
+            'new_users_trend': trend_data,
+            'engagement_rate': engagement_rate
+        }
+    
+    @staticmethod
+    def get_weekly_trends():
+        """Get weekly booking trends"""
+        now = timezone.now()
+        weeks = 8
+        start_date = now - timedelta(weeks=weeks)
+        
+        trends = []
+        for i in range(weeks):
+            week_start = start_date + timedelta(weeks=i)
+            week_end = week_start + timedelta(days=7)
+            
+            count = Booking.objects.filter(
+                created_at__gte=week_start,
+                created_at__lt=week_end
+            ).count()
+            
+            trends.append({
+                'week': f"Week {i+1}",
+                'count': count,
+                'start_date': week_start,
+                'end_date': week_end
+            })
+        
+        return {
+            'labels': [t['week'] for t in trends],
+            'data': [t['count'] for t in trends]
+        }
+    
+    @staticmethod
+    def get_monthly_trends():
+        """Get monthly booking trends"""
+        now = timezone.now()
+        months = 12
+        start_date = now - timedelta(days=365)
+        
+        trends = []
+        for i in range(months):
+            month_start = start_date + timedelta(days=30*i)
+            month_end = month_start + timedelta(days=30)
+            
+            count = Booking.objects.filter(
+                created_at__gte=month_start,
+                created_at__lt=month_end
+            ).count()
+            
+            trends.append({
+                'month': month_start.strftime('%B %Y'),
+                'count': count
+            })
+        
+        return {
+            'labels': [t['month'] for t in trends],
+            'data': [t['count'] for t in trends]
         }
     
     @staticmethod
     def export_bookings_csv():
-        """Export bookings data to CSV format"""
+        """Export bookings data as CSV"""
         import csv
-        from io import StringIO
+        from django.http import HttpResponse
         
-        output = StringIO()
-        writer = csv.writer(output)
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="bookings_export_{timezone.now().strftime("%Y%m%d")}.csv"'
         
-        # Write headers
+        writer = csv.writer(response)
         writer.writerow([
-            'Booking ID', 'Resource', 'Customer', 'Start Time', 'End Time',
-            'Status', 'Created At', 'Notes'
+            'ID', 'Resource', 'Customer', 'Start Time', 'End Time',
+            'Status', 'Duration (hours)', 'Revenue', 'Notes', 'Created At'
         ])
         
-        # Write data
-        for booking in Booking.objects.select_related('resource', 'customer').order_by('-created_at'):
+        bookings = Booking.objects.select_related('resource', 'customer').all()
+        for booking in bookings:
+            duration = booking.get_duration()
+            revenue = 0
+            if booking.resource.price_per_hour and booking.status == 'CONFIRMED':
+                revenue = booking.resource.price_per_hour * duration
+            
             writer.writerow([
                 booking.id,
                 booking.resource.name,
@@ -272,176 +566,83 @@ class AnalyticsService:
                 booking.start_time.strftime('%Y-%m-%d %H:%M'),
                 booking.end_time.strftime('%Y-%m-%d %H:%M'),
                 booking.get_status_display(),
-                booking.created_at.strftime('%Y-%m-%d %H:%M'),
+                duration,
+                f"${revenue:.2f}",
                 booking.notes or '',
+                booking.created_at.strftime('%Y-%m-%d %H:%M'),
             ])
         
-        return output.getvalue()
+        return response
     
     @staticmethod
     def export_users_csv():
-        """Export users data to CSV format"""
+        """Export users data as CSV"""
         import csv
-        from io import StringIO
+        from django.http import HttpResponse
         
-        output = StringIO()
-        writer = csv.writer(output)
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="users_export_{timezone.now().strftime("%Y%m%d")}.csv"'
         
-        # Write headers
+        writer = csv.writer(response)
         writer.writerow([
-            'Username', 'Email', 'First Name', 'Last Name', 'Date Joined',
-            'Last Login', 'Is Active', 'Is Staff', 'Total Bookings'
+            'Username', 'Email', 'First Name', 'Last Name',
+            'Phone', 'Location', 'Total Bookings', 'Joined Date'
         ])
         
-        # Write data
-        for user in User.objects.all():
-            booking_count = Booking.objects.filter(customer=user).count()
+        users = UserProfile.objects.select_related('user').all()
+        for profile in users:
             writer.writerow([
-                user.username,
-                user.email,
-                user.first_name,
-                user.last_name,
-                user.date_joined.strftime('%Y-%m-%d %H:%M'),
-                user.last_login.strftime('%Y-%m-%d %H:%M') if user.last_login else '',
-                'Yes' if user.is_active else 'No',
-                'Yes' if user.is_staff else 'No',
-                booking_count,
+                profile.user.username,
+                profile.user.email,
+                profile.user.first_name,
+                profile.user.last_name,
+                profile.phone_number or '',
+                profile.location or '',
+                Booking.objects.filter(customer=profile.user).count(),
+                profile.created_at.strftime('%Y-%m-%d'),
             ])
         
-        return output.getvalue()
+        return response
     
     @staticmethod
     def export_resources_csv():
-        """Export resources data to CSV format"""
+        """Export resources data as CSV"""
         import csv
-        from io import StringIO
+        from django.http import HttpResponse
         
-        output = StringIO()
-        writer = csv.writer(output)
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="resources_export_{timezone.now().strftime("%Y%m%d")}.csv"'
         
-        # Write headers
+        writer = csv.writer(response)
         writer.writerow([
-            'Resource ID', 'Name', 'Description', 'Owner', 'Status',
-            'Category', 'Location', 'Price/Hour', 'Total Bookings'
+            'ID', 'Name', 'Category', 'Owner', 'Status',
+            'Location', 'Price per Hour', 'Max Capacity',
+            'Total Bookings', 'Total Revenue', 'Created At'
         ])
         
-        # Write data
-        for resource in Resource.objects.select_related('owner', 'category').all():
-            booking_count = Booking.objects.filter(resource=resource).count()
+        resources = Resource.objects.select_related('category', 'owner').annotate(
+            booking_count=Count('bookings')
+        ).all()
+        
+        for resource in resources:
+            total_revenue = 0
+            for booking in resource.bookings.filter(status='CONFIRMED'):
+                if resource.price_per_hour:
+                    duration = booking.get_duration()
+                    total_revenue += resource.price_per_hour * duration
+            
             writer.writerow([
                 resource.id,
                 resource.name,
-                resource.description[:100] + '...' if len(resource.description) > 100 else resource.description,
-                resource.owner.username if resource.owner else 'Unknown',
-                resource.get_status_display(),
                 resource.category.name if resource.category else 'Uncategorized',
+                resource.owner.username if resource.owner else 'No owner',
+                resource.get_status_display(),
                 resource.location or '',
-                str(resource.price_per_hour) if resource.price_per_hour else '0.00',
-                booking_count,
+                resource.price_per_hour or 0,
+                resource.max_capacity,
+                resource.booking_count,
+                f"${total_revenue:.2f}",
+                resource.created_at.strftime('%Y-%m-%d %H:%M'),
             ])
         
-        return output.getvalue()
-    
-    @staticmethod
-    def track_event(user, event_type, request=None, metadata=None):
-        """Track a user event for analytics"""
-        try:
-            event = AnalyticsEvent(
-                user=user if user and user.is_authenticated else None,
-                event_type=event_type,
-                metadata=metadata or {},
-            )
-            
-            if request:
-                event.url = request.path
-                event.ip_address = request.META.get('REMOTE_ADDR')
-                event.user_agent = request.META.get('HTTP_USER_AGENT', '')
-            
-            event.save()
-            return event
-        except Exception as e:
-            print(f"Error tracking event: {e}")
-            return None
-
-
-    @staticmethod
-    def get_hourly_patterns():
-        """Get hourly booking patterns"""
-        hourly_data = []
-        for hour in range(24):
-            count = Booking.objects.filter(
-                start_time__hour=hour,
-                status__in=['CONFIRMED', 'COMPLETED']
-            ).count()
-            hourly_data.append({
-                'hour': f'{hour:02d}:00',
-                'count': count
-            })
-        return hourly_data
-
-    @staticmethod
-    def get_weekly_trends():
-        """Get weekly booking trends (last 7 days)"""
-        weekly_data = []
-        days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-        
-        for i, day in enumerate(days):
-            # Get bookings for each day of the week
-            count = Booking.objects.filter(
-                start_time__week_day=i+1 if i < 6 else 7,
-                status__in=['CONFIRMED', 'COMPLETED']
-            ).count()
-            weekly_data.append({
-                'day': day,
-                'count': count
-            })
-        return weekly_data
-
-    @staticmethod
-    def get_status_distribution():
-        """Get booking status distribution"""
-        status_data = []
-        status_colors = {
-            'CONFIRMED': '#28a745',
-            'PENDING': '#ffc107',
-            'CANCELLED': '#dc3545',
-            'COMPLETED': '#17a2b8'
-        }
-        for status, label in Booking.STATUS_CHOICES:
-            count = Booking.objects.filter(status=status).count()
-            status_data.append({
-                'status': label,
-                'count': count,
-                'color': status_colors.get(status, '#6c757d')
-            })
-        return status_data
-
-    @staticmethod
-    def get_monthly_trends():
-        """Get monthly booking trends (last 6 months)"""
-        now = timezone.now()
-        monthly_data = []
-        
-        for i in range(6):
-            month = now.replace(day=1) - timedelta(days=30*i)
-            month_start = month.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-            
-            # Get next month
-            if month.month == 12:
-                month_end = month.replace(year=month.year+1, month=1, day=1) - timedelta(seconds=1)
-            else:
-                month_end = month.replace(month=month.month+1, day=1) - timedelta(seconds=1)
-            
-            count = Booking.objects.filter(
-                created_at__gte=month_start,
-                created_at__lte=month_end,
-                status__in=['CONFIRMED', 'COMPLETED']
-            ).count()
-            
-            monthly_data.append({
-                'month': month.strftime('%b %Y'),
-                'count': count
-            })
-        
-        monthly_data.reverse()
-        return monthly_data
+        return response

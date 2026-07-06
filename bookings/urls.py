@@ -5,6 +5,9 @@ from . import views
 app_name = 'bookings'
 
 urlpatterns = [
+    # ============ EXPORT ============
+    path('export/', views.export_data, name='export_data'),
+    
     # ============ AUTHENTICATION ============
     path('login/', auth_views.LoginView.as_view(template_name='registration/login.html'), name='login'),
     path('logout/', views.custom_logout, name='logout'),
@@ -117,4 +120,5 @@ urlpatterns = [
     path('api/available-equipment/', views.get_available_equipment_ajax, name='get_available_equipment'),
     path('api/book/', views.book_slot, name='book_slot'),
     path('api/reviews/<int:review_id>/helpful/', views.toggle_review_helpful, name='toggle_review_helpful'),
+
 ]

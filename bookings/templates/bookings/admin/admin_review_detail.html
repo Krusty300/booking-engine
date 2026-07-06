@@ -1,264 +1,932 @@
 {% extends 'bookings/base.html' %}
+{% load static %}
 
 {% block content %}
-<div style="max-width: 800px; margin: 0 auto;">
-
-    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 20px;">
-        <h1 style="font-size: 1.6rem; font-weight: 800; margin: 0;">Review Details</h1>
+<div class="review-detail-container">
+    <!-- Page Header -->
+    <div class="page-header">
         <div>
-            <a href="{% url 'bookings:admin_reviews' %}" style="color: #007bff; text-decoration: none; font-size: 0.85rem;">← Back to Reviews</a>
+            <h1>Review Details</h1>
+            <p class="subtitle">Review #{{ review.id }} - {{ review.resource.name }}</p>
+        </div>
+        <div class="header-actions">
+            <a href="{% url 'bookings:admin_reviews' %}" class="btn-back">
+                Back to Reviews
+            </a>
         </div>
     </div>
 
-    <!-- Review Info -->
-    <div style="background: var(--bg-card); padding: 20px; margin-bottom: 20px; border-left: 4px solid 
-        {% if review.status == 'APPROVED' %}#28a745
-        {% elif review.status == 'PENDING' %}#ffc107
-        {% else %}#dc3545{% endif %}; border-radius: 0px;">
-        
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-            <div>
-                <p><strong>Resource:</strong> 
-                    <a href="{% url 'bookings:resource_detail' review.resource.id %}" style="color: #007bff; text-decoration: none;">
-                        {{ review.resource.name }}
-                    </a>
-                </p>
-                <p><strong>User:</strong> {{ review.user.username }} ({{ review.user.email }})</p>
-                <p><strong>Rating:</strong> 
-                    {% for i in "12345"|make_list %}
-                        {% if forloop.counter <= review.rating %}
-                            ⭐
-                        {% else %}
-                            ☆
-                        {% endif %}
-                    {% endfor %}
-                    <span style="font-size: 0.85rem; color: var(--text-secondary);">({{ review.rating }}/5)</span>
-                </p>
-                {% if review.title %}
-                    <p><strong>Title:</strong> {{ review.title }}</p>
+    <!-- Review Information -->
+    <div class="review-info-card">
+        <div class="review-info-header">
+            <div class="review-status">
+                <span class="status-badge status-{{ review.status|lower }}">
+                    {{ review.get_status_display }}
+                </span>
+                {% if review.is_verified %}
+                    <span class="verified-badge"><i class="fas fa-check-circle"></i> Verified</span>
                 {% endif %}
             </div>
-            <div>
-                <p><strong>Status:</strong> 
-                    {% if review.status == 'APPROVED' %}
-                        <span style="background: #d4edda; color: #155724; padding: 2px 10px; border-radius: 0px; font-size: 0.75rem;">Approved</span>
-                    {% elif review.status == 'PENDING' %}
-                        <span style="background: #fff3cd; color: #856404; padding: 2px 10px; border-radius: 0px; font-size: 0.75rem;">Pending</span>
+            <div class="review-rating">
+                {% for i in "12345"|make_list %}
+                    {% if forloop.counter <= review.rating %}
+                        <span class="star filled">⭐</span>
                     {% else %}
-                        <span style="background: #f8d7da; color: #721c24; padding: 2px 10px; border-radius: 0px; font-size: 0.75rem;">Rejected</span>
+                        <span class="star empty">☆</span>
                     {% endif %}
-                </p>
-                <p><strong>Created:</strong> {{ review.created_at|date:"M d, Y H:i" }}</p>
-                <p><strong>Verified:</strong> {% if review.is_verified %} Yes{% else %} No{% endif %}</p>
-                <p><strong>Helpful:</strong> 👍 {{ review.helpful_count }}</p>
+                {% endfor %}
+                <span class="rating-text">({{ review.rating }}/5)</span>
+            </div>
+        </div>
+
+        <div class="review-info-grid">
+            <div class="info-section">
+                <div class="info-item">
+                    <span class="info-label"><i class="fas fa-cube"></i> Resource</span>
+                    <span class="info-value">
+                        <a href="{% url 'bookings:resource_detail' review.resource.id %}" class="resource-link">
+                            {{ review.resource.name }}
+                        </a>
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label"><i class="fas fa-user"></i> User</span>
+                    <span class="info-value">
+                        <span class="user-name">{{ review.user.username }}</span>
+                        <span class="user-email">{{ review.user.email }}</span>
+                    </span>
+                </div>
+                {% if review.title %}
+                <div class="info-item">
+                    <span class="info-label"><i class="fas fa-heading"></i> Title</span>
+                    <span class="info-value review-title">{{ review.title }}</span>
+                </div>
+                {% endif %}
+            </div>
+            <div class="info-section">
+                <div class="info-item">
+                    <span class="info-label"><i class="far fa-calendar-alt"></i> Created</span>
+                    <span class="info-value">{{ review.created_at|date:"M d, Y H:i" }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label"><i class="fas fa-thumbs-up"></i> Helpful</span>
+                    <span class="info-value">{{ review.helpful_count }} people found this helpful</span>
+                </div>
                 {% if review.moderated_by %}
-                    <p><strong>Moderated by:</strong> {{ review.moderated_by.username }}</p>
-                    <p><strong>Moderated at:</strong> {{ review.moderated_at|date:"M d, Y H:i" }}</p>
+                <div class="info-item">
+                    <span class="info-label"><i class="fas fa-user-shield"></i> Moderated By</span>
+                    <span class="info-value">{{ review.moderated_by.username }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label"><i class="far fa-clock"></i> Moderated At</span>
+                    <span class="info-value">{{ review.moderated_at|date:"M d, Y H:i" }}</span>
+                </div>
                 {% endif %}
             </div>
         </div>
-        
+
+        <!-- Comment Section -->
         {% if review.comment %}
-            <div style="margin-top: 15px; padding: 15px; background: var(--bg-hover); border-left: 3px solid #007bff; border-radius: 0px;">
-                <strong>Review Comment:</strong>
-                <p style="margin-top: 5px; color: var(--text-primary); line-height: 1.6;">{{ review.comment|linebreaks }}</p>
+        <div class="comment-section">
+            <div class="comment-header">
+                <i class="fas fa-quote-left"></i>
+                <span>Review Comment</span>
             </div>
+            <div class="comment-body">
+                {{ review.comment|linebreaks }}
+            </div>
+        </div>
         {% endif %}
-        
-        <!-- Display existing rejection reason -->
+
+        <!-- Rejection Reason -->
         {% if review.moderation_reason %}
-            <div style="margin-top: 15px; padding: 10px; background: #f8d7da; border-left: 3px solid #dc3545; border-radius: 0px;">
-                <strong>Rejection Reason:</strong>
-                <p style="margin-top: 5px; color: #721c24;">{{ review.moderation_reason }}</p>
+        <div class="rejection-reason">
+            <div class="rejection-header">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span>Rejection Reason</span>
             </div>
+            <div class="rejection-body">
+                {{ review.moderation_reason }}
+            </div>
+        </div>
         {% endif %}
     </div>
 
     <!-- Moderation Actions -->
-    <div style="background: var(--bg-card); padding: 20px; border-radius: 0px;">
-        <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 15px;">Moderation Actions</h3>
+    <div class="moderation-card">
+        <h3><i class="fas fa-tasks"></i> Moderation Actions</h3>
         
-        <form method="post">
+        <form method="post" class="moderation-form">
             {% csrf_token %}
             
+            <!-- PENDING STATUS -->
             {% if review.status == 'PENDING' %}
-                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                    <button type="submit" name="action" value="approve" style="padding: 10px 25px; background: #28a745; color: white; border: none; border-radius: 0px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease;"
-                            onmouseover="this.style.background='#218838'"
-                            onmouseout="this.style.background='#28a745'">
-                        Approve Review
+                <div class="moderation-actions pending-actions">
+                    <button type="submit" name="action" value="approve" class="btn-approve">
+                        <i class="fas fa-check-circle"></i> Approve Review
                     </button>
-                    <button type="button" onclick="showRejectReason('pending')" style="padding: 10px 25px; background: #dc3545; color: white; border: none; border-radius: 0px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease;"
-                            onmouseover="this.style.background='#c82333'"
-                            onmouseout="this.style.background='#dc3545'">
-                        Reject Review
+                    <button type="button" onclick="showRejectReason('pending')" class="btn-reject">
+                        <i class="fas fa-times-circle"></i> Reject Review
                     </button>
                 </div>
                 
                 <!-- Reject Reason for Pending -->
-                <div id="reject-reason-pending" style="display: none; margin-top: 15px;">
-                    <div style="padding: 15px; background: #fff3cd; border-left: 3px solid #ffc107; border-radius: 0px;">
-                        <label for="moderation_reason_pending" style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.9rem;">
-                            Reason for rejection <span style="color: #dc3545;">*</span>
-                        </label>
-                        <textarea name="moderation_reason" id="moderation_reason_pending" rows="3" 
-                                  style="width: 100%; padding: 8px 12px; border: 2px solid var(--input-border); border-radius: 0px; font-size: 0.85rem; background: var(--bg-input); color: var(--text-primary); font-family: 'Mona Sans', sans-serif; box-sizing: border-box;"
-                                  placeholder="Provide a reason for rejecting this review. This will be sent to the user."></textarea>
-                        <div style="display: flex; gap: 10px; margin-top: 10px;">
-                            <button type="submit" name="action" value="reject" 
-                                    style="padding: 8px 20px; background: #dc3545; color: white; border: none; border-radius: 0px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease;"
-                                    onmouseover="this.style.background='#c82333'"
-                                    onmouseout="this.style.background='#dc3545'">
-                                Confirm Rejection
+                <div id="reject-reason-pending" class="reject-reason-container" style="display: none;">
+                    <div class="reject-reason-box">
+                        <div class="reject-reason-header">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <span>Provide Rejection Reason</span>
+                        </div>
+                        <div class="reject-reason-body">
+                            <label for="moderation_reason_pending">Reason for rejection <span class="required">*</span></label>
+                            <textarea name="moderation_reason" id="moderation_reason_pending" rows="4" 
+                                      placeholder="Please provide a clear reason for rejecting this review. This will be sent to the user."></textarea>
+                        </div>
+                        <div class="reject-reason-actions">
+                            <button type="submit" name="action" value="reject" class="btn-confirm-reject">
+                                <i class="fas fa-check"></i> Confirm Rejection
                             </button>
-                            <button type="button" onclick="hideRejectReason('pending')" 
-                                    style="padding: 8px 20px; background: #6c757d; color: white; border: none; border-radius: 0px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease;"
-                                    onmouseover="this.style.background='#5a6268'"
-                                    onmouseout="this.style.background='#6c757d'">
-                                Cancel
+                            <button type="button" onclick="hideRejectReason('pending')" class="btn-cancel-reject">
+                                <i class="fas fa-times"></i> Cancel
                             </button>
                         </div>
                     </div>
                 </div>
                 
+            <!-- APPROVED STATUS -->
             {% elif review.status == 'APPROVED' %}
-                <div style="padding: 12px; background: #d4edda; border-left: 3px solid #28a745; border-radius: 0px;">
-                    <p style="color: #155724;">This review has been approved.</p>
+                <div class="moderation-status approved-status">
+                    <div class="status-message">
+                        <i class="fas fa-check-circle"></i>
+                        <span>This review has been approved and is visible to the public.</span>
+                    </div>
                 </div>
-                <div style="margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap;">
-                    <button type="button" onclick="showRejectReason('approved')" style="padding: 10px 25px; background: #dc3545; color: white; border: none; border-radius: 0px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease;"
-                            onmouseover="this.style.background='#c82333'"
-                            onmouseout="this.style.background='#dc3545'">
-                        Reject Review
+                <div class="moderation-actions approved-actions">
+                    <button type="button" onclick="showRejectReason('approved')" class="btn-reject">
+                        <i class="fas fa-times-circle"></i> Reject Review
                     </button>
-                    <button type="submit" name="action" value="delete" style="padding: 10px 25px; background: #dc3545; color: white; border: none; border-radius: 0px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease;"
-                            onclick="return confirm('Are you sure you want to delete this review? This action cannot be undone.')"
-                            onmouseover="this.style.background='#c82333'"
-                            onmouseout="this.style.background='#dc3545'">
-                        Delete Review
+                    <button type="submit" name="action" value="delete" class="btn-delete" 
+                            onclick="return confirm('⚠️ Are you sure you want to delete this review? This action cannot be undone.')">
+                        <i class="fas fa-trash"></i> Delete Review
                     </button>
                 </div>
                 
                 <!-- Reject Reason for Approved -->
-                <div id="reject-reason-approved" style="display: none; margin-top: 15px;">
-                    <div style="padding: 15px; background: #fff3cd; border-left: 3px solid #ffc107; border-radius: 0px;">
-                        <p style="margin-bottom: 10px; font-weight: 600; color: #856404;">
-                            This review is currently approved. Rejecting it will remove it from public view.
-                        </p>
-                        <label for="moderation_reason_approved" style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.9rem;">
-                            Reason for rejection <span style="color: #dc3545;">*</span>
-                        </label>
-                        <textarea name="moderation_reason" id="moderation_reason_approved" rows="3" 
-                                  style="width: 100%; padding: 8px 12px; border: 2px solid var(--input-border); border-radius: 0px; font-size: 0.85rem; background: var(--bg-input); color: var(--text-primary); font-family: 'Mona Sans', sans-serif; box-sizing: border-box;"
-                                  placeholder="Provide a reason for rejecting this review. This will be sent to the user."></textarea>
-                        <div style="display: flex; gap: 10px; margin-top: 10px;">
-                            <button type="submit" name="action" value="reject-approved" 
-                                    style="padding: 8px 20px; background: #dc3545; color: white; border: none; border-radius: 0px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease;"
-                                    onmouseover="this.style.background='#c82333'"
-                                    onmouseout="this.style.background='#dc3545'">
-                                Confirm Rejection
+                <div id="reject-reason-approved" class="reject-reason-container" style="display: none;">
+                    <div class="reject-reason-box">
+                        <div class="reject-reason-header">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <span>Reject Approved Review</span>
+                        </div>
+                        <div class="reject-reason-body">
+                            <p class="warning-text">⚠️ This review is currently approved. Rejecting it will remove it from public view.</p>
+                            <label for="moderation_reason_approved">Reason for rejection <span class="required">*</span></label>
+                            <textarea name="moderation_reason" id="moderation_reason_approved" rows="4" 
+                                      placeholder="Please provide a clear reason for rejecting this review. This will be sent to the user."></textarea>
+                        </div>
+                        <div class="reject-reason-actions">
+                            <button type="submit" name="action" value="reject-approved" class="btn-confirm-reject">
+                                <i class="fas fa-check"></i> Confirm Rejection
                             </button>
-                            <button type="button" onclick="hideRejectReason('approved')" 
-                                    style="padding: 8px 20px; background: #6c757d; color: white; border: none; border-radius: 0px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease;"
-                                    onmouseover="this.style.background='#5a6268'"
-                                    onmouseout="this.style.background='#6c757d'">
-                                Cancel
+                            <button type="button" onclick="hideRejectReason('approved')" class="btn-cancel-reject">
+                                <i class="fas fa-times"></i> Cancel
                             </button>
                         </div>
                     </div>
                 </div>
                 
+            <!-- REJECTED STATUS -->
             {% else %}
-                <div style="padding: 12px; background: #f8d7da; border-left: 3px solid #dc3545; border-radius: 0px;">
-                    <p style="color: #721c24;">❌ This review has been rejected.</p>
+                <div class="moderation-status rejected-status">
+                    <div class="status-message">
+                        <i class="fas fa-times-circle"></i>
+                        <span>This review has been rejected.</span>
+                    </div>
                     {% if review.moderation_reason %}
-                        <p style="margin-top: 5px; font-size: 0.85rem;"><strong>Reason:</strong> {{ review.moderation_reason }}</p>
+                        <div class="rejection-reason-display">
+                            <span class="reason-label">Reason:</span>
+                            <span class="reason-text">{{ review.moderation_reason }}</span>
+                        </div>
                     {% endif %}
                 </div>
-                <div style="margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap;">
-                    <button type="submit" name="action" value="approve" style="padding: 10px 25px; background: #28a745; color: white; border: none; border-radius: 0px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease;"
-                            onmouseover="this.style.background='#218838'"
-                            onmouseout="this.style.background='#28a745'">
-                        Re-approve
+                <div class="moderation-actions rejected-actions">
+                    <button type="submit" name="action" value="approve" class="btn-approve">
+                        <i class="fas fa-undo"></i> Re-approve Review
                     </button>
-                    <button type="submit" name="action" value="delete" style="padding: 10px 25px; background: #dc3545; color: white; border: none; border-radius: 0px; font-size: 0.9rem; font-weight: 600; cursor: pointer;"
-                            onclick="return confirm('Are you sure you want to delete this review? This action cannot be undone.')"
-                            onmouseover="this.style.background='#c82333'"
-                            onmouseout="this.style.background='#dc3545'">
-                        Delete
+                    <button type="submit" name="action" value="delete" class="btn-delete"
+                            onclick="return confirm('⚠️ Are you sure you want to delete this review? This action cannot be undone.')">
+                        <i class="fas fa-trash"></i> Delete
                     </button>
                 </div>
             {% endif %}
         </form>
     </div>
+
+    <!-- Quick Actions -->
+    <div class="quick-actions-card">
+        <h4><i class="fas fa-link"></i> Quick Links</h4>
+        <div class="quick-actions">
+            <a href="{% url 'bookings:resource_detail' review.resource.id %}" class="quick-action-link">
+                <i class="fas fa-cube"></i> View Resource
+            </a>
+            <a href="{% url 'bookings:admin_reviews' %}?resource={{ review.resource.id }}" class="quick-action-link">
+                <i class="fas fa-list"></i> All Reviews for this Resource
+            </a>
+            <a href="{% url 'bookings:admin_reviews' %}?user={{ review.user.id }}" class="quick-action-link">
+                <i class="fas fa-user"></i> All Reviews by this User
+            </a>
+            <a href="{% url 'bookings:admin_reviews' %}" class="quick-action-link">
+                <i class="fas fa-arrow-left"></i> Back to All Reviews
+            </a>
+        </div>
+    </div>
 </div>
 
 <script>
+// ============ SHOW REJECT REASON ============
 function showRejectReason(type) {
-    if (type === 'approved') {
-        document.getElementById('reject-reason-approved').style.display = 'block';
-        document.getElementById('moderation_reason_approved').focus();
-    } else {
-        document.getElementById('reject-reason-pending').style.display = 'block';
-        document.getElementById('moderation_reason_pending').focus();
+    const container = document.getElementById(`reject-reason-${type}`);
+    if (container) {
+        container.style.display = 'block';
+        container.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const textarea = container.querySelector('textarea');
+        if (textarea) {
+            setTimeout(() => textarea.focus(), 300);
+        }
     }
 }
 
+// ============ HIDE REJECT REASON ============
 function hideRejectReason(type) {
-    if (type === 'approved') {
-        document.getElementById('reject-reason-approved').style.display = 'none';
-        document.getElementById('moderation_reason_approved').value = '';
-    } else {
-        document.getElementById('reject-reason-pending').style.display = 'none';
-        document.getElementById('moderation_reason_pending').value = '';
+    const container = document.getElementById(`reject-reason-${type}`);
+    if (container) {
+        container.style.display = 'none';
+        const textarea = container.querySelector('textarea');
+        if (textarea) {
+            textarea.value = '';
+        }
     }
 }
 
-// Validate rejection reason before submitting
-document.querySelectorAll('form').forEach(form => {
+// ============ VALIDATE REJECTION REASON ============
+document.querySelectorAll('.moderation-form').forEach(form => {
     form.addEventListener('submit', function(e) {
-        const action = this.querySelector('input[name="action"]:checked') || this.querySelector('button[type="submit"]');
-        if (action && (action.value === 'reject' || action.value === 'reject-approved')) {
-            const textarea = this.querySelector('textarea[name="moderation_reason"]');
-            if (textarea && !textarea.value.trim()) {
-                e.preventDefault();
-                alert('Please provide a reason for rejection.');
-                textarea.focus();
+        const action = this.querySelector('button[type="submit"][name="action"]:focus');
+        if (action) {
+            const actionValue = action.value;
+            if (actionValue === 'reject' || actionValue === 'reject-approved') {
+                const textarea = this.querySelector('textarea[name="moderation_reason"]');
+                if (textarea && !textarea.value.trim()) {
+                    e.preventDefault();
+                    alert('⚠️ Please provide a reason for rejection.');
+                    textarea.focus();
+                    textarea.classList.add('error');
+                }
             }
         }
+    });
+});
+
+// ============ AUTO-CLOSE REJECT REASON ON ESCAPE ============
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        document.querySelectorAll('.reject-reason-container').forEach(container => {
+            if (container.style.display === 'block') {
+                container.style.display = 'none';
+                const textarea = container.querySelector('textarea');
+                if (textarea) {
+                    textarea.value = '';
+                }
+            }
+        });
+    }
+});
+
+// ============ TEXTAREA CHARACTER COUNT ============
+document.querySelectorAll('.reject-reason-body textarea').forEach(textarea => {
+    textarea.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = this.scrollHeight + 'px';
     });
 });
 </script>
 
 <style>
+/* ============ CONTAINER ============ */
+.review-detail-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 15px;
+}
+
+/* ============ PAGE HEADER ============ */
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #e9ecef;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.page-header h1 {
+    margin: 0;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #1a1a2e;
+}
+
+.page-header h1 i {
+    color: #007bff;
+    margin-right: 10px;
+}
+
+.page-header .subtitle {
+    margin: 4px 0 0;
+    color: #6c757d;
+    font-size: 0.85rem;
+}
+
+.header-actions {
+    flex-shrink: 0;
+}
+
+.btn-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: #f8f9fa;
+    color: #495057;
+    text-decoration: none;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    font-weight: 500;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+}
+
+.btn-back:hover {
+    background: #e9ecef;
+    color: #212529;
+}
+
+/* ============ REVIEW INFO CARD ============ */
+.review-info-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 0px;
+    padding: 24px;
+    margin-bottom: 24px;
+    border-left: 4px solid #007bff;
+}
+
+.review-info-card.status-approved { border-left-color: #28a745; }
+.review-info-card.status-pending { border-left-color: #ffc107; }
+.review-info-card.status-rejected { border-left-color: #dc3545; }
+
+/* ============ REVIEW INFO HEADER ============ */
+.review-info-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #e9ecef;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.review-status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 4px 14px;
+    border-radius: 10px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.status-approved { background: #d4edda; color: #155724; }
+.status-pending { background: #fff3cd; color: #856404; }
+.status-rejected { background: #f8d7da; color: #721c24; }
+
+.verified-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: #28a745;
+    background: #d4edda;
+    padding: 2px 10px;
+    border-radius: 12px;
+}
+
+.review-rating {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.star {
+    font-size: 1rem;
+}
+
+.star.filled { color: #ffc107; }
+.star.empty { color: #dee2e6; }
+
+.rating-text {
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin-left: 4px;
+}
+
+/* ============ REVIEW INFO GRID ============ */
+.review-info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px 40px;
+    margin-bottom: 16px;
+}
+
+.info-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.info-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.info-label i {
+    margin-right: 4px;
+    width: 14px;
+    color: #007bff;
+}
+
+.info-value {
+    font-size: 0.9rem;
+    color: #1a1a2e;
+}
+
+.resource-link {
+    color: #007bff;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s;
+}
+
+.resource-link:hover {
+    color: #0056b3;
+    text-decoration: underline;
+}
+
+.user-name {
+    font-weight: 500;
+    display: block;
+}
+
+.user-email {
+    font-size: 0.75rem;
+    color: #6c757d;
+}
+
+.review-title {
+    font-weight: 600;
+}
+
+/* ============ COMMENT SECTION ============ */
+.comment-section {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #e9ecef;
+}
+
+.comment-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: #495057;
+    margin-bottom: 8px;
+}
+
+.comment-header i {
+    color: #007bff;
+    font-size: 1rem;
+}
+
+.comment-body {
+    background: #f8f9fa;
+    padding: 16px 20px;
+    border-radius: 0px;
+    border-left: 3px solid #007bff;
+    color: #1a1a2e;
+    line-height: 1.7;
+}
+
+/* ============ REJECTION REASON ============ */
+.rejection-reason {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #e9ecef;
+}
+
+.rejection-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: #dc3545;
+    margin-bottom: 8px;
+}
+
+.rejection-body {
+    background: #fef2f2;
+    padding: 12px 16px;
+    border-radius: 0px;
+    border-left: 3px solid #dc3545;
+    color: #721c24;
+}
+
+/* ============ MODERATION CARD ============ */
+.moderation-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 24px;
+    margin-bottom: 24px;
+}
+
+.moderation-card h3 {
+    margin: 0 0 16px 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1a1a2e;
+}
+
+.moderation-card h3 i {
+    color: #007bff;
+    margin-right: 8px;
+}
+
+/* ============ MODERATION ACTIONS ============ */
+.moderation-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.moderation-actions button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 24px;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.moderation-actions button:hover {
+    transform: translateY(-2px);
+}
+
+.btn-approve {
+    background: #28a745;
+    color: white;
+}
+
+.btn-approve:hover {
+    background: #218838;
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+}
+
+.btn-reject {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-reject:hover {
+    background: #c82333;
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+}
+
+.btn-delete {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-delete:hover {
+    background: #c82333;
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+}
+
+.btn-confirm-reject {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-confirm-reject:hover {
+    background: #c82333;
+}
+
+.btn-cancel-reject {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-cancel-reject:hover {
+    background: #5a6268;
+}
+
+/* ============ MODERATION STATUS ============ */
+.moderation-status {
+    padding: 16px 20px;
+    border-radius: 0px;
+    margin-bottom: 16px;
+}
+
+.moderation-status .status-message {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 500;
+}
+
+.approved-status {
+    background: #d4edda;
+    border-left: 4px solid #28a745;
+}
+
+.approved-status .status-message {
+    color: #155724;
+}
+
+.rejected-status {
+    background: #fef2f2;
+    border-left: 4px solid #dc3545;
+}
+
+.rejected-status .status-message {
+    color: #721c24;
+}
+
+.rejection-reason-display {
+    margin-top: 10px;
+    padding: 10px 14px;
+    background: white;
+    border-radius: 4px;
+    border: 1px solid #f5c6cb;
+}
+
+.reason-label {
+    font-weight: 600;
+    color: #721c24;
+}
+
+.reason-text {
+    color: #721c24;
+}
+
+/* ============ REJECT REASON CONTAINER ============ */
+.reject-reason-container {
+    margin-top: 16px;
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.reject-reason-box {
+    background: #fefef3;
+    border: 1px solid #f5c6cb;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.reject-reason-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: #fff3cd;
+    color: #856404;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.reject-reason-body {
+    padding: 16px;
+}
+
+.reject-reason-body label {
+    display: block;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: #495057;
+    margin-bottom: 4px;
+}
+
+.reject-reason-body .required {
+    color: #dc3545;
+}
+
+.reject-reason-body .warning-text {
+    color: #856404;
+    font-size: 0.85rem;
+    margin: 0 0 12px 0;
+    padding: 8px 12px;
+    background: #fff3cd;
+    border-radius: 4px;
+}
+
+.reject-reason-body textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-family: inherit;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    resize: vertical;
+    min-height: 100px;
+}
+
+.reject-reason-body textarea:focus {
+    border-color: #007bff;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.reject-reason-body textarea.error {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
+}
+
+.reject-reason-actions {
+    display: flex;
+    gap: 10px;
+    padding: 12px 16px;
+    border-top: 1px solid #f5c6cb;
+    background: #fafafa;
+}
+
+/* ============ QUICK ACTIONS ============ */
+.quick-actions-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 20px 24px;
+}
+
+.quick-actions-card h4 {
+    margin: 0 0 12px 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #1a1a2e;
+}
+
+.quick-actions-card h4 i {
+    color: #007bff;
+    margin-right: 8px;
+}
+
+.quick-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.quick-action-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: #f8f9fa;
+    color: #007bff;
+    text-decoration: none;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    transition: all 0.2s;
+}
+
+.quick-action-link:hover {
+    background: #e3f2fd;
+    border-color: #007bff;
+    color: #0056b3;
+}
+
+/* ============ RESPONSIVE ============ */
 @media (max-width: 768px) {
-    div[style*="display: grid; grid-template-columns: 1fr 1fr"] {
-        grid-template-columns: 1fr !important;
+    .review-info-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+    
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .header-actions {
+        width: 100%;
+    }
+    
+    .btn-back {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .review-info-header {
+        flex-direction: column;
+        align-items: flex-start;
     }
     
     .moderation-actions {
-        flex-direction: column !important;
+        flex-direction: column;
     }
     
     .moderation-actions button {
-        width: 100% !important;
-        text-align: center !important;
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .reject-reason-actions {
+        flex-direction: column;
+    }
+    
+    .reject-reason-actions button {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .quick-actions {
+        flex-direction: column;
+    }
+    
+    .quick-action-link {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .review-info-card {
+        padding: 16px;
+    }
+    
+    .moderation-card {
+        padding: 16px;
     }
 }
 
 @media (max-width: 480px) {
-    body {
-        padding: 10px !important;
+    .page-header h1 {
+        font-size: 1.3rem;
     }
     
-    h1 {
-        font-size: 1.3rem !important;
+    .review-info-card {
+        padding: 12px;
     }
     
-    .review-info {
-        padding: 15px !important;
+    .moderation-card {
+        padding: 12px;
+    }
+    
+    .comment-body {
+        padding: 12px 14px;
+        font-size: 0.85rem;
+    }
+    
+    .star {
+        font-size: 0.85rem;
     }
 }
 </style>
-
 {% endblock %}
