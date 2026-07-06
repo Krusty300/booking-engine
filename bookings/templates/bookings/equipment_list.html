@@ -63,39 +63,104 @@
 <div class="equipment-grid">
     {% for equipment in equipment_list %}
         <div class="equipment-card {% if equipment.status == 'AVAILABLE' %}available{% elif equipment.status == 'RENTED' %}rented{% elif equipment.status == 'MAINTENANCE' %}maintenance{% endif %}">
-            <div class="equipment-status-badge">{{ equipment.get_status_display }}</div>
-            <h3>{{ equipment.name }}</h3>
-            <div class="equipment-details">
-                <p><span class="label">Serial:</span> {{ equipment.serial_number }}</p>
-                <p><span class="label">Category:</span> {{ equipment.category.name|default:"Uncategorized" }}</p>
-                <p><span class="label">Condition:</span> {{ equipment.get_condition_display }}</p>
-                <p><span class="label">Location:</span> {{ equipment.location|default:"Not specified" }}</p>
-                <!--  Owner Display -->
-                <p>
-                    <span class="label">Owner:</span>
-                    {% if equipment.owner %}
-                        {{ equipment.owner.username }}
-                        {% if equipment.owner == request.user %}
-                            <span class="owner-badge">(You)</span>
-                        {% endif %}
-                    {% else %}
-                        <span class="no-owner">No owner assigned</span>
-                    {% endif %}
-                </p>
-            </div>
-            <div class="equipment-actions">
-                <a href="{% url 'bookings:equipment_detail' equipment.id %}" class="btn-view">View Details</a>
-                {% if equipment.is_available %}
-                    <button onclick="rentEquipment({{ equipment.id }})" class="btn-rent">Rent Now</button>
+            
+            <!-- ============ IMAGE SECTION ============ -->
+            <div class="equipment-image-container">
+                <img src="{{ equipment.get_image_url }}" class="equipment-image" alt="{{ equipment.name }}"
+                     onerror="this.src='{% static 'bookings/images/default-resource.png' %}'">
+                
+                <!-- Image count badge -->
+                {% if equipment.image_count > 1 %}
+                <span class="image-count-badge">
+                    <i class="fas fa-images"></i> {{ equipment.image_count }}
+                </span>
                 {% endif %}
+                
+                <!-- Status Badge -->
+                <div class="equipment-status-badge">{{ equipment.get_status_display }}</div>
+                
+                <!-- Condition Badge -->
+                <div class="equipment-condition-badge">{{ equipment.get_condition_display }}</div>
+            </div>
+            <!-- ============ END IMAGE SECTION ============ -->
+            
+            <div class="equipment-content">
+                <h3>{{ equipment.name }}</h3>
+                <div class="equipment-details">
+                    <p><span class="label">Serial:</span> {{ equipment.serial_number }}</p>
+                    <p><span class="label">Category:</span> {{ equipment.category.name|default:"Uncategorized" }}</p>
+                    <p><span class="label">Condition:</span> {{ equipment.get_condition_display }}</p>
+                    <p><span class="label">Location:</span> {{ equipment.location|default:"Not specified" }}</p>
+                    <!-- Owner Display -->
+                    <p>
+                        <span class="label">Owner:</span>
+                        {% if equipment.owner %}
+                            {{ equipment.owner.username }}
+                            {% if equipment.owner == user %}
+                                <span class="owner-badge">(You)</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="no-owner">No owner assigned</span>
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="equipment-actions">
+                    <a href="{% url 'bookings:equipment_detail' equipment.id %}" class="btn-view">View Details</a>
+                    {% if equipment.is_available %}
+                        <button onclick="rentEquipment({{ equipment.id }})" class="btn-rent">Rent Now</button>
+                    {% endif %}
+                    {% if user.is_authenticated and user.is_staff or equipment.owner == user %}
+                        <a href="{% url 'bookings:edit_equipment' equipment.id %}" class="btn-edit">
+                            Edit
+                        </a>
+                    {% endif %}
+                </div>
             </div>
         </div>
     {% empty %}
         <div class="no-equipment">
+            <img src="{% static 'bookings/images/no-equipment.svg' %}" alt="No equipment" style="max-width: 200px;">
+            <h3>No Equipment Found</h3>
             <p>No equipment found matching your criteria.</p>
+            <a href="{% url 'bookings:create_equipment' %}" class="btn-filter">Add Equipment</a>
         </div>
     {% endfor %}
 </div>
+
+<!-- ============ PAGINATION ============ -->
+{% if equipment_list.has_other_pages %}
+<nav aria-label="Page navigation" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if equipment_list.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ equipment_list.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}">
+                Previous
+            </a>
+        </li>
+        {% endif %}
+        
+        {% for num in equipment_list.paginator.page_range %}
+            {% if equipment_list.number == num %}
+            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+            {% elif num > equipment_list.number|add:'-3' and num < equipment_list.number|add:'3' %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}">
+                    {{ num }}
+                </a>
+            </li>
+            {% endif %}
+        {% endfor %}
+        
+        {% if equipment_list.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ equipment_list.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}">
+                Next
+            </a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
 
 <script>
 function rentEquipment(equipmentId) {
@@ -132,11 +197,14 @@ function rentEquipment(equipmentId) {
 </script>
 
 <style>
+/* ============ HEADER ============ */
 .equipment-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 10px;
 }
 
 .equipment-stats {
@@ -155,6 +223,7 @@ function rentEquipment(equipmentId) {
 .stat.rented { background: #fff3cd; color: #856404; }
 .stat.maintenance { background: #f8d7da; color: #721c24; }
 
+/* ============ FILTER SECTION ============ */
 .filter-section {
     background: #f8f9fa;
     padding: 15px;
@@ -187,6 +256,7 @@ function rentEquipment(equipmentId) {
     border: 1px solid #ddd;
     border-radius: 0px;
     font-size: 0.9rem;
+    min-width: 140px;
 }
 
 .btn-filter {
@@ -194,19 +264,33 @@ function rentEquipment(equipmentId) {
     background: #007bff;
     color: white;
     border: none;
-    border-radius: 0px;
+    border-radius: 6px;
     cursor: pointer;
+    font-weight: 500;
+    transition: background 0.2s;
+}
+
+.btn-filter:hover {
+    background: #0056b3;
 }
 
 .btn-clear {
-    padding: 5px 20px;
+    padding: 6px 20px;
     background: #6c757d;
     color: white;
     border: none;
-    border-radius: 0px;
+    border-radius: 6px;
     text-decoration: none;
+    font-weight: 500;
+    transition: background 0.2s;
 }
 
+.btn-clear:hover {
+    background: #5a6268;
+    color: white;
+}
+
+/* ============ EQUIPMENT GRID ============ */
 .equipment-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -216,37 +300,118 @@ function rentEquipment(equipmentId) {
 .equipment-card {
     border: 1px solid #ddd;
     border-radius: 0px;
-    padding: 15px;
-    position: relative;
-    transition: box-shadow 0.3s ease;
+    overflow: hidden;
+    transition: box-shadow 0.3s ease, transform 0.2s ease;
+    background: white;
 }
 
 .equipment-card:hover {
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+    transform: translateY(-2px);
 }
 
 .equipment-card.available { border-left: 4px solid #28a745; }
 .equipment-card.rented { border-left: 4px solid #ffc107; }
 .equipment-card.maintenance { border-left: 4px solid #dc3545; }
+.equipment-card.reserved { border-left: 4px solid #17a2b8; }
 
-.equipment-status-badge {
+/* ============ IMAGE SECTION ============ */
+.equipment-image-container {
+    position: relative;
+    background: #f8f9fa;
+    overflow: hidden;
+    height: 200px;
+}
+
+.equipment-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.equipment-card:hover .equipment-image {
+    transform: scale(1.03);
+}
+
+/* Image count badge */
+.image-count-badge {
     position: absolute;
     top: 10px;
     right: 10px;
-    padding: 2px 10px;
-    border-radius: 0px;
+    padding: 3px 10px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    border-radius: 20px;
     font-size: 0.7rem;
     font-weight: 600;
-    background: #e9ecef;
+    display: flex;
+    align-items: center;
+    gap: 4px;
 }
 
-.equipment-card.available .equipment-status-badge { background: #d4edda; color: #155724; }
-.equipment-card.rented .equipment-status-badge { background: #fff3cd; color: #856404; }
-.equipment-card.maintenance .equipment-status-badge { background: #f8d7da; color: #721c24; }
+.image-count-badge i {
+    font-size: 0.6rem;
+}
+
+/* Status Badge */
+.equipment-status-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    padding: 3px 12px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.equipment-card.available .equipment-status-badge { 
+    background: #d4edda; 
+    color: #155724; 
+}
+
+.equipment-card.rented .equipment-status-badge { 
+    background: #fff3cd; 
+    color: #856404; 
+}
+
+.equipment-card.maintenance .equipment-status-badge { 
+    background: #f8d7da; 
+    color: #721c24; 
+}
+
+.equipment-card.reserved .equipment-status-badge { 
+    background: #cce5ff; 
+    color: #004085; 
+}
+
+/* Condition Badge */
+.equipment-condition-badge {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    padding: 2px 10px;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 20px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: #495057;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+/* ============ CONTENT SECTION ============ */
+.equipment-content {
+    padding: 15px;
+}
 
 .equipment-card h3 {
     margin: 0 0 10px 0;
     font-size: 1.1rem;
+    font-weight: 600;
+    color: #212529;
 }
 
 .equipment-details p {
@@ -258,56 +423,174 @@ function rentEquipment(equipmentId) {
 .equipment-details .label {
     font-weight: 600;
     color: #6c757d;
+    min-width: 70px;
+    display: inline-block;
 }
 
+.owner-badge {
+    background: #ffffff;
+    color: rgb(0, 0, 0);
+    padding: 1px 8px;
+    border-radius: 12px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    margin-left: 4px;
+}
+
+.no-owner {
+    color: #6c757d;
+    font-style: italic;
+}
+
+/* ============ ACTIONS ============ */
 .equipment-actions {
     margin-top: 12px;
     display: flex;
     gap: 8px;
+    flex-wrap: wrap;
 }
 
 .btn-view {
-    padding: 6px 12px;
+    padding: 6px 14px;
     background: #17a2b8;
     color: white;
     text-decoration: none;
     border-radius: 0px;
     font-size: 0.85rem;
+    transition: background 0.2s;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-view:hover {
+    background: #138496;
+    color: white;
 }
 
 .btn-rent {
-    padding: 6px 12px;
+    padding: 6px 14px;
     background: #28a745;
     color: white;
     border: none;
     border-radius: 0px;
     cursor: pointer;
     font-size: 0.85rem;
+    transition: background 0.2s;
 }
 
 .btn-rent:hover {
     background: #218838;
 }
 
+.btn-edit {
+    padding: 6px 12px;
+    background: #ffc107;
+    color: #212529;
+    border: none;
+    border-radius: 0px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    text-decoration: none;
+    transition: background 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-edit:hover {
+    background: #e0a800;
+    color: #212529;
+}
+
+/* ============ NO EQUIPMENT ============ */
 .no-equipment {
     grid-column: 1 / -1;
     text-align: center;
-    padding: 40px;
+    padding: 60px 20px;
     color: #6c757d;
 }
 
-.owner-badge {
-    background: #007bff;
-    color: white;
-    padding: 1px 6px;
+.no-equipment h3 {
+    margin: 15px 0 10px 0;
+    color: #495057;
+}
+
+.no-equipment .btn-filter {
+    display: inline-block;
+    margin-top: 15px;
+    text-decoration: none;
+}
+
+/* ============ PAGINATION ============ */
+.pagination {
+    margin-top: 20px;
+}
+
+.page-link {
+    color: #007bff;
     border-radius: 0px;
-    font-size: 0.7rem;
-    font-weight: 600;
 }
 
-.no-owner {
-    color: #6c757d;
-    font-style: italic;
+.page-item.active .page-link {
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+/* ============ RESPONSIVE ============ */
+@media (max-width: 768px) {
+    .equipment-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .equipment-stats {
+        flex-wrap: wrap;
+    }
+    
+    .filter-form {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .filter-group {
+        width: 100%;
+    }
+    
+    .filter-group select,
+    .filter-group input {
+        width: 100%;
+        min-width: unset;
+    }
+    
+    .equipment-grid {
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    }
+    
+    .equipment-image-container {
+        height: 180px;
+    }
+}
+
+@media (max-width: 480px) {
+    .equipment-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .equipment-image-container {
+        height: 200px;
+    }
+    
+    .equipment-actions {
+        flex-direction: column;
+    }
+    
+    .equipment-actions .btn-view,
+    .equipment-actions .btn-rent,
+    .equipment-actions .btn-edit {
+        width: 100%;
+        text-align: center;
+        justify-content: center;
+    }
 }
 </style>
 {% endblock %}

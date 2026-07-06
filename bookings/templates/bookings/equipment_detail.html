@@ -1,4 +1,5 @@
 {% extends 'bookings/base.html' %}
+{% load static %}
 
 {% block content %}
 <div class="equipment-detail-container">
@@ -12,7 +13,7 @@
                 <span class="owner-badge-detail">
                     {% if equipment.owner %}
                         {{ equipment.owner.username }}
-                        {% if equipment.owner == request.user %}
+                        {% if equipment.owner == user %}
                             <span class="owner-label">(Your Equipment)</span>
                         {% endif %}
                     {% else %}
@@ -22,13 +23,64 @@
             </div>
         </div>
         <div class="header-actions">
-            <a href="{% url 'bookings:my_equipment' %}" class="btn-back">← Back to My Equipment</a>
+            <a href="{% url 'bookings:equipment_list' %}" class="btn-back">← Back to Equipment</a>
         </div>
     </div>
 
     <!-- Main Content Grid -->
     <div class="equipment-detail-grid">
-        <!-- Left Column: Equipment Information -->
+        <!-- ============ LEFT COLUMN: IMAGE GALLERY ============ -->
+        <div class="equipment-gallery-section">
+            <div class="gallery-card">
+                <!-- Main Image -->
+                <div class="main-image-container">
+                    <img id="mainImage" src="{{ primary_image }}" class="main-image" 
+                         alt="{{ equipment.name }}"
+                         onerror="this.src='{% static 'bookings/images/default-resource.png' %}'">
+                    
+                    <!-- Status Badge Overlay -->
+                    <span class="image-status-badge status-{{ equipment.status|lower }}">
+                        {{ equipment.get_status_display }}
+                    </span>
+                    
+                    <!-- Image Count -->
+                    {% if image_count > 1 %}
+                    <span class="image-count-overlay">
+                        <i class="fas fa-images"></i> {{ image_count }} images
+                    </span>
+                    {% endif %}
+                    
+                    <!-- Gallery Management Link -->
+                    {% if user.is_authenticated and user.is_staff or equipment.owner == user %}
+                    <a href="{% url 'bookings:equipment_gallery' equipment.id %}" class="gallery-manage-btn">
+                        <i class="fas fa-cog"></i> Manage Gallery
+                    </a>
+                    {% endif %}
+                </div>
+
+                <!-- Thumbnails -->
+                {% if images and images|length > 1 %}
+                <div class="thumbnail-container">
+                    {% for image in images %}
+                    <div class="thumbnail-item {% if image.is_primary %}active{% endif %}" 
+                         onclick="changeImage('{{ image.url }}', this)">
+                        <img src="{{ image.url }}" alt="{{ image.caption|default:'Equipment image' }}"
+                             onerror="this.src='{% static 'bookings/images/default-resource.png' %}'">
+                        {% if image.is_primary %}
+                        <span class="thumbnail-badge">★</span>
+                        {% endif %}
+                        {% if image.caption %}
+                        <span class="thumbnail-caption">{{ image.caption|truncatechars:15 }}</span>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        <!-- ============ END IMAGE GALLERY ============ -->
+
+        <!-- ============ RIGHT COLUMN: Equipment Information ============ -->
         <div class="equipment-info">
             <div class="info-card">
                 <h3>Equipment Information</h3>
@@ -88,22 +140,22 @@
                 <h4>Rental Status</h4>
                 {% if equipment.is_available %}
                     <div class="action-available">
-                        <p class="status-message available"> This equipment is available for rental</p>
+                        <p class="status-message available">This equipment is available for rental</p>
                         <button onclick="rentEquipment({{ equipment.id }})" class="btn-rent-large">
-                            Rent Now
+                            <i class="fas fa-hand-holding"></i> Rent Now
                         </button>
                     </div>
                 {% elif equipment.status == 'RENTED' %}
                     {% with rental=equipment.rentals.first %}
                         {% if rental %}
                             <div class="action-rented">
-                                <p class="status-message rented"> Currently rented</p>
+                                <p class="status-message rented">Currently rented</p>
                                 <div class="rental-info">
                                     <p><strong>Rented by:</strong> {{ rental.rented_by.username }}</p>
                                     <p><strong>Expected return:</strong> {{ rental.expected_return_date|date:"M d, Y H:i" }}</p>
                                     <p><strong>Days rented:</strong> {{ rental.days_rented }} days</p>
                                     {% if rental.is_overdue %}
-                                        <p class="overdue-warning"> This rental is OVERDUE!</p>
+                                        <p class="overdue-warning">This rental is OVERDUE!</p>
                                     {% endif %}
                                 </div>
                             </div>
@@ -111,48 +163,58 @@
                     {% endwith %}
                 {% elif equipment.status == 'MAINTENANCE' %}
                     <div class="action-maintenance">
-                        <p class="status-message maintenance"> Currently under maintenance</p>
+                        <p class="status-message maintenance">Currently under maintenance</p>
                         <p>This equipment is not available for rental until maintenance is completed.</p>
                     </div>
                 {% elif equipment.status == 'RETIRED' %}
                     <div class="action-retired">
-                        <p class="status-message retired"> his equipment has been retired</p>
+                        <p class="status-message retired">This equipment has been retired</p>
                     </div>
                 {% elif equipment.status == 'LOST' %}
                     <div class="action-lost">
-                        <p class="status-message lost"> This equipment has been marked as lost</p>
+                        <p class="status-message lost">This equipment has been marked as lost</p>
                     </div>
                 {% endif %}
             </div>
         </div>
-
-        <!-- Right Column: Quick Actions -->
-        <div class="equipment-sidebar">
-            <div class="quick-actions-card">
-                <h3>Quick Actions</h3>
-                <ul>
-                    <li><a href="{% url 'bookings:equipment_list' %}" class="action-link">
-                        Back to Equipment List
-                    </a></li>
-                    {% if user.is_staff %}
-                        <li><a href="/admin/bookings/equipment/{{ equipment.id }}/change/" class="action-link" target="_blank">
-                            Edit in Admin
-                        </a></li>
-                        <li><a href="{% url 'bookings:equipment_maintenance' %}?equipment_id={{ equipment.id }}" class="action-link">
-                            Schedule Maintenance
-                        </a></li>
-                    {% endif %}
-                    {% if equipment.status == 'RENTED' %}
-                        <li><button onclick="returnCurrentRental()" class="action-link return-btn">
-                            Return Equipment
-                        </button></li>
-                    {% endif %}
-                </ul>
-            </div>
-        </div>
+        <!-- ============ END EQUIPMENT INFORMATION ============ -->
     </div>
 
-    <!-- Rental History -->
+    <!-- ============ SIDEBAR ============ -->
+    <div class="equipment-sidebar">
+        <div class="quick-actions-card">
+            <h3>Quick Actions</h3>
+            <ul>
+                <li><a href="{% url 'bookings:equipment_list' %}" class="action-link">
+                    <i class="fas fa-list"></i> Back to Equipment List
+                </a></li>
+                {% if user.is_authenticated and user.is_staff or equipment.owner == user %}
+                    <li><a href="{% url 'bookings:edit_equipment' equipment.id %}" class="action-link">
+                        <i class="fas fa-edit"></i> Edit Equipment
+                    </a></li>
+                    <li><a href="{% url 'bookings:equipment_gallery' equipment.id %}" class="action-link">
+                        <i class="fas fa-images"></i> Manage Gallery ({{ image_count }})
+                    </a></li>
+                {% endif %}
+                {% if user.is_staff %}
+                    <li><a href="/admin/bookings/equipment/{{ equipment.id }}/change/" class="action-link" target="_blank">
+                        <i class="fas fa-user-cog"></i> Edit in Admin
+                    </a></li>
+                    <li><a href="{% url 'bookings:equipment_maintenance' %}?equipment_id={{ equipment.id }}" class="action-link">
+                        <i class="fas fa-tools"></i> Schedule Maintenance
+                    </a></li>
+                {% endif %}
+                {% if equipment.status == 'RENTED' %}
+                    <li><button onclick="returnCurrentRental()" class="action-link return-btn">
+                        <i class="fas fa-undo"></i> Return Equipment
+                    </button></li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+    <!-- ============ END SIDEBAR ============ -->
+
+    <!-- ============ RENTAL HISTORY ============ -->
     <div class="history-section">
         <div class="history-header">
             <h3>Rental History</h3>
@@ -203,8 +265,9 @@
             </div>
         {% endif %}
     </div>
+    <!-- ============ END RENTAL HISTORY ============ -->
 
-    <!-- Maintenance History -->
+    <!-- ============ MAINTENANCE HISTORY ============ -->
     <div class="history-section">
         <div class="history-header">
             <h3>Maintenance History</h3>
@@ -249,10 +312,32 @@
             </div>
         {% endif %}
     </div>
+    <!-- ============ END MAINTENANCE HISTORY ============ -->
 </div>
 
 <script>
-// Get CSRF token
+// ============ IMAGE GALLERY ============
+function changeImage(imageUrl, element) {
+    // Update main image
+    document.getElementById('mainImage').src = imageUrl;
+    
+    // Update active thumbnail
+    document.querySelectorAll('.thumbnail-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    if (element) {
+        element.classList.add('active');
+    }
+}
+
+// Keyboard navigation for gallery
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        // Close any lightbox if we add one
+    }
+});
+
+// ============ GET CSRF TOKEN ============
 function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {
@@ -269,7 +354,7 @@ function getCookie(name) {
 }
 const csrftoken = getCookie('csrftoken');
 
-// Rent Equipment
+// ============ RENT EQUIPMENT ============
 function rentEquipment(equipmentId) {
     const returnDate = prompt(
         'Expected return date (YYYY-MM-DD HH:MM):', 
@@ -295,8 +380,8 @@ function rentEquipment(equipmentId) {
     if (!confirmRent) return;
     
     const btn = event.target;
-    const originalText = btn.textContent;
-    btn.textContent = ' Processing...';
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '⏳ Processing...';
     btn.disabled = true;
     
     fetch('/equipment/rent/', {
@@ -309,24 +394,23 @@ function rentEquipment(equipmentId) {
     .then(response => response.json())
     .then(data => {
         if (data.error) {
-            alert(' Error: ' + data.error);
+            alert('❌ Error: ' + data.error);
         } else {
-            alert(' Success! ' + data.message);
+            alert('✅ Success! ' + data.message);
             location.reload();
         }
     })
     .catch(error => {
-        alert(' Error: ' + error.message);
+        alert('❌ Error: ' + error.message);
     })
     .finally(() => {
-        btn.textContent = originalText;
+        btn.innerHTML = originalText;
         btn.disabled = false;
     });
 }
 
-// Return Equipment
+// ============ RETURN EQUIPMENT ============
 function returnCurrentRental() {
-    // Find the active rental ID from the page
     const rentalId = '{{ equipment.rentals.first.id }}';
     if (!rentalId || rentalId === 'None') {
         alert('No active rental found for this equipment.');
@@ -349,8 +433,8 @@ function returnCurrentRental() {
     formData.append('condition_notes', conditionNotes || '');
     
     const btn = event.target;
-    const originalText = btn.textContent;
-    btn.textContent = ' Processing...';
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '⏳ Processing...';
     btn.disabled = true;
     
     fetch('/equipment/return/', {
@@ -363,30 +447,30 @@ function returnCurrentRental() {
     .then(response => response.json())
     .then(data => {
         if (data.error) {
-            alert(' Error: ' + data.error);
+            alert('❌ Error: ' + data.error);
         } else {
-            alert(' Success! ' + data.message);
+            alert('✅ Success! ' + data.message);
             location.reload();
         }
     })
     .catch(error => {
-        alert(' Error: ' + error.message);
+        alert('❌ Error: ' + error.message);
     })
     .finally(() => {
-        btn.textContent = originalText;
+        btn.innerHTML = originalText;
         btn.disabled = false;
     });
 }
 </script>
 
 <style>
-/* Container */
+/* ============ CONTAINER ============ */
 .equipment-detail-container {
     max-width: 1200px;
     margin: 0 auto;
 }
 
-/* Header */
+/* ============ HEADER ============ */
 .equipment-detail-header {
     display: flex;
     justify-content: space-between;
@@ -429,7 +513,7 @@ function returnCurrentRental() {
     color: #212529;
 }
 
-/* Badges */
+/* ============ BADGES ============ */
 .status-badge {
     padding: 4px 14px;
     font-weight: 600;
@@ -462,20 +546,163 @@ function returnCurrentRental() {
 .condition-poor { background: #f8d7da; color: #721c24; }
 .condition-needs_repair { background: #f8d7da; color: #721c24; }
 
-/* Grid Layout */
+/* ============ GRID LAYOUT ============ */
 .equipment-detail-grid {
     display: grid;
-    grid-template-columns: 2fr 1fr;
+    grid-template-columns: 1fr 1fr;
     gap: 30px;
     margin-bottom: 30px;
 }
 
-/* Equipment Info */
+/* ============ GALLERY SECTION ============ */
+.equipment-gallery-section {
+    display: flex;
+    flex-direction: column;
+}
+
+.gallery-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    padding: 16px;
+    border-radius: 4px;
+}
+
+.main-image-container {
+    position: relative;
+    background: #f8f9fa;
+    border-radius: 4px;
+    overflow: hidden;
+    height: 400px;
+}
+
+.main-image {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.image-status-badge {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    padding: 6px 16px;
+    font-weight: 600;
+    font-size: 0.8rem;
+    border-radius: 0px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.image-status-badge.status-available { background: rgba(40, 167, 69, 0.9); color: white; }
+.image-status-badge.status-rented { background: rgba(255, 193, 7, 0.9); color: #856404; }
+.image-status-badge.status-maintenance { background: rgba(220, 53, 69, 0.9); color: white; }
+.image-status-badge.status-retired { background: rgba(108, 117, 125, 0.9); color: white; }
+.image-status-badge.status-lost { background: rgba(220, 53, 69, 0.9); color: white; }
+
+.image-count-overlay {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+    padding: 4px 12px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.gallery-manage-btn {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    padding: 6px 14px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    border: none;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+
+.gallery-manage-btn:hover {
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+}
+
+/* ============ THUMBNAILS ============ */
+.thumbnail-container {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    overflow-x: auto;
+    padding: 4px 2px;
+}
+
+.thumbnail-item {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    flex-shrink: 0;
+    border: 2px solid transparent;
+    border-radius: 0px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.thumbnail-item:hover {
+    transform: scale(1.05);
+    border-color: #007bff;
+}
+
+.thumbnail-item.active {
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.3);
+}
+
+.thumbnail-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.thumbnail-badge {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    font-size: 12px;
+    color: #ffc107;
+    text-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
+}
+
+.thumbnail-caption {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 2px 4px;
+    background: rgba(0, 0, 0, 0.6);
+    color: white;
+    font-size: 0.6rem;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ============ EQUIPMENT INFO ============ */
+.equipment-info {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
 .info-card {
     background: white;
     border: 1px solid #e9ecef;
     padding: 20px;
-    margin-bottom: 20px;
+    border-radius: 0px;
 }
 
 .info-card h3 {
@@ -521,12 +748,11 @@ function returnCurrentRental() {
     font-style: italic;
 }
 
-/* Notes Card */
+/* ============ NOTES CARD ============ */
 .notes-card {
     background: #f8f9fa;
     border: 1px solid #e9ecef;
     padding: 16px 20px;
-    margin-bottom: 20px;
 }
 
 .notes-card h4 {
@@ -541,7 +767,7 @@ function returnCurrentRental() {
     line-height: 1.6;
 }
 
-/* Action Card */
+/* ============ ACTION CARD ============ */
 .action-card {
     background: white;
     border: 1px solid #e9ecef;
@@ -566,7 +792,7 @@ function returnCurrentRental() {
 .status-message.retired { color: #6c757d; }
 .status-message.lost { color: #dc3545; }
 
-/* Rent Button */
+/* ============ RENT BUTTON ============ */
 .btn-rent-large {
     display: inline-flex;
     align-items: center;
@@ -579,6 +805,7 @@ function returnCurrentRental() {
     font-size: 1rem;
     font-weight: 600;
     transition: all 0.3s ease;
+    border-radius: 0px;
 }
 
 .btn-rent-large:hover {
@@ -587,7 +814,7 @@ function returnCurrentRental() {
     box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
 }
 
-/* Rental Info */
+/* ============ RENTAL INFO ============ */
 .rental-info {
     background: #f8f9fa;
     padding: 12px 16px;
@@ -605,11 +832,9 @@ function returnCurrentRental() {
     margin-top: 6px !important;
 }
 
-/* Sidebar */
+/* ============ SIDEBAR ============ */
 .equipment-sidebar {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
+    margin-top: 30px;
 }
 
 .quick-actions-card {
@@ -661,10 +886,6 @@ function returnCurrentRental() {
     text-decoration: none;
 }
 
-.action-icon {
-    flex-shrink: 0;
-}
-
 .return-btn {
     background: #fff3cd;
     border-color: #ffc107;
@@ -677,7 +898,7 @@ function returnCurrentRental() {
     color: #856404;
 }
 
-/* History Sections */
+/* ============ HISTORY SECTIONS ============ */
 .history-section {
     margin-top: 30px;
     background: white;
@@ -779,7 +1000,7 @@ function returnCurrentRental() {
     color: #495057;
 }
 
-/* Empty State */
+/* ============ EMPTY STATE ============ */
 .empty-state {
     text-align: center;
     padding: 30px;
@@ -787,11 +1008,15 @@ function returnCurrentRental() {
     background: #f8f9fa;
 }
 
-/* Responsive */
+/* ============ RESPONSIVE ============ */
 @media (max-width: 992px) {
     .equipment-detail-grid {
         grid-template-columns: 1fr;
         gap: 20px;
+    }
+    
+    .main-image-container {
+        height: 350px;
     }
 }
 
@@ -822,6 +1047,20 @@ function returnCurrentRental() {
     .equipment-detail-header h1 {
         font-size: 1.4rem;
     }
+    
+    .main-image-container {
+        height: 280px;
+    }
+    
+    .thumbnail-item {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .action-link {
+        font-size: 0.8rem;
+        padding: 6px 10px;
+    }
 }
 
 @media (max-width: 480px) {
@@ -846,6 +1085,20 @@ function returnCurrentRental() {
     .btn-rent-large {
         width: 100%;
         justify-content: center;
+    }
+    
+    .main-image-container {
+        height: 220px;
+    }
+    
+    .thumbnail-item {
+        width: 50px;
+        height: 50px;
+    }
+    
+    .image-status-badge {
+        font-size: 0.65rem;
+        padding: 4px 10px;
     }
 }
 </style>

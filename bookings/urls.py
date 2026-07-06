@@ -31,7 +31,7 @@ urlpatterns = [
     path('categories/<int:category_id>/delete/', views.delete_category, name='delete_category'),
 
     # ============ ADMIN RESOURCE MANAGEMENT ============
-    path('resources-admin/', views.admin_manage_resources, name='admin_manage_resources'),  # ✅ Changed
+    path('resources-admin/', views.admin_manage_resources, name='admin_manage_resources'),
     path('resources-admin/<int:resource_id>/status/', views.admin_update_resource_status, name='admin_update_resource_status'),
 
     # ============ BOOKING MANAGEMENT ============
@@ -61,6 +61,12 @@ urlpatterns = [
     path('equipment/<int:equipment_id>/edit/', views.edit_equipment, name='edit_equipment'),
     path('equipment/<int:equipment_id>/delete/', views.delete_equipment, name='delete_equipment'),
     
+    # ============ EQUIPMENT GALLERY ============
+    path('equipment/<int:equipment_id>/gallery/', views.equipment_gallery, name='equipment_gallery'),
+    path('equipment/gallery/<int:image_id>/delete/', views.delete_gallery_image, name='delete_gallery_image'),
+    path('equipment/gallery/<int:image_id>/set-primary/', views.set_primary_gallery_image, name='set_primary_gallery_image'),
+    path('equipment/<int:equipment_id>/reorder/', views.reorder_gallery_images, name='reorder_gallery_images'),
+    
     path('my-rentals/', views.my_rentals, name='my_rentals'),
     path('rentals/<int:rental_id>/', views.rental_detail, name='rental_detail'),
     path('equipment/rent/', views.rent_equipment, name='rent_equipment'),
@@ -89,7 +95,7 @@ urlpatterns = [
     path('reviews/<int:review_id>/delete/', views.delete_review, name='delete_review'),
 
     # ============ ADMIN REVIEW MANAGEMENT ============
-    path('reviews-admin/', views.admin_reviews, name='admin_reviews'),  # ✅ Changed
+    path('reviews-admin/', views.admin_reviews, name='admin_reviews'),
     path('reviews-admin/<int:review_id>/', views.admin_review_detail, name='admin_review_detail'),
     path('reviews-admin/bulk-action/', views.admin_bulk_action_reviews, name='admin_bulk_action_reviews'),
 

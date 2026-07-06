@@ -1,4 +1,5 @@
 {% extends 'bookings/base.html' %}
+{% load static %}
 
 {% block content %}
 <div class="my-rentals-container">
@@ -92,14 +93,38 @@
         <div class="rentals-grid">
             {% for rental in rentals %}
                 <div class="rental-card {% if rental.is_overdue %}overdue{% endif %}">
-                    <!-- Equipment Image/Icon -->
+                    <!-- ============ EQUIPMENT IMAGE ============ -->
                     <div class="rental-image">
-                        {% if rental.equipment.category.icon %}
-                            <span class="category-icon">{{ rental.equipment.category.icon|safe }}</span>
+                        {% if rental.equipment.has_image %}
+                            <img src="{{ rental.equipment.get_image_url }}" 
+                                 alt="{{ rental.equipment.name }}"
+                                 class="equipment-thumbnail"
+                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            <div class="category-icon" style="display: none;">
+                                {% if rental.equipment.category.icon %}
+                                    {{ rental.equipment.category.icon|safe }}
+                                {% else %}
+                                    🛠️
+                                {% endif %}
+                            </div>
                         {% else %}
-                            <span class="category-icon">🛠️</span>
+                            <div class="category-icon">
+                                {% if rental.equipment.category.icon %}
+                                    {{ rental.equipment.category.icon|safe }}
+                                {% else %}
+                                    🛠️
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                        
+                        <!-- Image count badge -->
+                        {% if rental.equipment.image_count > 1 %}
+                            <span class="image-count-badge">
+                                <i class="fas fa-images"></i> {{ rental.equipment.image_count }}
+                            </span>
                         {% endif %}
                     </div>
+                    <!-- ============ END EQUIPMENT IMAGE ============ -->
                     
                     <!-- Rental Info -->
                     <div class="rental-info">
@@ -167,7 +192,7 @@
                                 Return Equipment
                             </button>
                         {% elif rental.status == 'CHECKED_IN' %}
-                            <span class="returned-label">✅ Returned</span>
+                            <span class="returned-label">Returned</span>
                         {% endif %}
                     </div>
                 </div>
@@ -176,7 +201,6 @@
     {% else %}
         <!-- Empty State -->
         <div class="empty-state">
-            <div class="empty-icon">📦</div>
             <h2>No Rentals Found</h2>
             <p>You haven't rented any equipment yet.</p>
             <div class="empty-actions">
@@ -213,7 +237,7 @@ function returnEquipment(rentalId) {
         ''
     );
     
-    if (conditionNotes === null) return; // User cancelled
+    if (conditionNotes === null) return;
     
     const confirmReturn = confirm(
         'Are you sure you want to return this equipment?\n\n' +
@@ -226,7 +250,6 @@ function returnEquipment(rentalId) {
     formData.append('rental_id', rentalId);
     formData.append('condition_notes', conditionNotes || '');
     
-    // Show loading state
     const btn = event.target;
     const originalText = btn.textContent;
     btn.textContent = '⏳ Processing...';
@@ -259,10 +282,8 @@ function returnEquipment(rentalId) {
 
 // Auto-refresh overdue counter every minute
 document.addEventListener('DOMContentLoaded', function() {
-    // Highlight overdue items if any
     const overdueCards = document.querySelectorAll('.rental-card.overdue');
     if (overdueCards.length > 0) {
-        // Scroll to first overdue
         overdueCards[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 });
@@ -319,6 +340,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
 .stat-number.active-count {
     color: #28a745;
+}
+
+.stat-number.returned-count {
+    color: #17a2b8;
 }
 
 .stat-label {
@@ -463,21 +488,53 @@ document.addEventListener('DOMContentLoaded', function() {
     border-color: #dc3545;
 }
 
-/* Rental Image */
+/* ============ RENTAL IMAGE ============ */
 .rental-image {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 64px;
-    height: 64px;
+    width: 80px;
+    height: 80px;
     background: #f8f9fa;
     border: 1px solid #e9ecef;
     flex-shrink: 0;
+    overflow: hidden;
+    border-radius: 4px;
+}
+
+.equipment-thumbnail {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 .category-icon {
     font-size: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
+
+.image-count-badge {
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    padding: 1px 8px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    border-radius: 12px;
+    font-size: 0.55rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.image-count-badge i {
+    font-size: 0.5rem;
+}
+/* ============ END RENTAL IMAGE ============ */
 
 /* Rental Info */
 .rental-info {
@@ -688,6 +745,11 @@ document.addEventListener('DOMContentLoaded', function() {
     .header-stats {
         gap: 12px;
     }
+    
+    .rental-image {
+        width: 60px;
+        height: 60px;
+    }
 }
 
 @media (max-width: 768px) {
@@ -731,8 +793,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     .rental-image {
-        width: 48px;
-        height: 48px;
+        width: 50px;
+        height: 50px;
     }
     
     .category-icon {
@@ -766,6 +828,15 @@ document.addEventListener('DOMContentLoaded', function() {
     .detail-label {
         min-width: unset;
         font-size: 0.75rem;
+    }
+    
+    .rental-image {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .category-icon {
+        font-size: 1.2rem;
     }
 }
 </style>

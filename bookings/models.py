@@ -653,6 +653,46 @@ class EquipmentCategory(models.Model):
         return self.equipment.count()
 
 
+class EquipmentImage(models.Model):
+    """Gallery images for equipment"""
+    equipment = models.ForeignKey(
+        'Equipment',
+        on_delete=models.CASCADE,
+        related_name='gallery_images'
+    )
+    image = models.ImageField(
+        upload_to='equipment/gallery/',
+        validators=[validate_image_size],
+        help_text="Upload an equipment photo (max 5MB)"
+    )
+    caption = models.CharField(max_length=200, blank=True, null=True, help_text="Optional caption for the image")
+    is_primary = models.BooleanField(default=False, help_text="Set as primary image for this equipment")
+    order = models.IntegerField(default=0, help_text="Display order")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['order', 'created_at']
+        verbose_name_plural = "Equipment Images"
+        indexes = [
+            models.Index(fields=['equipment', 'is_primary']),
+            models.Index(fields=['order']),
+        ]
+    
+    def __str__(self):
+        return f"Image for {self.equipment.name}"
+    
+    def get_image_url(self):
+        """Get the image URL"""
+        return self.image.url if self.image else '/static/bookings/images/default-equipment.png'
+    
+    def delete(self, *args, **kwargs):
+        """Delete the image file when the record is deleted"""
+        if self.image:
+            self.image.delete()
+        super().delete(*args, **kwargs)
+
+
 class Equipment(models.Model):
     """Individual equipment item with serial number tracking"""
     STATUS_CHOICES = [
@@ -709,6 +749,27 @@ class Equipment(models.Model):
         help_text="User who owns/created this equipment"
     )
 
+    # ============ NEW IMAGE FIELDS ============
+    image = models.ImageField(
+        upload_to='equipment/',
+        blank=True,
+        null=True,
+        validators=[validate_image_size],
+        help_text="Upload a photo of the equipment (max 5MB)"
+    )
+    image_url = models.URLField(
+        blank=True,
+        null=True,
+        help_text="Optional: Link to an external image URL"
+    )
+    thumbnail = models.ImageField(
+        upload_to='equipment/thumbnails/',
+        blank=True,
+        null=True,
+        help_text="Auto-generated thumbnail"
+    )
+    # ============ END NEW IMAGE FIELDS ============
+
     class Meta:
         verbose_name_plural = "Equipment"
         indexes = [
@@ -718,6 +779,8 @@ class Equipment(models.Model):
             models.Index(fields=['owner']),
             models.Index(fields=['owner', 'status']),
             models.Index(fields=['category', 'status']),
+            # New indexes for image fields
+            models.Index(fields=['image']),
         ]
 
     def __str__(self):
@@ -745,6 +808,109 @@ class Equipment(models.Model):
         if not user.is_authenticated:
             return False
         return user.is_staff or self.is_owned_by(user)
+
+    # ============ NEW IMAGE HELPER METHODS ============
+    def get_image_url(self):
+        """Get the primary image URL"""
+        if self.image:
+            return self.image.url
+        elif self.image_url:
+            return self.image_url
+        return '/static/bookings/images/default-equipment.png'
+    
+    def has_image(self):
+        """Check if equipment has an image"""
+        return bool(self.image) or bool(self.image_url)
+    
+    def get_thumbnail_url(self):
+        """Get thumbnail URL"""
+        if self.thumbnail:
+            return self.thumbnail.url
+        return self.get_image_url()
+    
+    def get_all_images(self):
+        """Get all images associated with this equipment"""
+        images = []
+        
+        # Primary image
+        if self.image:
+            images.append({
+                'id': 'primary',
+                'url': self.image.url,
+                'type': 'primary',
+                'is_primary': True,
+                'caption': 'Primary Image'
+            })
+        
+        # External image
+        if self.image_url:
+            images.append({
+                'id': 'external',
+                'url': self.image_url,
+                'type': 'external',
+                'is_primary': not bool(self.image),
+                'caption': 'External Image'
+            })
+        
+        # Gallery images
+        for gallery_image in self.gallery_images.all():
+            images.append({
+                'id': gallery_image.id,
+                'url': gallery_image.image.url,
+                'type': 'gallery',
+                'is_primary': gallery_image.is_primary,
+                'caption': gallery_image.caption or f'Image {gallery_image.order + 1}',
+                'order': gallery_image.order
+            })
+        
+        # Sort images: primary first, then by order
+        images.sort(key=lambda x: (not x['is_primary'], x.get('order', 0)))
+        
+        return images
+    
+    def get_primary_image(self):
+        """Get the primary image"""
+        if self.image:
+            return {
+                'url': self.image.url,
+                'type': 'primary',
+                'is_primary': True
+            }
+        elif self.image_url:
+            return {
+                'url': self.image_url,
+                'type': 'external',
+                'is_primary': True
+            }
+        # Check gallery for primary
+        primary_gallery = self.gallery_images.filter(is_primary=True).first()
+        if primary_gallery:
+            return {
+                'url': primary_gallery.image.url,
+                'type': 'gallery',
+                'is_primary': True,
+                'caption': primary_gallery.caption
+            }
+        return None
+    
+    def get_image_count(self):
+        """Get total number of images"""
+        count = 0
+        if self.image:
+            count += 1
+        if self.image_url:
+            count += 1
+        count += self.gallery_images.count()
+        return count
+    
+    def delete(self, *args, **kwargs):
+        """Delete image files when equipment is deleted"""
+        if self.image:
+            self.image.delete()
+        if self.thumbnail:
+            self.thumbnail.delete()
+        super().delete(*args, **kwargs)
+    # ============ END NEW IMAGE HELPER METHODS ============
 
 
 class EquipmentRental(models.Model):
@@ -952,7 +1118,7 @@ class EquipmentReservation(models.Model):
     def cancel(self):
         """Cancel the reservation"""
         self.status = 'CANCELLED'
-        self.save(skip_validation=True)  # ✅ Skip validation when cancelling
+        self.save(skip_validation=True)
         
         if self.equipment.status == 'RESERVED':
             self.equipment.status = 'AVAILABLE'
@@ -961,7 +1127,7 @@ class EquipmentReservation(models.Model):
     def expire(self):
         """Expire the reservation"""
         self.status = 'EXPIRED'
-        self.save(skip_validation=True)  # ✅ Skip validation when expiring
+        self.save(skip_validation=True)
         
         if self.equipment.status == 'RESERVED':
             self.equipment.status = 'AVAILABLE'
@@ -970,7 +1136,7 @@ class EquipmentReservation(models.Model):
     def complete(self):
         """Mark reservation as completed"""
         self.status = 'COMPLETED'
-        self.save(skip_validation=True)  # ✅ Skip validation when completing
+        self.save(skip_validation=True)
         
         if self.equipment.status == 'RESERVED':
             self.equipment.status = 'AVAILABLE'
@@ -1128,3 +1294,16 @@ def save_user_profile(sender, instance, **kwargs):
         instance.profile.save()
     else:
         UserProfile.objects.create(user=instance)
+
+
+# ============ EQUIPMENT IMAGE SIGNALS ============
+
+@receiver(post_save, sender=EquipmentImage)
+def update_equipment_thumbnail(sender, instance, created, **kwargs):
+    """Update equipment thumbnail when gallery images change"""
+    if instance.is_primary:
+        # If this is a primary image, set it as the equipment thumbnail
+        equipment = instance.equipment
+        if equipment.thumbnail != instance.image:
+            equipment.thumbnail = instance.image
+            equipment.save(update_fields=['thumbnail'])

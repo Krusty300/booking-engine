@@ -1,4 +1,5 @@
 {% extends 'bookings/base.html' %}
+{% load static %}
 
 {% block content %}
 <div class="dashboard-container">
@@ -10,7 +11,7 @@
         </div>
         <div class="header-actions">
             <a href="{% url 'bookings:create_equipment' %}" class="btn-primary">
-                + Add Equipment
+                <i class="fas fa-plus"></i> Add Equipment
             </a>
         </div>
     </div>
@@ -57,6 +58,47 @@
         </div>
     </div>
 
+    <!-- Recently Viewed Equipment -->
+    <div class="recently-viewed-section">
+        <h2>Recently Viewed Equipment</h2>
+        <div class="recently-viewed-grid">
+            {% if recently_viewed %}
+                {% for equipment in recently_viewed %}
+                    <div class="recent-item">
+                        <a href="{% url 'bookings:equipment_detail' equipment.id %}" class="recent-link">
+                            <!-- Image Thumbnail -->
+                            <div class="recent-image-container">
+                                <img src="{{ equipment.get_image_url }}" alt="{{ equipment.name }}" 
+                                    class="recent-thumbnail"
+                                    onerror="this.src='{% static 'bookings/images/default-resource.png' %}'">
+                                {% if equipment.image_count > 1 %}
+                                <span class="recent-image-count">
+                                    <i class="fas fa-images"></i> {{ equipment.image_count }}
+                                </span>
+                                {% endif %}
+                            </div>
+                            <div class="recent-info">
+                                <span class="recent-name">{{ equipment.name }}</span>
+                                <span class="recent-status status-{{ equipment.status|lower }}">
+                                    {{ equipment.get_status_display }}
+                                </span>
+                                <span class="recent-serial">{{ equipment.serial_number }}</span>
+                            </div>
+                        </a>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-recent">
+                    <img src="{% static 'bookings/images/no-recent.svg' %}" alt="No recently viewed" style="max-width: 100px;">
+                    <p>No equipment viewed recently</p>
+                    <a href="{% url 'bookings:equipment_list' %}" class="btn-browse">
+                        Browse Equipment
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
     <!-- Quick Actions Widget -->
     <div class="quick-actions-section">
         <h2>Quick Actions</h2>
@@ -64,12 +106,12 @@
             <!-- Quick Rent -->
             <div class="quick-action-card">
                 <div class="action-header">
-                    <h3>Quick Rent</h3>
+                    <h3><i class="fas fa-hand-holding"></i> Quick Rent</h3>
                 </div>
                 <div class="action-body">
                     {% if recently_viewed %}
                         <div class="action-list">
-                            {% for equipment in recently_viewed %}
+                            {% for equipment in recently_viewed|slice:":5" %}
                                 <div class="action-item">
                                     <span class="item-name">{{ equipment.name }}</span>
                                     <span class="item-status status-{{ equipment.status|lower }}">
@@ -89,7 +131,7 @@
                         <p class="empty-message">No recently viewed equipment</p>
                     {% endif %}
                     <a href="{% url 'bookings:equipment_list' %}" class="action-footer-link">
-                        Browse All Equipments →
+                        Browse All Equipment →
                     </a>
                 </div>
             </div>
@@ -97,7 +139,7 @@
             <!-- Quick Return -->
             <div class="quick-action-card">
                 <div class="action-header">
-                    <h3>Quick Return</h3>
+                    <h3><i class="fas fa-undo"></i> Quick Return</h3>
                 </div>
                 <div class="action-body">
                     {% if quick_return_rentals %}
@@ -126,7 +168,7 @@
             <!-- Quick Maintenance -->
             <div class="quick-action-card">
                 <div class="action-header">
-                    <h3>Maintenance Schedule</h3>
+                    <h3><i class="fas fa-tools"></i> Maintenance Schedule</h3>
                 </div>
                 <div class="action-body">
                     {% if upcoming_maintenance %}
@@ -153,20 +195,20 @@
             <!-- Quick Add -->
             <div class="quick-action-card quick-add">
                 <div class="action-header">
-                    <h3>Add Equipment</h3>
+                    <h3><i class="fas fa-plus-circle"></i> Add Equipment</h3>
                 </div>
                 <div class="action-body">
                     <p class="add-description">Add new equipment to your inventory</p>
                     <div class="add-actions">
                         <a href="{% url 'bookings:create_equipment' %}" class="btn-add-equipment">
-                            + Add New Equipment
+                            Add New Equipment
                         </a>
                         <a href="{% url 'bookings:equipment_list' %}" class="btn-browse-equipment">
                             Browse Available
                         </a>
                     </div>
                     <div class="quick-tips">
-                        <span class="tip">💡 Tip: Use unique serial numbers</span>
+                        <span class="tip">Tip: Use unique serial numbers</span>
                     </div>
                 </div>
             </div>
@@ -266,8 +308,8 @@ function quickRent(equipmentId) {
     formData.append('condition_notes', conditionNotes || '');
     
     const btn = event.target;
-    const originalText = btn.textContent;
-    btn.textContent = '⏳';
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '⏳';
     btn.disabled = true;
     
     fetch('/equipment/rent/', {
@@ -290,7 +332,7 @@ function quickRent(equipmentId) {
         alert('❌ Error: ' + error.message);
     })
     .finally(() => {
-        btn.textContent = originalText;
+        btn.innerHTML = originalText;
         btn.disabled = false;
     });
 }
@@ -312,8 +354,8 @@ function quickReturn(rentalId) {
     formData.append('condition_notes', conditionNotes || '');
     
     const btn = event.target;
-    const originalText = btn.textContent;
-    btn.textContent = '⏳';
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '⏳';
     btn.disabled = true;
     
     fetch('/equipment/return/', {
@@ -336,20 +378,20 @@ function quickReturn(rentalId) {
         alert('❌ Error: ' + error.message);
     })
     .finally(() => {
-        btn.textContent = originalText;
+        btn.innerHTML = originalText;
         btn.disabled = false;
     });
 }
 </script>
 
 <style>
-/* Container */
+/* ============ CONTAINER ============ */
 .dashboard-container {
     max-width: 1200px;
     margin: 0 auto;
 }
 
-/* Page Header */
+/* ============ PAGE HEADER ============ */
 .page-header {
     display: flex;
     justify-content: space-between;
@@ -383,6 +425,7 @@ function quickReturn(rentalId) {
     text-decoration: none;
     font-weight: 600;
     font-size: 0.85rem;
+    border-radius: 4px;
     transition: all 0.2s ease;
 }
 
@@ -393,7 +436,7 @@ function quickReturn(rentalId) {
     box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
 }
 
-/* Stats Grid */
+/* ============ STATS GRID ============ */
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(6, 1fr);
@@ -409,6 +452,7 @@ function quickReturn(rentalId) {
     align-items: center;
     gap: 12px;
     transition: all 0.2s ease;
+    border-radius: 4px;
 }
 
 .stat-card:hover {
@@ -449,7 +493,148 @@ function quickReturn(rentalId) {
     color: #dc3545;
 }
 
-/* Quick Actions Section */
+/* ============ RECENTLY VIEWED SECTION ============ */
+.recently-viewed-section {
+    margin-bottom: 30px;
+}
+
+.recently-viewed-section h2 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: #1a1a2e;
+}
+
+.recently-viewed-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 16px;
+}
+
+.recent-item {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.recent-item:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-3px);
+}
+
+.recent-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+
+.recent-image-container {
+    position: relative;
+    background: #f8f9fa;
+    height: 140px;
+    overflow: hidden;
+}
+
+.recent-thumbnail {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.recent-item:hover .recent-thumbnail {
+    transform: scale(1.05);
+}
+
+.recent-image-count {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    padding: 2px 8px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    border-radius: 12px;
+    font-size: 0.6rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.recent-image-count i {
+    font-size: 0.5rem;
+}
+
+.recent-info {
+    padding: 10px 12px;
+}
+
+.recent-name {
+    display: block;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: #1a1a2e;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.recent-status {
+    display: inline-block;
+    font-size: 0.6rem;
+    padding: 1px 8px;
+    border-radius: 10px;
+    font-weight: 500;
+}
+
+.recent-status.status-available { background: #d4edda; color: #155724; }
+.recent-status.status-rented { background: #fff3cd; color: #856404; }
+.recent-status.status-maintenance { background: #f8d7da; color: #721c24; }
+.recent-status.status-retired { background: #e2e3e5; color: #383d41; }
+.recent-status.status-lost { background: #f8d7da; color: #721c24; }
+
+.recent-serial {
+    display: block;
+    font-size: 0.65rem;
+    color: #6c757d;
+    margin-top: 2px;
+}
+
+.empty-recent {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 40px 20px;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+}
+
+.empty-recent p {
+    color: #6c757d;
+    margin: 8px 0 16px;
+}
+
+.btn-browse {
+    display: inline-block;
+    padding: 8px 20px;
+    background: #007bff;
+    color: white;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.85rem;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.btn-browse:hover {
+    background: #0056b3;
+    color: white;
+}
+
+/* ============ QUICK ACTIONS SECTION ============ */
 .quick-actions-section {
     margin-bottom: 30px;
 }
@@ -473,6 +658,7 @@ function quickReturn(rentalId) {
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    border-radius: 4px;
 }
 
 .quick-action-card .action-header {
@@ -491,12 +677,17 @@ function quickReturn(rentalId) {
     color: #1a1a2e;
 }
 
+.quick-action-card .action-header h3 i {
+    color: #007bff;
+    margin-right: 4px;
+}
+
 .quick-action-card .action-body {
     padding: 12px 16px;
     flex: 1;
 }
 
-/* Action List */
+/* ============ ACTION LIST ============ */
 .action-list {
     display: flex;
     flex-direction: column;
@@ -512,6 +703,7 @@ function quickReturn(rentalId) {
     padding: 6px 8px;
     background: #f8f9fa;
     font-size: 0.8rem;
+    border-radius: 4px;
 }
 
 .action-item .item-name {
@@ -521,9 +713,14 @@ function quickReturn(rentalId) {
 }
 
 .action-item .item-status {
-    font-size: 0.65rem;
+    font-size: 0.6rem;
     padding: 1px 8px;
+    border-radius: 10px;
 }
+
+.action-item .item-status.status-available { background: #d4edda; color: #155724; }
+.action-item .item-status.status-rented { background: #fff3cd; color: #856404; }
+.action-item .item-status.status-maintenance { background: #f8d7da; color: #721c24; }
 
 .action-item .item-due {
     font-size: 0.7rem;
@@ -543,6 +740,7 @@ function quickReturn(rentalId) {
 .action-item .item-type {
     font-size: 0.6rem;
     padding: 1px 8px;
+    border-radius: 10px;
     background: #e9ecef;
 }
 
@@ -550,10 +748,6 @@ function quickReturn(rentalId) {
 .type-repair { background: #f8d7da; color: #721c24; }
 .type-inspection { background: #d4edda; color: #155724; }
 .type-calibration { background: #fff3cd; color: #856404; }
-
-.status-available { color: #28a745; }
-.status-rented { color: #856404; }
-.status-maintenance { color: #721c24; }
 
 .action-footer-link {
     display: block;
@@ -570,7 +764,7 @@ function quickReturn(rentalId) {
     text-decoration: underline;
 }
 
-/* Action Buttons */
+/* ============ ACTION BUTTONS ============ */
 .btn-action {
     padding: 2px 10px;
     border: none;
@@ -578,6 +772,7 @@ function quickReturn(rentalId) {
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
+    border-radius: 4px;
 }
 
 .btn-rent {
@@ -604,7 +799,7 @@ function quickReturn(rentalId) {
     cursor: not-allowed;
 }
 
-/* Quick Add Card */
+/* ============ QUICK ADD CARD ============ */
 .quick-add .action-body {
     display: flex;
     flex-direction: column;
@@ -639,6 +834,7 @@ function quickReturn(rentalId) {
     text-decoration: none;
     font-weight: 600;
     font-size: 0.85rem;
+    border-radius: 4px;
     transition: all 0.2s ease;
 }
 
@@ -656,6 +852,7 @@ function quickReturn(rentalId) {
     text-decoration: none;
     font-size: 0.8rem;
     border: 1px solid #e9ecef;
+    border-radius: 4px;
     transition: all 0.2s ease;
 }
 
@@ -675,7 +872,7 @@ function quickReturn(rentalId) {
     color: #6c757d;
 }
 
-/* Recent Activity Section */
+/* ============ RECENT ACTIVITY SECTION ============ */
 .recent-activity-section {
     margin-top: 30px;
 }
@@ -696,6 +893,7 @@ function quickReturn(rentalId) {
 .activity-card {
     background: white;
     border: 1px solid #e9ecef;
+    border-radius: 4px;
 }
 
 .activity-header {
@@ -718,6 +916,7 @@ function quickReturn(rentalId) {
     background: #e9ecef;
     font-size: 0.7rem;
     font-weight: 600;
+    border-radius: 10px;
 }
 
 .activity-body {
@@ -753,9 +952,17 @@ function quickReturn(rentalId) {
 }
 
 .activity-status {
-    font-size: 0.65rem;
+    font-size: 0.6rem;
     padding: 1px 8px;
+    border-radius: 10px;
 }
+
+.activity-status.status-available { background: #d4edda; color: #155724; }
+.activity-status.status-rented { background: #fff3cd; color: #856404; }
+.activity-status.status-checked_out { background: #fff3cd; color: #856404; }
+.activity-status.status-checked_in { background: #d4edda; color: #155724; }
+.activity-status.status-scheduled { background: #d1ecf1; color: #0c5460; }
+.activity-status.status-completed { background: #d4edda; color: #155724; }
 
 .empty-message {
     color: #6c757d;
@@ -764,7 +971,7 @@ function quickReturn(rentalId) {
     padding: 10px 0;
 }
 
-/* Responsive */
+/* ============ RESPONSIVE ============ */
 @media (max-width: 1200px) {
     .stats-grid {
         grid-template-columns: repeat(3, 1fr);
@@ -778,6 +985,10 @@ function quickReturn(rentalId) {
     
     .activity-grid {
         grid-template-columns: 1fr;
+    }
+    
+    .recently-viewed-grid {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
     }
 }
 
@@ -813,6 +1024,14 @@ function quickReturn(rentalId) {
         width: 100%;
         justify-content: center;
     }
+    
+    .recently-viewed-grid {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    }
+    
+    .recent-image-container {
+        height: 120px;
+    }
 }
 
 @media (max-width: 480px) {
@@ -840,6 +1059,18 @@ function quickReturn(rentalId) {
     .btn-action {
         padding: 2px 8px;
         font-size: 0.6rem;
+    }
+    
+    .recently-viewed-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .recent-image-container {
+        height: 100px;
+    }
+    
+    .recent-name {
+        font-size: 0.75rem;
     }
 }
 </style>

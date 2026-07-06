@@ -7,7 +7,7 @@ from .models import (
     Resource, Booking, Category, UserProfile, 
     Equipment, EquipmentCategory, EquipmentRental, MaintenanceRecord,
     Review, MeetingRoom, Amenity, AnalyticsEvent, DailyAnalytics, SavedSearch,
-    EquipmentReservation  # ✅ Added EquipmentReservation
+    EquipmentReservation, EquipmentImage  # ✅ Keep this import
 )
 
 # ============ CUSTOM ADMIN FORMS ============
@@ -54,6 +54,26 @@ class EquipmentRentalInline(admin.TabularInline):
     fields = ['rented_by', 'checkout_date', 'expected_return_date', 'status']
     readonly_fields = ['checkout_date']
     autocomplete_fields = ['rented_by']
+
+class EquipmentImageInline(admin.TabularInline):
+    """Inline for gallery images in equipment admin"""
+    model = EquipmentImage
+    extra = 1
+    fields = ['image_preview', 'caption', 'is_primary', 'order']
+    readonly_fields = ['image_preview']
+    ordering = ['order', 'created_at']
+    max_num = 20
+    
+    def image_preview(self, obj):
+        """Display image thumbnail in admin"""
+        if obj.image:
+            return format_html(
+                '<img src="{}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;" />',
+                obj.image.url
+            )
+        return "No image"
+    image_preview.short_description = 'Preview'
+    image_preview.allow_html = True
 
 class MeetingRoomInline(admin.StackedInline):
     """Inline for meeting room features in resource admin"""
@@ -124,7 +144,7 @@ class ResourceAdmin(admin.ModelAdmin):
     
     def view_on_site(self, obj):
         url = reverse('bookings:resource_detail', kwargs={'resource_id': obj.id})
-        return format_html('<a href="{}" target="_blank">🔍 View</a>', url)
+        return format_html('<a href="{}" target="_blank">View</a>', url)
     view_on_site.short_description = 'Preview'
     
     actions = ['approve_resources', 'reject_resources', 'deactivate_resources']
@@ -226,11 +246,16 @@ class EquipmentCategoryAdmin(admin.ModelAdmin):
         return obj.equipment.count()
     equipment_count.short_description = 'Equipment Count'
 
+# ============ REMOVED: EquipmentImageAdmin ============
+# The EquipmentImageAdmin has been removed to avoid duplication.
+# Equipment images are now only managed through the EquipmentAdmin inline.
+
 @admin.register(Equipment)
 class EquipmentAdmin(admin.ModelAdmin):
     list_display = [
         'name', 'serial_number', 'category', 'owner', 'status', 
-        'condition', 'location', 'view_equipment', 'created_at'
+        'condition', 'location', 'image_preview', 'image_count_display', 
+        'view_equipment', 'created_at'
     ]
     list_filter = [
         'status', 'condition', 'category', 
@@ -241,10 +266,10 @@ class EquipmentAdmin(admin.ModelAdmin):
         'name', 'serial_number', 'asset_tag', 'barcode', 
         'owner__username', 'owner__email'
     ]
-    readonly_fields = ['created_at', 'updated_at']
+    readonly_fields = ['created_at', 'updated_at', 'image_preview']
     autocomplete_fields = ['owner', 'category']
     list_editable = ['status', 'condition']
-    inlines = [MaintenanceRecordInline, EquipmentRentalInline]
+    inlines = [MaintenanceRecordInline, EquipmentRentalInline, EquipmentImageInline]  # ✅ EquipmentImageInline is kept
     
     fieldsets = (
         ('Basic Information', {
@@ -264,14 +289,46 @@ class EquipmentAdmin(admin.ModelAdmin):
         ('Purchase Information', {
             'fields': ('purchase_date', 'purchase_price', 'warranty_expiry')
         }),
+        ('Images', {
+            'fields': ('image', 'image_url', 'thumbnail', 'image_preview'),
+            'classes': ('wide',),
+            'description': 'Upload a main image or provide an external URL. Additional images can be added in the Gallery section below.'
+        }),
         ('Additional', {
             'fields': ('notes', 'created_at', 'updated_at')
         }),
     )
     
+    def image_preview(self, obj):
+        """Display image thumbnail in list view"""
+        if obj.has_image():
+            return format_html(
+                '<img src="{}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px;" />',
+                obj.get_thumbnail_url()
+            )
+        return format_html(
+            '<span style="color: #999;"><i class="fas fa-image"></i> No image</span>'
+        )
+    image_preview.short_description = 'Image'
+    image_preview.allow_html = True
+    
+    def image_count_display(self, obj):
+        """Display number of images"""
+        count = obj.get_image_count()
+        if count > 0:
+            return format_html(
+                '<span class="badge" style="background: #007bff; color: white; padding: 4px 8px;">{}</span>',
+                count
+            )
+        return format_html(
+            '<span style="color: #999;">0</span>'
+        )
+    image_count_display.short_description = 'Images'
+    image_count_display.allow_html = True
+    
     def view_equipment(self, obj):
         url = reverse('bookings:equipment_detail', kwargs={'equipment_id': obj.id})
-        return format_html('<a href="{}" target="_blank">🔍 View</a>', url)
+        return format_html('<a href="{}" target="_blank">View</a>', url)
     view_equipment.short_description = 'Preview'
     
     actions = [
@@ -343,6 +400,33 @@ class EquipmentRentalAdmin(admin.ModelAdmin):
         return obj.days_rented()
     days_rented.short_description = 'Days Rented'
 
+@admin.register(MaintenanceRecord)
+class MaintenanceRecordAdmin(admin.ModelAdmin):
+    list_display = [
+        'equipment', 'maintenance_type', 'status', 'scheduled_date', 
+        'completed_date', 'cost'
+    ]
+    list_filter = ['maintenance_type', 'status', 'scheduled_date']
+    search_fields = ['equipment__name', 'equipment__serial_number', 'title', 'description']
+    readonly_fields = ['created_at', 'updated_at']
+    autocomplete_fields = ['equipment', 'performed_by']
+    date_hierarchy = 'scheduled_date'
+    
+    fieldsets = (
+        ('Maintenance Information', {
+            'fields': ('equipment', 'maintenance_type', 'status', 'title', 'description')
+        }),
+        ('Cost & Dates', {
+            'fields': ('cost', 'scheduled_date', 'completed_date')
+        }),
+        ('Performed By', {
+            'fields': ('performed_by', 'vendor')
+        }),
+        ('Additional', {
+            'fields': ('notes', 'created_at', 'updated_at')
+        }),
+    )
+
 # ============ EQUIPMENT RESERVATIONS ============
 
 @admin.register(EquipmentReservation)
@@ -407,9 +491,9 @@ class EquipmentReservationAdmin(admin.ModelAdmin):
     def is_expired_display(self, obj):
         """Display if reservation is expired"""
         if obj.is_expired():
-            return format_html('<span style="color: #f44336; font-weight: bold;">⚠️ Expired</span>')
+            return format_html('<span style="color: #f44336; font-weight: bold;">Expired</span>')
         return format_html('<span style="color: #4caf50; font-weight: bold;">✓ Active</span>')
-    is_expired_display.short_description = 'Expired?'
+    is_expired_display.short_description = 'Expired'
     is_expired_display.allow_html = True
     
     actions = [
@@ -492,33 +576,6 @@ class EquipmentReservationAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         """Optimize queryset with select_related"""
         return super().get_queryset(request).select_related('equipment', 'user')
-
-@admin.register(MaintenanceRecord)
-class MaintenanceRecordAdmin(admin.ModelAdmin):
-    list_display = [
-        'equipment', 'maintenance_type', 'status', 'scheduled_date', 
-        'completed_date', 'cost'
-    ]
-    list_filter = ['maintenance_type', 'status', 'scheduled_date']
-    search_fields = ['equipment__name', 'equipment__serial_number', 'title', 'description']
-    readonly_fields = ['created_at', 'updated_at']
-    autocomplete_fields = ['equipment', 'performed_by']
-    date_hierarchy = 'scheduled_date'
-    
-    fieldsets = (
-        ('Maintenance Information', {
-            'fields': ('equipment', 'maintenance_type', 'status', 'title', 'description')
-        }),
-        ('Cost & Dates', {
-            'fields': ('cost', 'scheduled_date', 'completed_date')
-        }),
-        ('Performed By', {
-            'fields': ('performed_by', 'vendor')
-        }),
-        ('Additional', {
-            'fields': ('notes', 'created_at', 'updated_at')
-        }),
-    )
 
 # ============ REVIEWS ============
 

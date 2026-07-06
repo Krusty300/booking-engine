@@ -1,4 +1,5 @@
 {% extends 'bookings/base.html' %}
+{% load static %}
 
 {% block content %}
 <div class="my-equipment-container">
@@ -10,7 +11,7 @@
         </div>
         <div class="header-actions">
             <a href="{% url 'bookings:create_equipment' %}" class="btn-create">
-                Add Equipment
+                <i class="fas fa-plus"></i> Add Equipment
             </a>
         </div>
     </div>
@@ -73,47 +74,71 @@
         <div class="equipment-grid">
             {% for equipment in equipment_list %}
                 <div class="equipment-card status-{{ equipment.status|lower }}">
-                    <div class="card-header">
-                        <h3>{{ equipment.name }}</h3>
-                        <span class="status-badge status-{{ equipment.status|lower }}">
+                    <!-- ============ IMAGE SECTION ============ -->
+                    <div class="equipment-image-container">
+                            <img src="{{ equipment.get_image_url }}" class="equipment-image" alt="{{ equipment.name }}"
+                                onerror="this.src='{% static 'bookings/images/default-resource.png' %}'">
+                        <!-- Image count badge -->
+                        {% if equipment.image_count > 1 %}
+                        <span class="image-count-badge">
+                            <i class="fas fa-images"></i> {{ equipment.image_count }}
+                        </span>
+                        {% endif %}
+                        
+                        <!-- Status Badge Overlay -->
+                        <span class="image-status-badge status-{{ equipment.status|lower }}">
                             {{ equipment.get_status_display }}
                         </span>
                     </div>
+                    <!-- ============ END IMAGE SECTION ============ -->
                     
-                    <div class="card-details">
-                        <p><span class="label">Serial:</span> {{ equipment.serial_number }}</p>
-                        <p><span class="label">Category:</span> {{ equipment.category.name|default:"Uncategorized" }}</p>
-                        <p><span class="label">Condition:</span> {{ equipment.get_condition_display }}</p>
-                        <p><span class="label">Location:</span> {{ equipment.location|default:"Not specified" }}</p>
-                        {% if equipment.purchase_price %}
-                            <p><span class="label">Price:</span> ${{ equipment.purchase_price }}</p>
-                        {% endif %}
-                        <p><span class="label">Owner:</span>
-                        <strong>You</strong>
-                        <span class="owner-badge">(Your Equipment)</span>
-                        </p>
-                    </div>
-                    <!-- Actions -->
-                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                        <a href="{% url 'bookings:equipment_detail' equipment.id %}" 
-                            style="background: #28a745; color: white; padding: 5px 12px; text-decoration: none; font-size: 0.75rem; font-weight: 400; border-radius: 4px; transition: all 0.2s ease;"
-                            onmouseover="this.style.background='#218838'"
-                            onmouseout="this.style.background='#28a745'">
-                            View
-                        </a>
+                    <div class="card-content">
+                        <div class="card-header">
+                            <h3>{{ equipment.name }}</h3>
+                            <span class="status-badge status-{{ equipment.status|lower }}">
+                                {{ equipment.get_status_display }}
+                            </span>
+                        </div>
                         
-                        <a href="{% url 'bookings:edit_equipment' equipment.id %}" 
-                           style="background: #007bff; color: white; padding: 5px 12px; text-decoration: none; font-size: 0.75rem; font-weight: 400; border-radius: 4px; transition: all 0.2s ease;"
-                           onmouseover="this.style.background='#0056b3'"
-                           onmouseout="this.style.background='#007bff'">
-                            Edit
-                        </a>
-                        <a href="{% url 'bookings:delete_equipment' equipment.id %}"
-                            style="background: #dc3545; color: white; padding: 5px 12px; text-decoration: none; font-size: 0.75rem; font-weight: 400; border-radius: 4px; transition: all 0.2s ease;"
-                            onmouseover="this.style.background='#c82333'"
-                            onmouseout="this.style.background='#dc3545'">
-                            Delete
-                        </a>
+                        <div class="card-details">
+                            <p><span class="label">Serial:</span> {{ equipment.serial_number }}</p>
+                            <p><span class="label">Category:</span> {{ equipment.category.name|default:"Uncategorized" }}</p>
+                            <p><span class="label">Condition:</span> {{ equipment.get_condition_display }}</p>
+                            <p><span class="label">Location:</span> {{ equipment.location|default:"Not specified" }}</p>
+                            {% if equipment.purchase_price %}
+                                <p><span class="label">Price:</span> ${{ equipment.purchase_price }}</p>
+                            {% endif %}
+                            <p><span class="label">Owner:</span>
+                            <strong>You</strong>
+                            <span class="owner-badge">(Your Equipment)</span>
+                            </p>
+                            {% if equipment.status == 'RENTED' %}
+                                {% with rental=equipment.rentals.first %}
+                                    {% if rental %}
+                                        <p class="rental-info">
+                                            <span class="label">Rented by:</span>
+                                            {{ rental.rented_by.username }}
+                                            <span class="rental-date">
+                                                ({{ rental.checkout_date|date:"M d" }})
+                                            </span>
+                                        </p>
+                                    {% endif %}
+                                {% endwith %}
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Actions -->
+                        <div class="card-actions">
+                            <a href="{% url 'bookings:equipment_detail' equipment.id %}" class="btn-view">
+                                <i class="fas fa-eye"></i> View
+                            </a>
+                            <a href="{% url 'bookings:edit_equipment' equipment.id %}" class="btn-edit">
+                                <i class="fas fa-edit"></i> Edit
+                            </a>
+                            <a href="{% url 'bookings:delete_equipment' equipment.id %}" class="btn-delete">
+                                <i class="fas fa-trash"></i> Delete
+                            </a>
+                        </div>
                     </div>
                 </div>
             {% endfor %}
@@ -122,11 +147,12 @@
         <!-- Enhanced Empty States -->
         <div class="empty-state">
             {% if current_filter == 'all' %}
+                <img src="{% static 'bookings/images/no-equipment.svg' %}" alt="No equipment" style="max-width: 150px;">
                 <h2>No Equipment Added Yet</h2>
                 <p>You haven't added any equipment to your inventory.</p>
                 <div class="empty-actions">
                     <a href="{% url 'bookings:create_equipment' %}" class="btn-create-large">
-                        Add Your First Equipment
+                        <i class="fas fa-plus"></i> Add Your First Equipment
                     </a>
                 </div>
                 <div class="empty-tips">
@@ -138,11 +164,14 @@
                     </ul>
                 </div>
             {% elif current_filter == 'AVAILABLE' %}
+                <img src="{% static 'bookings/images/no-equipment.svg' %}" alt="No available equipment" style="max-width: 150px;">
                 <h2>No Available Equipment</h2>
                 <p>You don't have any equipment marked as available.</p>
                 <div class="empty-actions">
                     <a href="?status=all" class="btn-secondary">View All Equipment</a>
-                    <a href="{% url 'bookings:create_equipment' %}" class="btn-create-large">+ Add Equipment</a>
+                    <a href="{% url 'bookings:create_equipment' %}" class="btn-create-large">
+                        <i class="fas fa-plus"></i> Add Equipment
+                    </a>
                 </div>
                 <div class="empty-tips">
                     <h4>To make equipment available:</h4>
@@ -153,11 +182,14 @@
                     </ul>
                 </div>
             {% elif current_filter == 'RENTED' %}
+                <img src="{% static 'bookings/images/no-rented.svg' %}" alt="No rented equipment" style="max-width: 150px;">
                 <h2>No Rented Equipment</h2>
                 <p>None of your equipment is currently rented out.</p>
                 <div class="empty-actions">
                     <a href="?status=all" class="btn-secondary">View All Equipment</a>
-                    <a href="{% url 'bookings:equipment_list' %}" class="btn-primary">Browse Equipment to Rent</a>
+                    <a href="{% url 'bookings:equipment_list' %}" class="btn-primary">
+                        <i class="fas fa-search"></i> Browse Equipment to Rent
+                    </a>
                 </div>
                 <div class="empty-tips">
                     <ul>
@@ -167,6 +199,7 @@
                     </ul>
                 </div>
             {% elif current_filter == 'MAINTENANCE' %}
+                <img src="{% static 'bookings/images/no-maintenance.svg' %}" alt="No maintenance" style="max-width: 150px;">
                 <h2>No Equipment Under Maintenance</h2>
                 <p>All your equipment is currently in good working order.</p>
                 <div class="empty-actions">
@@ -180,6 +213,7 @@
                     </ul>
                 </div>
             {% elif current_filter == 'RETIRED' %}
+                <img src="{% static 'bookings/images/no-retired.svg' %}" alt="No retired equipment" style="max-width: 150px;">
                 <h2>No Retired Equipment</h2>
                 <p>You haven't retired any equipment from your inventory.</p>
                 <div class="empty-actions">
@@ -194,6 +228,7 @@
                     </ul>
                 </div>
             {% elif current_filter == 'LOST' %}
+                <img src="{% static 'bookings/images/no-lost.svg' %}" alt="No lost equipment" style="max-width: 150px;">
                 <h2>No Lost Equipment</h2>
                 <p>All your equipment is accounted for.</p>
                 <div class="empty-actions">
@@ -208,11 +243,14 @@
                     </ul>
                 </div>
             {% else %}
+                <img src="{% static 'bookings/images/no-equipment.svg' %}" alt="No equipment" style="max-width: 150px;">
                 <h2>No Equipment Found</h2>
                 <p>No equipment matches your current filter.</p>
                 <div class="empty-actions">
                     <a href="?status=all" class="btn-secondary">Clear Filter</a>
-                    <a href="{% url 'bookings:create_equipment' %}" class="btn-create-large">+ Add Equipment</a>
+                    <a href="{% url 'bookings:create_equipment' %}" class="btn-create-large">
+                        <i class="fas fa-plus"></i> Add Equipment
+                    </a>
                 </div>
             {% endif %}
         </div>
@@ -220,13 +258,13 @@
 </div>
 
 <style>
-/* Container */
+/* ============ CONTAINER ============ */
 .my-equipment-container {
     max-width: 1200px;
     margin: 0 auto;
 }
 
-/* Page Header */
+/* ============ PAGE HEADER ============ */
 .page-header {
     display: flex;
     justify-content: space-between;
@@ -265,6 +303,7 @@
     font-weight: 600;
     font-size: 0.85rem;
     transition: all 0.2s ease;
+    border-radius: 4px;
 }
 
 .btn-create:hover {
@@ -274,7 +313,7 @@
     color: white;
 }
 
-/* Statistics Cards */
+/* ============ STATISTICS CARDS ============ */
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -288,6 +327,7 @@
     border: 1px solid #e9ecef;
     text-align: center;
     transition: all 0.2s ease;
+    border-radius: 4px;
 }
 
 .stat-card:hover {
@@ -314,12 +354,13 @@
 .stat-card.stat-rented .stat-number { color: #ffc107; }
 .stat-card.stat-maintenance .stat-number { color: #dc3545; }
 
-/* Filter Section */
+/* ============ FILTER SECTION ============ */
 .filter-section {
     margin-bottom: 24px;
     background: #f8f9fa;
     padding: 14px 18px;
     border: 1px solid #e9ecef;
+    border-radius: 4px;
 }
 
 .filter-header {
@@ -355,6 +396,7 @@
     font-size: 0.75rem;
     font-weight: 500;
     transition: all 0.2s ease;
+    border-radius: 4px;
 }
 
 .filter-btn:hover {
@@ -368,7 +410,7 @@
 }
 
 .filter-btn.active .filter-count {
-    background: rgba(241, 237, 237, 0.2);
+    background: rgba(255, 255, 255, 0.2);
     color: white;
 }
 
@@ -381,6 +423,7 @@
     color: #6c757d;
     min-width: 18px;
     text-align: center;
+    border-radius: 10px;
 }
 
 .filter-info {
@@ -401,23 +444,24 @@
     text-decoration: underline;
 }
 
-/* Equipment Grid */
+/* ============ EQUIPMENT GRID ============ */
 .equipment-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 20px;
 }
 
 .equipment-card {
     background: white;
     border: 1px solid #e9ecef;
-    padding: 18px;
-    transition: all 0.2s ease;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    border-radius: 0px;
 }
 
 .equipment-card:hover {
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
-    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    transform: translateY(-3px);
 }
 
 .equipment-card.status-available { border-left: 4px solid #28a745; }
@@ -426,7 +470,67 @@
 .equipment-card.status-retired { border-left: 4px solid #6c757d; }
 .equipment-card.status-lost { border-left: 4px solid #dc3545; }
 
-/* Card Header */
+/* ============ IMAGE SECTION ============ */
+.equipment-image-container {
+    position: relative;
+    background: #f8f9fa;
+    overflow: hidden;
+    height: 200px;
+}
+
+.equipment-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.equipment-card:hover .equipment-image {
+    transform: scale(1.03);
+}
+
+.image-count-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 3px 10px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.image-count-badge i {
+    font-size: 0.6rem;
+}
+
+.image-status-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.image-status-badge.status-available { background: rgba(40, 167, 69, 0.9); color: white; }
+.image-status-badge.status-rented { background: rgba(255, 193, 7, 0.9); color: #856404; }
+.image-status-badge.status-maintenance { background: rgba(220, 53, 69, 0.9); color: white; }
+.image-status-badge.status-retired { background: rgba(108, 117, 125, 0.9); color: white; }
+.image-status-badge.status-lost { background: rgba(220, 53, 69, 0.9); color: white; }
+
+/* ============ CARD CONTENT ============ */
+.card-content {
+    padding: 16px;
+}
+
 .card-header {
     display: flex;
     justify-content: space-between;
@@ -449,6 +553,7 @@
     white-space: nowrap;
     text-transform: uppercase;
     letter-spacing: 0.3px;
+    border-radius: 12px;
 }
 
 .status-available .status-badge { background: #d4edda; color: #155724; }
@@ -457,7 +562,7 @@
 .status-retired .status-badge { background: #e2e3e5; color: #383d41; }
 .status-lost .status-badge { background: #f8d7da; color: #721c24; }
 
-/* Card Details */
+/* ============ CARD DETAILS ============ */
 .card-details p {
     margin: 3px 0;
     font-size: 0.8rem;
@@ -471,16 +576,87 @@
     font-size: 0.75rem;
 }
 
-/* Empty State */
+.owner-badge {
+    background: #ffffff;
+    color: rgb(0, 0, 0);
+    padding: 1px 8px;
+    border-radius: 12px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    margin-left: 4px;
+}
+
+.rental-info {
+    margin-top: 4px !important;
+}
+
+.rental-date {
+    color: #6c757d;
+    font-size: 0.7rem;
+    margin-left: 4px;
+}
+
+/* ============ CARD ACTIONS ============ */
+.card-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+}
+
+.card-actions a {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 12px;
+    text-decoration: none;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.btn-view {
+    background: #28a745;
+    color: white;
+}
+
+.btn-view:hover {
+    background: #218838;
+    color: white;
+}
+
+.btn-edit {
+    background: #007bff;
+    color: white;
+}
+
+.btn-edit:hover {
+    background: #0056b3;
+    color: white;
+}
+
+.btn-delete {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-delete:hover {
+    background: #c82333;
+    color: white;
+}
+
+/* ============ EMPTY STATE ============ */
 .empty-state {
     text-align: center;
     padding: 50px 30px;
     background: #f8f9fa;
     border: 1px solid #e9ecef;
+    border-radius: 4px;
 }
 
 .empty-state h2 {
-    margin: 0 0 8px;
+    margin: 16px 0 8px;
     font-size: 1.3rem;
     font-weight: 700;
     color: #1a1a2e;
@@ -503,13 +679,16 @@
 }
 
 .empty-actions .btn-secondary {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     padding: 8px 20px;
     background: #6c757d;
     color: white;
     text-decoration: none;
     font-weight: 600;
     font-size: 0.85rem;
+    border-radius: 4px;
     transition: all 0.2s ease;
 }
 
@@ -519,13 +698,16 @@
 }
 
 .empty-actions .btn-primary {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     padding: 8px 20px;
     background: #007bff;
     color: white;
     text-decoration: none;
     font-weight: 600;
     font-size: 0.85rem;
+    border-radius: 4px;
     transition: all 0.2s ease;
 }
 
@@ -544,6 +726,7 @@
     text-decoration: none;
     font-weight: 600;
     font-size: 0.85rem;
+    border-radius: 4px;
     transition: all 0.2s ease;
 }
 
@@ -582,10 +765,14 @@
     line-height: 1.5;
 }
 
-/* Responsive */
+/* ============ RESPONSIVE ============ */
 @media (max-width: 992px) {
     .stats-grid {
         grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .equipment-grid {
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
     }
 }
 
@@ -648,6 +835,10 @@
         width: 100%;
         justify-content: center;
     }
+    
+    .equipment-image-container {
+        height: 180px;
+    }
 }
 
 @media (max-width: 480px) {
@@ -678,7 +869,11 @@
     }
     
     .equipment-card {
-        padding: 14px;
+        padding: 0;
+    }
+    
+    .card-content {
+        padding: 12px;
     }
     
     .filter-btn {
@@ -692,6 +887,19 @@
     
     .empty-state h2 {
         font-size: 1.1rem;
+    }
+    
+    .equipment-image-container {
+        height: 160px;
+    }
+    
+    .card-actions {
+        flex-direction: column;
+    }
+    
+    .card-actions a {
+        width: 100%;
+        justify-content: center;
     }
 }
 </style>

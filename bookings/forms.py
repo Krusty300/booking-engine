@@ -7,7 +7,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from .models import (
     Resource, Category, UserProfile, MeetingRoom, Review, 
-    Equipment, EquipmentCategory, Booking
+    Equipment, EquipmentCategory, EquipmentImage, Booking
 )
 
 # ============ VALIDATION MIXINS ============
@@ -536,7 +536,7 @@ class ReviewFilterForm(forms.Form):
 # ============ EQUIPMENT FORMS ============
 
 class EquipmentForm(forms.ModelForm, ImageValidationMixin):
-    """Form for creating and editing equipment"""
+    """Form for creating and editing equipment with image support"""
     
     owner = forms.ModelChoiceField(
         queryset=User.objects.all().order_by('username'),
@@ -545,19 +545,41 @@ class EquipmentForm(forms.ModelForm, ImageValidationMixin):
         widget=forms.Select(attrs={'class': 'form-control'})
     )
     
+    # ============ NEW IMAGE FIELDS ============
+    image = forms.ImageField(
+        required=False,
+        widget=forms.FileInput(attrs={
+            'class': 'form-control',
+            'accept': 'image/*'
+        }),
+        help_text="Upload a photo of the equipment (max 5MB)"
+    )
+    
+    remove_image = forms.BooleanField(
+        required=False,
+        initial=False,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'form-check-input'
+        }),
+        help_text="Check this box to remove the current image"
+    )
+    # ============ END NEW IMAGE FIELDS ============
+    
     class Meta:
         model = Equipment
         fields = [
             'name', 'category', 'description', 'serial_number', 
             'asset_tag', 'barcode', 'condition', 'status', 'location',
             'purchase_date', 'purchase_price', 'warranty_expiry',
-            'notes', 'owner'
+            'notes', 'owner', 'image', 'image_url'  # Added image fields
         ]
         labels = {
             'serial_number': 'Serial Number *',
             'condition': 'Condition',
             'owner': 'Equipment Owner',
             'status': 'Status',
+            'image': 'Equipment Photo',
+            'image_url': 'Image URL (Alternative)',
         }
         help_texts = {
             'serial_number': 'Must be unique for each equipment item',
@@ -568,6 +590,8 @@ class EquipmentForm(forms.ModelForm, ImageValidationMixin):
             'purchase_price': 'Original purchase price',
             'warranty_expiry': 'When does the warranty expire?',
             'status': 'Current status of the equipment',
+            'image': 'Upload a photo of the equipment (JPG, PNG, GIF, WebP). Max 5MB.',
+            'image_url': 'Link to an external image (if you don\'t want to upload)',
         }
         widgets = {
             'name': forms.TextInput(attrs={
@@ -614,6 +638,10 @@ class EquipmentForm(forms.ModelForm, ImageValidationMixin):
                 'placeholder': 'Additional notes'
             }),
             'status': forms.Select(attrs={'class': 'form-control'}),
+            'image_url': forms.URLInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'https://example.com/equipment-image.jpg'
+            }),
         }
     
     def __init__(self, *args, **kwargs):
@@ -654,6 +682,25 @@ class EquipmentForm(forms.ModelForm, ImageValidationMixin):
                 self.fields['owner'].empty_label = 'Select an owner (optional)'
                 if self.instance and self.instance.pk:
                     self.fields['owner'].initial = self.instance.owner
+        
+        # ============ NEW: Image field configuration ============
+        # Add image preview if editing
+        if self.instance and self.instance.pk and self.instance.has_image():
+            current_image_url = self.instance.get_image_url()
+            self.fields['image'].help_text = (
+                f'Current image: <a href="{current_image_url}" target="_blank">'
+                f'<img src="{current_image_url}" style="max-height: 100px; max-width: 100%; border-radius: 4px; margin-top: 5px;" /></a><br>'
+                f'Upload a new image to replace it.'
+            )
+            self.fields['remove_image'].label = "Remove current image"
+            self.fields['remove_image'].help_text = "Check this box to delete the current image"
+        
+        # Hide remove_image if no image exists
+        if not self.instance or not self.instance.pk or not self.instance.has_image():
+            self.fields['remove_image'].widget = forms.HiddenInput()
+            self.fields['remove_image'].required = False
+        
+        # ============ END NEW: Image field configuration ============
         
         # Add CSS classes for all visible fields
         for field_name, field in self.fields.items():
@@ -713,6 +760,122 @@ class EquipmentForm(forms.ModelForm, ImageValidationMixin):
         if expiry and purchase_date and expiry <= purchase_date:
             raise ValidationError('Warranty expiry must be after purchase date.')
         return expiry
+    
+    # ============ NEW: Image validation methods ============
+    def clean_image(self):
+        """Validate and process uploaded image"""
+        image = self.cleaned_data.get('image')
+        if image:
+            # Validate file size
+            max_size = 5 * 1024 * 1024
+            if image.size > max_size:
+                raise ValidationError('Image file size cannot exceed 5MB.')
+            
+            # Validate file type
+            valid_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
+            import os
+            ext = os.path.splitext(image.name)[1].lower()
+            if ext not in valid_extensions:
+                raise ValidationError(
+                    f"Unsupported file extension. Please use: {', '.join(valid_extensions)}"
+                )
+            
+            # Validate image dimensions (optional - check if image is too large)
+            try:
+                from PIL import Image
+                img = Image.open(image)
+                width, height = img.size
+                # Optional: Check minimum dimensions
+                if width < 200 or height < 200:
+                    raise ValidationError('Image must be at least 200x200 pixels.')
+                # Optional: Check maximum dimensions
+                if width > 4096 or height > 4096:
+                    raise ValidationError('Image cannot exceed 4096x4096 pixels.')
+            except ImportError:
+                # PIL not installed, skip dimension validation
+                pass
+            except Exception:
+                # Invalid image file
+                raise ValidationError('Invalid image file. Please upload a valid image.')
+        
+        # Check if image removal is requested
+        remove_image = self.cleaned_data.get('remove_image')
+        if remove_image and self.instance and self.instance.pk:
+            # If remove_image is checked, don't require a new image
+            # The view will handle the removal
+            pass
+        
+        return image
+    
+    def clean(self):
+        """Cross-field validation for images"""
+        cleaned_data = super().clean()
+        image = cleaned_data.get('image')
+        image_url = cleaned_data.get('image_url')
+        remove_image = cleaned_data.get('remove_image')
+        
+        # If removing image, don't require a new one
+        if remove_image:
+            return cleaned_data
+        
+        # If no image and no image_url and no existing image, that's fine
+        # Images are optional
+        return cleaned_data
+    # ============ END NEW: Image validation methods ============
+
+
+class EquipmentImageForm(forms.ModelForm, ImageValidationMixin):
+    """Form for uploading and managing equipment gallery images"""
+    
+    class Meta:
+        model = EquipmentImage
+        fields = ['image', 'caption', 'is_primary', 'order']
+        widgets = {
+            'image': forms.FileInput(attrs={
+                'class': 'form-control',
+                'accept': 'image/*'
+            }),
+            'caption': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Optional caption...'
+            }),
+            'is_primary': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            }),
+            'order': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 0,
+                'placeholder': '0'
+            }),
+        }
+        labels = {
+            'image': 'Image *',
+            'caption': 'Caption',
+            'is_primary': 'Set as Primary Image',
+            'order': 'Display Order',
+        }
+        help_texts = {
+            'image': 'Upload an image for the equipment gallery (max 5MB)',
+            'caption': 'Optional description for this image',
+            'is_primary': 'Make this the main image for the equipment',
+            'order': 'Display order (lower numbers appear first)',
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['image'].required = True
+        
+        # If editing, show current image
+        if self.instance and self.instance.pk and self.instance.image:
+            self.fields['image'].help_text = (
+                f'Current image: <a href="{self.instance.image.url}" target="_blank">View</a>'
+            )
+            self.fields['image'].required = False
+    
+    def clean_image(self):
+        """Validate uploaded image"""
+        image = self.cleaned_data.get('image')
+        return self.validate_image_file(image)
 
 
 # ============ BOOKING FORMS ============

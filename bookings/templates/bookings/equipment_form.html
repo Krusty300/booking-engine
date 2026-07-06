@@ -1,4 +1,5 @@
 {% extends 'bookings/base.html' %}
+{% load static %}
 
 {% block content %}
 <div class="equipment-form-container">
@@ -7,7 +8,7 @@
         <p class="subtitle">{% if equipment %}Update the equipment information below{% else %}Add new equipment to your inventory{% endif %}</p>
     </div>
 
-    <form method="post" class="equipment-form" action="{% if equipment %}{% url 'bookings:edit_equipment' equipment.id %}{% else %}{% url 'bookings:create_equipment' %}{% endif %}">
+    <form method="post" class="equipment-form" enctype="multipart/form-data" action="{% if equipment %}{% url 'bookings:edit_equipment' equipment.id %}{% else %}{% url 'bookings:create_equipment' %}{% endif %}">
         {% csrf_token %}
         
         <!-- Display all form errors at the top -->
@@ -28,6 +29,91 @@
                 </ul>
             </div>
         {% endif %}
+
+        <!-- ============ IMAGE UPLOAD SECTION ============ -->
+        <div class="form-section image-section">
+            <h2><i class="fas fa-image"></i> Equipment Photo</h2>
+            
+            <!-- Current Image Display -->
+            {% if has_image %}
+            <div class="current-image-container">
+                <label class="form-label">Current Image</label>
+                <div class="current-image-wrapper">
+                    <img src="{{ image_url }}" alt="Current equipment image" class="current-image-preview"
+                         onerror="this.src='{% static 'bookings/images/default-resource.png' %}'">
+                    <div class="current-image-actions">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="remove_image" id="removeImage">
+                            <label class="form-check-label text-danger" for="removeImage">
+                                <i class="fas fa-trash"></i> Remove current image
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Image Upload -->
+            <div class="upload-container">
+                <div class="form-group {% if form.image.errors %}has-error{% endif %}">
+                    <label for="{{ form.image.id_for_label }}" class="form-label">
+                        {% if has_image %}Replace Image{% else %}Upload Image{% endif %}
+                    </label>
+                    <div class="file-upload-wrapper">
+                        {{ form.image }}
+                        <div class="file-upload-info">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <span>Click to choose a file or drag and drop</span>
+                            <small class="help-text">Max file size: 5MB. Supported formats: JPG, PNG, GIF, WebP</small>
+                        </div>
+                    </div>
+                    <div id="imagePreview" class="image-preview-container" style="display: none;">
+                        <div class="image-preview-wrapper">
+                            <img id="previewImage" src="#" alt="Preview" class="image-preview"
+                                 onerror="this.src='{% static 'bookings/images/default-resource.png' %}'">
+                            <div class="image-preview-actions">
+                                <span id="fileInfo" class="file-info"></span>
+                                <button type="button" class="btn-remove-preview" onclick="removePreview()">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {% if form.image.errors %}
+                        <div class="field-error">❌ {{ form.image.errors|striptags }}</div>
+                    {% endif %}
+                </div>
+
+                <!-- Image URL (Alternative) -->
+                <div class="form-group {% if form.image_url.errors %}has-error{% endif %}">
+                    <label for="{{ form.image_url.id_for_label }}" class="form-label">Or Enter Image URL</label>
+                    <div class="input-group">
+                        {{ form.image_url }}
+                        <button type="button" class="btn-test-url" onclick="testImageUrl()">
+                            <i class="fas fa-check"></i> Test
+                        </button>
+                    </div>
+                    <small class="help-text">Provide a direct link to an image if you don't want to upload</small>
+                    {% if form.image_url.errors %}
+                        <div class="field-error">❌ {{ form.image_url.errors|striptags }}</div>
+                    {% endif %}
+                    <div id="urlPreview" class="url-preview-container" style="display: none;">
+                        <img id="urlPreviewImage" src="#" alt="URL Preview" class="url-preview"
+                             onerror="this.src='{% static 'bookings/images/default-resource.png' %}'">
+                        <div class="url-preview-actions">
+                            <span class="url-success">✅ Image loaded successfully</span>
+                            <button type="button" class="btn-remove-url" onclick="removeUrlPreview()">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="urlError" class="url-error" style="display: none;">
+                        <span class="text-danger">❌ Failed to load image. Please check the URL.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- ============ END IMAGE UPLOAD SECTION ============ -->
 
         <!-- Basic Information -->
         <div class="form-section">
@@ -207,29 +293,139 @@
 
         <div class="form-actions">
             <button type="submit" class="btn-submit">{{ button_text }}</button>
-            <a href="{% url 'bookings:my_equipment' %}" class="btn-cancel">Cancel</a>
+            <a href="{% if equipment %}{% url 'bookings:equipment_detail' equipment.id %}{% else %}{% url 'bookings:my_equipment' %}{% endif %}" class="btn-cancel">Cancel</a>
         </div>
     </form>
 </div>
 
 <script>
-    // Show/hide status field based on user role
-    document.addEventListener('DOMContentLoaded', function() {
-        const statusField = document.querySelector('.form-group:has(#id_status)');
-        if (statusField) {
-            // Check if the user is staff by looking for the status field visibility
-            // The field is hidden for non-staff users in the form initialization
-            const statusSelect = document.getElementById('id_status');
-            if (statusSelect) {
-                // If the select exists, it's visible
-                console.log('Status field is visible');
+// ============ IMAGE PREVIEW ============
+// File input preview
+document.addEventListener('DOMContentLoaded', function() {
+    const fileInput = document.getElementById('id_image');
+    if (fileInput) {
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const previewContainer = document.getElementById('imagePreview');
+                    const previewImage = document.getElementById('previewImage');
+                    const fileInfo = document.getElementById('fileInfo');
+                    
+                    previewImage.src = e.target.result;
+                    fileInfo.textContent = `${file.name} (${(file.size / 1024).toFixed(2)} KB)`;
+                    previewContainer.style.display = 'block';
+                    
+                    // Hide URL preview if showing
+                    document.getElementById('urlPreview').style.display = 'none';
+                    document.getElementById('urlError').style.display = 'none';
+                };
+                reader.readAsDataURL(file);
             }
-        }
-    });
+        });
+    }
+});
+
+function removePreview() {
+    const fileInput = document.getElementById('id_image');
+    if (fileInput) {
+        fileInput.value = '';
+    }
+    document.getElementById('imagePreview').style.display = 'none';
+    document.getElementById('previewImage').src = '#';
+}
+
+// ============ URL PREVIEW ============
+function testImageUrl() {
+    const urlInput = document.getElementById('id_image_url');
+    const url = urlInput.value.trim();
+    
+    if (!url) {
+        document.getElementById('urlError').style.display = 'none';
+        document.getElementById('urlPreview').style.display = 'none';
+        return;
+    }
+    
+    const previewImage = document.getElementById('urlPreviewImage');
+    const previewContainer = document.getElementById('urlPreview');
+    const errorContainer = document.getElementById('urlError');
+    
+    // Show loading state
+    previewImage.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+    previewContainer.style.display = 'block';
+    errorContainer.style.display = 'none';
+    
+    // Test image load
+    previewImage.onload = function() {
+        // Image loaded successfully
+        errorContainer.style.display = 'none';
+        document.querySelector('.url-success').style.display = 'inline';
+    };
+    
+    previewImage.onerror = function() {
+        // Image failed to load
+        errorContainer.style.display = 'block';
+        document.querySelector('.url-success').style.display = 'none';
+    };
+    
+    previewImage.src = url;
+}
+
+function removeUrlPreview() {
+    document.getElementById('id_image_url').value = '';
+    document.getElementById('urlPreview').style.display = 'none';
+    document.getElementById('urlError').style.display = 'none';
+}
+
+// ============ REMOVE IMAGE CHECKBOX ============
+document.addEventListener('DOMContentLoaded', function() {
+    const removeCheckbox = document.getElementById('removeImage');
+    if (removeCheckbox) {
+        removeCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                document.querySelector('.current-image-wrapper').style.opacity = '0.5';
+            } else {
+                document.querySelector('.current-image-wrapper').style.opacity = '1';
+            }
+        });
+    }
+});
+
+// ============ FORM VALIDATION ============
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('.equipment-form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            // Check if any required fields are empty
+            const requiredFields = form.querySelectorAll('[required]');
+            let hasError = false;
+            
+            requiredFields.forEach(field => {
+                if (!field.value.trim()) {
+                    field.classList.add('is-invalid');
+                    hasError = true;
+                } else {
+                    field.classList.remove('is-invalid');
+                }
+            });
+            
+            if (hasError) {
+                e.preventDefault();
+                // Scroll to first error
+                const firstError = form.querySelector('.is-invalid');
+                if (firstError) {
+                    firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    firstError.focus();
+                }
+            }
+        });
+    }
+});
 </script>
 
 <style>
-/* Form Styles */
+/* ============ FORM CONTAINER ============ */
 .equipment-form-container {
     max-width: 800px;
     margin: 0 auto;
@@ -261,6 +457,7 @@
     border: 1px solid #e9ecef;
 }
 
+/* ============ FORM SECTIONS ============ */
 .form-section {
     margin-bottom: 24px;
     padding-bottom: 24px;
@@ -280,6 +477,256 @@
     color: #495057;
 }
 
+.form-section h2 i {
+    margin-right: 8px;
+    color: #007bff;
+}
+
+/* ============ IMAGE SECTION ============ */
+.image-section {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 4px;
+    border-left: 4px solid #28a745;
+}
+
+.image-section h2 {
+    color: #28a745;
+}
+
+.image-section h2 i {
+    color: #28a745;
+}
+
+/* Current Image */
+.current-image-container {
+    margin-bottom: 16px;
+}
+
+.current-image-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 12px;
+    background: white;
+    border-radius: 4px;
+    border: 1px solid #e9ecef;
+    transition: opacity 0.3s;
+}
+
+.current-image-preview {
+    max-height: 150px;
+    max-width: 200px;
+    border-radius: 4px;
+    object-fit: contain;
+}
+
+.current-image-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.current-image-actions .form-check {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.current-image-actions .form-check-input {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.current-image-actions .form-check-label {
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+/* Upload Container */
+.upload-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.file-upload-wrapper {
+    position: relative;
+    border: 2px dashed #ddd;
+    border-radius: 4px;
+    padding: 20px;
+    text-align: center;
+    transition: all 0.3s;
+    cursor: pointer;
+    background: white;
+}
+
+.file-upload-wrapper:hover {
+    border-color: #007bff;
+    background: #f8f9fa;
+}
+
+.file-upload-wrapper input[type="file"] {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.file-upload-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    color: #6c757d;
+    pointer-events: none;
+}
+
+.file-upload-info i {
+    font-size: 2rem;
+    color: #007bff;
+}
+
+.file-upload-info span {
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+/* Image Preview */
+.image-preview-container {
+    margin-top: 12px;
+    padding: 12px;
+    background: white;
+    border-radius: 4px;
+    border: 1px solid #28a745;
+}
+
+.image-preview-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.image-preview {
+    max-height: 150px;
+    max-width: 200px;
+    border-radius: 4px;
+    object-fit: contain;
+}
+
+.image-preview-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.file-info {
+    font-size: 0.85rem;
+    color: #28a745;
+    font-weight: 500;
+}
+
+.btn-remove-preview {
+    padding: 4px 12px;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: background 0.2s;
+}
+
+.btn-remove-preview:hover {
+    background: #c82333;
+}
+
+/* URL Input Group */
+.input-group {
+    display: flex;
+    gap: 8px;
+}
+
+.input-group input {
+    flex: 1;
+}
+
+.btn-test-url {
+    padding: 8px 16px;
+    background: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: background 0.2s;
+    white-space: nowrap;
+}
+
+.btn-test-url:hover {
+    background: #5a6268;
+}
+
+/* URL Preview */
+.url-preview-container {
+    margin-top: 12px;
+    padding: 12px;
+    background: white;
+    border-radius: 4px;
+    border: 1px solid #28a745;
+}
+
+.url-preview {
+    max-height: 150px;
+    max-width: 200px;
+    border-radius: 4px;
+    object-fit: contain;
+}
+
+.url-preview-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+}
+
+.url-success {
+    color: #28a745;
+    font-weight: 500;
+    font-size: 0.85rem;
+}
+
+.btn-remove-url {
+    padding: 4px 12px;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: background 0.2s;
+}
+
+.btn-remove-url:hover {
+    background: #c82333;
+}
+
+.url-error {
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: #f8d7da;
+    border-radius: 4px;
+    border: 1px solid #f5c6cb;
+}
+
+/* ============ FORM ROW ============ */
 .form-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -298,7 +745,8 @@
     color: #dc3545;
 }
 
-.form-group label {
+.form-group label,
+.form-group .form-label {
     display: block;
     margin-bottom: 4px;
     font-weight: 600;
@@ -322,6 +770,10 @@
     border-color: #007bff;
     outline: none;
     box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.form-group .form-control.is-invalid {
+    border-color: #dc3545;
 }
 
 .form-group .form-control:disabled,
@@ -365,7 +817,7 @@
     padding-left: 16px;
 }
 
-/* Owner Section */
+/* ============ OWNER SECTION ============ */
 .owner-section {
     background: #f8f9fa;
     padding: 20px;
@@ -432,7 +884,7 @@
     font-weight: 600;
 }
 
-/* Alert */
+/* ============ ALERT ============ */
 .alert {
     padding: 12px 16px;
     border-radius: 4px;
@@ -455,7 +907,7 @@
     margin-bottom: 5px;
 }
 
-/* Form Actions */
+/* ============ FORM ACTIONS ============ */
 .form-actions {
     display: flex;
     gap: 12px;
@@ -498,7 +950,7 @@
     color: white;
 }
 
-/* Responsive */
+/* ============ RESPONSIVE ============ */
 @media (max-width: 768px) {
     .form-row {
         grid-template-columns: 1fr;
@@ -526,6 +978,34 @@
     .owner-section {
         padding: 12px;
     }
+    
+    .current-image-wrapper {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+    
+    .current-image-actions {
+        align-items: center;
+    }
+    
+    .image-preview-wrapper {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+    
+    .image-preview {
+        max-width: 100%;
+    }
+    
+    .input-group {
+        flex-direction: column;
+    }
+    
+    .btn-test-url {
+        width: 100%;
+    }
 }
 
 @media (max-width: 480px) {
@@ -539,6 +1019,10 @@
     
     .alert-error ul {
         padding-left: 10px;
+    }
+    
+    .image-section {
+        padding: 12px;
     }
 }
 </style>

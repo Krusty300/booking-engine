@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 from .models import (
     Resource, Booking, Category, UserProfile, AnalyticsEvent, DailyAnalytics, 
     Equipment, EquipmentRental, MaintenanceRecord, EquipmentCategory, Review,
-    MeetingRoom, SavedSearch, EquipmentReservation
+    MeetingRoom, SavedSearch, EquipmentReservation, EquipmentImage
 )
 from .services import BookingService
 from .services.equipment_service import EquipmentService
@@ -18,7 +18,7 @@ from .export_service import ExportService
 from .forms import (
     SignUpForm, ResourceForm, ResourceStatusForm, CategoryForm, 
     UserProfileForm, UserSettingsForm, ReviewForm, ReviewFilterForm,
-    EquipmentForm, MeetingRoomForm
+    EquipmentForm, MeetingRoomForm, EquipmentImageForm
 )
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.forms import PasswordChangeForm
@@ -54,7 +54,7 @@ def signup(request):
             user = form.save()
             login(request, user)
             messages.success(request, f"Account created successfully! Welcome {user.username}!")
-            return redirect('bookings:resource_list')  # ✅ Fixed with namespace
+            return redirect('bookings:resource_list')
         else:
             messages.error(request, "Please correct the errors below.")
     else:
@@ -171,31 +171,25 @@ def create_resource(request):
         form = ResourceForm(request.POST, request.FILES)
         if form.is_valid():
             try:
-                # 1. Always create the Resource first
                 resource = form.save(commit=False)
                 resource.owner = request.user
                 resource.status = 'APPROVED'
                 resource.save()
                 
-                # 2. Check if this should be a Meeting Room (explicit checkbox)
                 is_meeting_room = request.POST.get('is_meeting_room') == 'on'
                 
-                # 3. Create MeetingRoom if checkbox is checked
                 if is_meeting_room:
                     meeting_room = MeetingRoom.objects.create(resource=resource)
                     
-                    # Room identification
                     meeting_room.room_number = request.POST.get('room_number', '')
                     meeting_room.floor_number = int(request.POST.get('floor_number', 1))
                     meeting_room.building_name = request.POST.get('building_name', '')
                     
-                    # Capacities
                     meeting_room.seating_capacity = int(request.POST.get('seating_capacity', 0))
                     meeting_room.standing_capacity = int(request.POST.get('standing_capacity', 0))
                     meeting_room.classroom_capacity = int(request.POST.get('classroom_capacity', 0))
                     meeting_room.theater_capacity = int(request.POST.get('theater_capacity', 0))
                     
-                    # Features
                     meeting_room.has_projector = request.POST.get('has_projector') == 'on'
                     meeting_room.has_whiteboard = request.POST.get('has_whiteboard') == 'on'
                     meeting_room.has_video_conferencing = request.POST.get('has_video_conferencing') == 'on'
@@ -206,33 +200,27 @@ def create_resource(request):
                     meeting_room.has_air_conditioning = request.POST.get('has_air_conditioning') == 'on'
                     meeting_room.is_accessible = request.POST.get('is_accessible') == 'on'
                     
-                    # Room details
                     room_size = request.POST.get('room_size_sqft')
                     meeting_room.room_size_sqft = int(room_size) if room_size and room_size.strip() else None
                     meeting_room.natural_light = request.POST.get('natural_light') == 'on'
                     meeting_room.has_window = request.POST.get('has_window') == 'on'
                     
-                    # Setup times with defaults
                     setup_time = request.POST.get('default_setup_time')
                     meeting_room.default_setup_time = int(setup_time) if setup_time and setup_time.strip() else 15
                     
                     teardown_time = request.POST.get('default_teardown_time')
                     meeting_room.default_teardown_time = int(teardown_time) if teardown_time and teardown_time.strip() else 15
                     
-                    # Images
                     if 'room_photo' in request.FILES:
                         meeting_room.room_photo = request.FILES['room_photo']
                     if 'floor_plan' in request.FILES:
                         meeting_room.floor_plan = request.FILES['floor_plan']
                     
-                    # Notes
                     meeting_room.notes = request.POST.get('notes', '')
                     
-                    # Amenities (Many-to-Many)
                     if request.POST.getlist('amenities'):
                         meeting_room.amenities.set(request.POST.getlist('amenities'))
                     
-                    # Set default capacity if none specified
                     if not any([meeting_room.seating_capacity, meeting_room.standing_capacity,
                                meeting_room.classroom_capacity, meeting_room.theater_capacity]):
                         meeting_room.seating_capacity = 1
@@ -245,7 +233,6 @@ def create_resource(request):
                 return redirect('bookings:my_resources')
             except Exception as e:
                 messages.error(request, f'Error creating resource: {str(e)}')
-                # Log the error for debugging
                 import logging
                 logger = logging.getLogger(__name__)
                 logger.error(f'Create resource error: {e}', exc_info=True)
@@ -254,7 +241,6 @@ def create_resource(request):
     else:
         form = ResourceForm()
     
-    # Pass empty meeting room form for new resources
     meeting_room_form = MeetingRoomForm()
     
     context = {
@@ -282,25 +268,20 @@ def edit_resource(request, resource_id):
             try:
                 resource = form.save()
                 
-                # Check if this should be a Meeting Room (explicit checkbox)
                 is_meeting_room = request.POST.get('is_meeting_room') == 'on'
                 
                 if is_meeting_room:
-                    # Get or create meeting room
                     meeting_room, created = MeetingRoom.objects.get_or_create(resource=resource)
                     
-                    # Room identification
                     meeting_room.room_number = request.POST.get('room_number', '')
                     meeting_room.floor_number = int(request.POST.get('floor_number', 1))
                     meeting_room.building_name = request.POST.get('building_name', '')
                     
-                    # Capacities
                     meeting_room.seating_capacity = int(request.POST.get('seating_capacity', 0))
                     meeting_room.standing_capacity = int(request.POST.get('standing_capacity', 0))
                     meeting_room.classroom_capacity = int(request.POST.get('classroom_capacity', 0))
                     meeting_room.theater_capacity = int(request.POST.get('theater_capacity', 0))
                     
-                    # Features
                     meeting_room.has_projector = request.POST.get('has_projector') == 'on'
                     meeting_room.has_whiteboard = request.POST.get('has_whiteboard') == 'on'
                     meeting_room.has_video_conferencing = request.POST.get('has_video_conferencing') == 'on'
@@ -311,20 +292,17 @@ def edit_resource(request, resource_id):
                     meeting_room.has_air_conditioning = request.POST.get('has_air_conditioning') == 'on'
                     meeting_room.is_accessible = request.POST.get('is_accessible') == 'on'
                     
-                    # Room details
                     room_size = request.POST.get('room_size_sqft')
                     meeting_room.room_size_sqft = int(room_size) if room_size and room_size.strip() else None
                     meeting_room.natural_light = request.POST.get('natural_light') == 'on'
                     meeting_room.has_window = request.POST.get('has_window') == 'on'
                     
-                    # Setup times with defaults
                     setup_time = request.POST.get('default_setup_time')
                     meeting_room.default_setup_time = int(setup_time) if setup_time and setup_time.strip() else 15
                     
                     teardown_time = request.POST.get('default_teardown_time')
                     meeting_room.default_teardown_time = int(teardown_time) if teardown_time and teardown_time.strip() else 15
                     
-                    # Images
                     if request.POST.get('room_photo_clear'):
                         if meeting_room.room_photo:
                             meeting_room.room_photo.delete()
@@ -339,24 +317,19 @@ def edit_resource(request, resource_id):
                     if 'floor_plan' in request.FILES:
                         meeting_room.floor_plan = request.FILES['floor_plan']
                     
-                    # Notes
                     meeting_room.notes = request.POST.get('notes', '')
                     
-                    # Amenities
                     if request.POST.getlist('amenities'):
                         meeting_room.amenities.set(request.POST.getlist('amenities'))
                     
-                    # Set default capacity if none specified
                     if not any([meeting_room.seating_capacity, meeting_room.standing_capacity,
                                meeting_room.classroom_capacity, meeting_room.theater_capacity]):
                         meeting_room.seating_capacity = 1
                     
                     meeting_room.save()
                 else:
-                    # If checkbox is unchecked and meeting room exists, delete it
                     if resource.is_meeting_room():
                         meeting_room = resource.meeting_room
-                        # Delete associated images if they exist
                         if meeting_room.room_photo:
                             meeting_room.room_photo.delete()
                         if meeting_room.floor_plan:
@@ -393,12 +366,12 @@ def delete_resource(request, resource_id):
     
     if resource.owner != request.user and not request.user.is_staff:
         messages.error(request, 'You do not have permission to delete this resource.')
-        return redirect('bookings:my_resources')  # ✅ Fixed with namespace
+        return redirect('bookings:my_resources')
     
     bookings = Booking.objects.filter(resource=resource, status__in=['PENDING', 'CONFIRMED'])
     if bookings.exists():
         messages.error(request, f'Cannot delete "{resource.name}" because it has active bookings.')
-        return redirect('bookings:my_resources')  # ✅ Fixed with namespace
+        return redirect('bookings:my_resources')
     
     if request.method == 'POST':
         resource_name = resource.name
@@ -407,7 +380,7 @@ def delete_resource(request, resource_id):
             messages.success(request, f'Resource "{resource_name}" deleted successfully.')
         except Exception as e:
             messages.error(request, f'Error deleting resource: {str(e)}')
-        return redirect('bookings:my_resources')  # ✅ Fixed with namespace
+        return redirect('bookings:my_resources')
     
     return render(request, 'bookings/resource_confirm_delete.html', {'resource': resource})
 
@@ -445,7 +418,7 @@ def admin_update_resource_status(request, resource_id):
         else:
             messages.error(request, 'Failed to update resource status.')
     
-    return redirect('bookings:admin_manage_resources')  # ✅ Fixed with namespace
+    return redirect('bookings:admin_manage_resources')
 
 # ============ CATEGORY MANAGEMENT VIEWS (ADMIN ONLY) ============
 
@@ -464,7 +437,7 @@ def create_category(request):
             try:
                 form.save()
                 messages.success(request, 'Category created successfully!')
-                return redirect('bookings:manage_categories')  # ✅ Fixed with namespace
+                return redirect('bookings:manage_categories')
             except Exception as e:
                 messages.error(request, f'Error creating category: {str(e)}')
         else:
@@ -485,7 +458,7 @@ def edit_category(request, category_id):
             try:
                 form.save()
                 messages.success(request, 'Category updated successfully!')
-                return redirect('bookings:manage_categories')  # ✅ Fixed with namespace
+                return redirect('bookings:manage_categories')
             except Exception as e:
                 messages.error(request, f'Error updating category: {str(e)}')
         else:
@@ -500,10 +473,9 @@ def delete_category(request, category_id):
     """View for admins to delete a category"""
     category = get_object_or_404(Category, id=category_id)
     
-    # Check if category has resources
     if category.resources.exists():
         messages.error(request, f'Cannot delete "{category.name}" because it has resources assigned to it.')
-        return redirect('bookings:manage_categories')  # ✅ Fixed with namespace
+        return redirect('bookings:manage_categories')
     
     if request.method == 'POST':
         category_name = category.name
@@ -512,7 +484,7 @@ def delete_category(request, category_id):
             messages.success(request, f'Category "{category_name}" deleted successfully.')
         except Exception as e:
             messages.error(request, f'Error deleting category: {str(e)}')
-        return redirect('bookings:manage_categories')  # ✅ Fixed with namespace
+        return redirect('bookings:manage_categories')
     
     return render(request, 'bookings/category_confirm_delete.html', {'category': category})
 
@@ -647,7 +619,7 @@ def cancel_booking(request, booking_id):
         except Exception as e:
             messages.error(request, f'Error cancelling booking: {str(e)}')
     
-    return redirect('bookings:my_bookings')  # ✅ Fixed with namespace
+    return redirect('bookings:my_bookings')
 
 # ============ API ENDPOINTS ============
 
@@ -795,7 +767,7 @@ def edit_profile(request):
                 user_form.save()
                 profile_form.save()
                 messages.success(request, 'Your profile has been updated successfully!')
-                return redirect('bookings:profile')  # ✅ Fixed with namespace
+                return redirect('bookings:profile')
             except Exception as e:
                 messages.error(request, f'Error updating profile: {str(e)}')
         else:
@@ -821,7 +793,7 @@ def change_password(request):
                 user = form.save()
                 update_session_auth_hash(request, user)
                 messages.success(request, 'Your password has been changed successfully!')
-                return redirect('bookings:profile')  # ✅ Fixed with namespace
+                return redirect('bookings:profile')
             except Exception as e:
                 messages.error(request, f'Error changing password: {str(e)}')
         else:
@@ -1290,7 +1262,7 @@ def write_review(request, resource_id):
     existing_review = Review.objects.filter(user=request.user, resource=resource).first()
     if existing_review:
         messages.warning(request, 'You have already reviewed this resource.')
-        return redirect('bookings:edit_review', review_id=existing_review.id)  # ✅ Fixed with namespace
+        return redirect('bookings:edit_review', review_id=existing_review.id)
     
     has_booked = Booking.objects.filter(
         customer=request.user,
@@ -1320,7 +1292,7 @@ def write_review(request, resource_id):
                 send_review_submitted_email(review)
                 
                 messages.success(request, 'Your review has been submitted and is awaiting admin approval.')
-                return redirect('bookings:resource_detail', resource_id=resource.id)  # ✅ Fixed with namespace
+                return redirect('bookings:resource_detail', resource_id=resource.id)
             except Exception as e:
                 messages.error(request, f'Error submitting review: {str(e)}')
         else:
@@ -1342,7 +1314,7 @@ def edit_review(request, review_id):
     
     if review.status == 'APPROVED':
         messages.warning(request, 'This review has been approved and cannot be edited.')
-        return redirect('bookings:resource_detail', resource_id=review.resource.id)  # ✅ Fixed
+        return redirect('bookings:resource_detail', resource_id=review.resource.id)
     
     if request.method == 'POST':
         form = ReviewForm(request.POST, instance=review)
@@ -1353,7 +1325,7 @@ def edit_review(request, review_id):
                     review.status = 'PENDING'
                 review.save()
                 messages.success(request, 'Your review has been updated successfully.')
-                return redirect('bookings:resource_detail', resource_id=review.resource.id)  # ✅ Fixed
+                return redirect('bookings:resource_detail', resource_id=review.resource.id)
             except Exception as e:
                 messages.error(request, f'Error updating review: {str(e)}')
         else:
@@ -1378,7 +1350,7 @@ def delete_review(request, review_id):
             resource_id = review.resource.id
             review.delete()
             messages.success(request, 'Your review has been deleted.')
-            return redirect('bookings:resource_detail', resource_id=resource_id)  # ✅ Fixed
+            return redirect('bookings:resource_detail', resource_id=resource_id)
         except Exception as e:
             messages.error(request, f'Error deleting review: {str(e)}')
     
@@ -1393,7 +1365,6 @@ def my_reviews(request):
     if status_filter != 'all':
         reviews = reviews.filter(status=status_filter)
     
-    # Counts for stats
     all_reviews = Review.objects.filter(user=request.user)
     approved_count = all_reviews.filter(status='APPROVED').count()
     pending_count = all_reviews.filter(status='PENDING').count()
@@ -1586,7 +1557,7 @@ def admin_review_detail(request, review_id):
 def admin_bulk_action_reviews(request):
     """Bulk action for reviews"""
     if request.method != 'POST':
-        return redirect('bookings:admin_reviews')  # ✅ Fixed
+        return redirect('bookings:admin_reviews')
     
     review_ids = request.POST.getlist('review_ids')
     action = request.POST.get('action')
@@ -1594,7 +1565,7 @@ def admin_bulk_action_reviews(request):
     
     if not review_ids:
         messages.error(request, 'No reviews selected.')
-        return redirect('bookings:admin_reviews')  # ✅ Fixed
+        return redirect('bookings:admin_reviews')
     
     reviews = Review.objects.filter(id__in=review_ids)
     count = reviews.count()
@@ -1609,7 +1580,7 @@ def admin_bulk_action_reviews(request):
         elif action == 'reject':
             if not reason:
                 messages.error(request, 'Please provide a reason for rejection.')
-                return redirect('bookings:admin_reviews')  # ✅ Fixed
+                return redirect('bookings:admin_reviews')
             for review in reviews:
                 review.moderate('REJECTED', request.user, reason)
                 send_review_rejected_email(review)
@@ -1626,7 +1597,7 @@ def admin_bulk_action_reviews(request):
     except Exception as e:
         messages.error(request, f'Error performing bulk action: {str(e)}')
     
-    return redirect('bookings:admin_reviews')  # ✅ Fixed
+    return redirect('bookings:admin_reviews')
 
 # ============ EQUIPMENT RENTAL VIEWS ============
 
@@ -1664,6 +1635,13 @@ def equipment_list(request):
     rented_count = Equipment.objects.filter(status='RENTED').count()
     maintenance_count = Equipment.objects.filter(status='MAINTENANCE').count()
     
+    # ============ ADD IMAGE INFO TO EACH EQUIPMENT ============
+    for equipment in page_obj:
+        equipment.image_url = equipment.get_image_url()
+        equipment.has_image = equipment.has_image()
+        equipment.image_count = equipment.get_image_count()
+    # ============ END IMAGE INFO ============
+    
     context = {
         'equipment_list': page_obj,
         'status_choices': Equipment.STATUS_CHOICES,
@@ -1683,6 +1661,13 @@ def equipment_detail(request, equipment_id):
     """Show equipment details and rental history"""
     equipment = get_object_or_404(Equipment, id=equipment_id)
     
+    # ============ GET ALL IMAGES ============
+    images = equipment.get_all_images()
+    primary_image = equipment.get_image_url()
+    has_image = equipment.has_image()
+    image_count = equipment.get_image_count()
+    # ============ END IMAGES ============
+    
     recently_viewed = request.session.get('recently_viewed_equipment', [])
     if equipment_id not in recently_viewed:
         recently_viewed.insert(0, equipment_id)
@@ -1694,6 +1679,10 @@ def equipment_detail(request, equipment_id):
     
     context = {
         'equipment': equipment,
+        'images': images,
+        'primary_image': primary_image,
+        'has_image': has_image,
+        'image_count': image_count,
         'rentals': rentals,
         'maintenance_records': maintenance_records,
     }
@@ -1865,11 +1854,10 @@ def equipment_maintenance(request):
         cost = request.POST.get('cost')
         vendor = request.POST.get('vendor', '')
         
-        # Validate equipment ownership
         equipment = get_object_or_404(Equipment, id=equipment_id)
         if not request.user.is_staff and equipment.owner != request.user:
             messages.error(request, 'You do not have permission to schedule maintenance for this equipment.')
-            return redirect('bookings:equipment_maintenance')  # ✅ Fixed with namespace
+            return redirect('bookings:equipment_maintenance')
         
         if all([equipment_id, maintenance_type, title, description, scheduled_date_str]):
             try:
@@ -1887,7 +1875,6 @@ def equipment_maintenance(request):
                         vendor=vendor
                     )
                 
-                # Send notification
                 try:
                     from .services.notification_service import NotificationService
                     NotificationService.send_maintenance_scheduled(maintenance)
@@ -1895,7 +1882,7 @@ def equipment_maintenance(request):
                     print(f"Notification error: {e}")
                 
                 messages.success(request, f'Maintenance scheduled for {maintenance.equipment.name}')
-                return redirect('bookings:equipment_maintenance')  # ✅ Fixed with namespace
+                return redirect('bookings:equipment_maintenance')
             
             except ValidationError as e:
                 messages.error(request, str(e))
@@ -1904,7 +1891,6 @@ def equipment_maintenance(request):
         else:
             messages.error(request, 'Please fill in all required fields')
     
-    # Calculate maintenance statistics
     if request.user.is_staff:
         total_records = MaintenanceRecord.objects.count()
         scheduled_count = MaintenanceRecord.objects.filter(status='SCHEDULED').count()
@@ -1957,18 +1943,12 @@ def maintenance_detail(request, maintenance_id):
         messages.error(request, 'Maintenance record not found.')
         return redirect('bookings:equipment_maintenance')
     
-    # Check if user can view this maintenance
     if not request.user.is_staff and maintenance.equipment.owner != request.user:
         messages.error(request, 'You do not have permission to view this maintenance record.')
         return redirect('bookings:equipment_maintenance')
     
-    # Check if user can complete (staff or equipment owner)
     can_complete = (request.user.is_staff or maintenance.equipment.owner == request.user)
-    
-    # Check if user can edit (staff or equipment owner)
     can_edit = request.user.is_staff or maintenance.equipment.owner == request.user
-    
-    # Check if user is the owner
     is_owner = maintenance.equipment.owner == request.user
     
     context = {
@@ -2076,7 +2056,7 @@ def my_equipment(request):
 def create_equipment(request):
     """View for users to create new equipment"""
     if request.method == 'POST':
-        form = EquipmentForm(request.POST, user=request.user)
+        form = EquipmentForm(request.POST, request.FILES, user=request.user)
         if form.is_valid():
             try:
                 equipment = form.save(commit=False)
@@ -2085,7 +2065,7 @@ def create_equipment(request):
                 equipment.status = 'AVAILABLE'
                 equipment.save()
                 messages.success(request, f'Equipment "{equipment.name}" created successfully!')
-                return redirect('bookings:my_equipment')  # ✅ Fixed with namespace
+                return redirect('bookings:my_equipment')
             except Exception as e:
                 messages.error(request, f'Error creating equipment: {str(e)}')
         else:
@@ -2105,21 +2085,32 @@ def edit_equipment(request, equipment_id):
     """View for users to edit their own equipment"""
     equipment = get_object_or_404(Equipment, id=equipment_id)
     
-    # Check ownership
     if equipment.owner != request.user and not request.user.is_staff:
         messages.error(request, 'You do not have permission to edit this equipment.')
-        return redirect('bookings:my_equipment')  # ✅ Fixed with namespace
+        return redirect('bookings:my_equipment')
     
     if request.method == 'POST':
-        form = EquipmentForm(request.POST, instance=equipment, user=request.user)
+        form = EquipmentForm(request.POST, request.FILES, instance=equipment, user=request.user)
         if form.is_valid():
             try:
                 equipment = form.save(commit=False)
+                
+                # ============ HANDLE IMAGE REMOVAL ============
+                if request.POST.get('remove_image'):
+                    if equipment.image:
+                        equipment.image.delete()
+                        equipment.image = None
+                    if equipment.thumbnail:
+                        equipment.thumbnail.delete()
+                        equipment.thumbnail = None
+                # ============ END IMAGE REMOVAL ============
+                
                 if not request.user.is_staff:
                     equipment.owner = Equipment.objects.get(id=equipment_id).owner
                 equipment.save()
+                
                 messages.success(request, f'Equipment "{equipment.name}" updated successfully!')
-                return redirect('bookings:my_equipment')  # ✅ Fixed with namespace
+                return redirect('bookings:equipment_detail', equipment_id=equipment.id)
             except Exception as e:
                 messages.error(request, f'Error updating equipment: {str(e)}')
         else:
@@ -2130,25 +2121,131 @@ def edit_equipment(request, equipment_id):
     context = {
         'form': form,
         'equipment': equipment,
+        'has_image': equipment.has_image(),
+        'image_url': equipment.get_image_url(),
         'title': 'Edit Equipment',
         'button_text': 'Update Equipment',
     }
     return render(request, 'bookings/equipment_form.html', context)
+
+# ============ GALLERY IMAGE VIEWS ============
+
+@login_required
+def equipment_gallery(request, equipment_id):
+    """View for managing equipment gallery images"""
+    equipment = get_object_or_404(Equipment, id=equipment_id)
+    
+    if equipment.owner != request.user and not request.user.is_staff:
+        messages.error(request, 'You do not have permission to manage this equipment gallery.')
+        return redirect('bookings:equipment_detail', equipment_id=equipment.id)
+    
+    images = equipment.gallery_images.all()
+    
+    if request.method == 'POST':
+        form = EquipmentImageForm(request.POST, request.FILES)
+        if form.is_valid():
+            try:
+                gallery_image = form.save(commit=False)
+                gallery_image.equipment = equipment
+                
+                # If this is set as primary, unset others
+                if gallery_image.is_primary:
+                    equipment.gallery_images.update(is_primary=False)
+                
+                gallery_image.save()
+                messages.success(request, 'Image added to gallery successfully!')
+                return redirect('bookings:equipment_gallery', equipment_id=equipment.id)
+            except Exception as e:
+                messages.error(request, f'Error adding image: {str(e)}')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = EquipmentImageForm()
+    
+    context = {
+        'equipment': equipment,
+        'images': images,
+        'form': form,
+        'image_count': images.count(),
+    }
+    return render(request, 'bookings/equipment_gallery.html', context)
+
+@login_required
+def delete_gallery_image(request, image_id):
+    """Delete a gallery image"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    image = get_object_or_404(EquipmentImage, id=image_id)
+    equipment = image.equipment
+    
+    if equipment.owner != request.user and not request.user.is_staff:
+        return JsonResponse({'error': 'Permission denied'}, status=403)
+    
+    try:
+        image.delete()
+        return JsonResponse({'success': True, 'message': 'Image deleted successfully'})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@login_required
+def set_primary_gallery_image(request, image_id):
+    """Set a gallery image as primary"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    image = get_object_or_404(EquipmentImage, id=image_id)
+    equipment = image.equipment
+    
+    if equipment.owner != request.user and not request.user.is_staff:
+        return JsonResponse({'error': 'Permission denied'}, status=403)
+    
+    try:
+        # Unset all primary flags
+        equipment.gallery_images.update(is_primary=False)
+        # Set this one as primary
+        image.is_primary = True
+        image.save()
+        return JsonResponse({'success': True, 'message': 'Primary image updated'})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+# ============ EQUIPMENT IMAGE REORDER ============
+
+@login_required
+def reorder_gallery_images(request, equipment_id):
+    """Reorder gallery images"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    equipment = get_object_or_404(Equipment, id=equipment_id)
+    
+    if equipment.owner != request.user and not request.user.is_staff:
+        return JsonResponse({'error': 'Permission denied'}, status=403)
+    
+    try:
+        data = json.loads(request.body)
+        order = data.get('order', [])
+        
+        for idx, image_id in enumerate(order):
+            EquipmentImage.objects.filter(id=image_id, equipment=equipment).update(order=idx)
+        
+        return JsonResponse({'success': True, 'message': 'Images reordered successfully'})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
 @login_required
 def delete_equipment(request, equipment_id):
     """View for users to delete their own equipment"""
     equipment = get_object_or_404(Equipment, id=equipment_id)
     
-    # Check ownership
     if equipment.owner != request.user and not request.user.is_staff:
         messages.error(request, 'You do not have permission to delete this equipment.')
-        return redirect('bookings:my_equipment')  # ✅ Fixed with namespace
+        return redirect('bookings:my_equipment')
     
-    # Check if equipment is currently rented
     if equipment.status == 'RENTED':
         messages.error(request, f'Cannot delete "{equipment.name}" because it is currently rented.')
-        return redirect('bookings:my_equipment')  # ✅ Fixed with namespace
+        return redirect('bookings:my_equipment')
     
     if request.method == 'POST':
         equipment_name = equipment.name
@@ -2157,7 +2254,7 @@ def delete_equipment(request, equipment_id):
             messages.success(request, f'Equipment "{equipment_name}" deleted successfully.')
         except Exception as e:
             messages.error(request, f'Error deleting equipment: {str(e)}')
-        return redirect('bookings:my_equipment')  # ✅ Fixed with namespace
+        return redirect('bookings:my_equipment')
     
     context = {
         'equipment': equipment,
@@ -2529,7 +2626,7 @@ def create_reservation(request):
         
         if not all([equipment_id, start_date_str, end_date_str]):
             messages.error(request, 'Please fill in all required fields')
-            return redirect('bookings:create_reservation')  # ✅ Fixed
+            return redirect('bookings:create_reservation')
         
         try:
             start_date = timezone.datetime.fromisoformat(start_date_str)
@@ -2551,7 +2648,7 @@ def create_reservation(request):
                 )
             
             messages.success(request, f'Reservation created for {reservation.equipment.name}')
-            return redirect('bookings:reservation_detail', reservation_id=reservation.id)  # ✅ Fixed with namespace
+            return redirect('bookings:reservation_detail', reservation_id=reservation.id)
         
         except ValidationError as e:
             messages.error(request, str(e))
@@ -2586,7 +2683,7 @@ def reservation_detail(request, reservation_id):
     
     if not can_view:
         messages.error(request, 'You do not have permission to view this reservation')
-        return redirect('bookings:reservation_list')  # ✅ Fixed with namespace
+        return redirect('bookings:reservation_list')
     
     can_confirm = (
         (request.user.is_staff or reservation.equipment.owner == request.user) and 
@@ -2627,11 +2724,11 @@ def cancel_reservation_view(request, reservation_id):
             
             if not is_authorized:
                 messages.error(request, 'You do not have permission to cancel this reservation.')
-                return redirect('bookings:reservation_detail', reservation_id=reservation_id)  # ✅ Fixed
+                return redirect('bookings:reservation_detail', reservation_id=reservation_id)
             
             if not reservation.can_cancel():
                 messages.error(request, f'Cannot cancel reservation with status: {reservation.get_status_display()}')
-                return redirect('bookings:reservation_detail', reservation_id=reservation_id)  # ✅ Fixed
+                return redirect('bookings:reservation_detail', reservation_id=reservation_id)
             
             reservation.cancel()
             
@@ -2642,11 +2739,11 @@ def cancel_reservation_view(request, reservation_id):
                 print(f"Notification error: {e}")
             
             messages.success(request, f'Reservation for {reservation.equipment.name} cancelled successfully!')
-            return redirect('bookings:reservation_list')  # ✅ Fixed
+            return redirect('bookings:reservation_list')
         
     except Exception as e:
         messages.error(request, str(e))
-        return redirect('bookings:reservation_detail', reservation_id=reservation_id)  # ✅ Fixed
+        return redirect('bookings:reservation_detail', reservation_id=reservation_id)
 
 @login_required
 def confirm_reservation_view(request, reservation_id):
@@ -2662,15 +2759,15 @@ def confirm_reservation_view(request, reservation_id):
             
             if not is_authorized:
                 messages.error(request, 'You do not have permission to confirm this reservation.')
-                return redirect('bookings:reservation_detail', reservation_id=reservation_id)  # ✅ Fixed
+                return redirect('bookings:reservation_detail', reservation_id=reservation_id)
             
             if reservation.status != 'PENDING':
                 messages.error(request, f'Cannot confirm reservation with status: {reservation.get_status_display()}')
-                return redirect('bookings:reservation_detail', reservation_id=reservation_id)  # ✅ Fixed
+                return redirect('bookings:reservation_detail', reservation_id=reservation_id)
             
             if reservation.is_expired():
                 messages.error(request, 'This reservation has expired')
-                return redirect('bookings:reservation_detail', reservation_id=reservation_id)  # ✅ Fixed
+                return redirect('bookings:reservation_detail', reservation_id=reservation_id)
             
             conflict = EquipmentReservation.objects.filter(
                 equipment=reservation.equipment,
@@ -2681,7 +2778,7 @@ def confirm_reservation_view(request, reservation_id):
             
             if conflict:
                 messages.error(request, 'A conflicting reservation has been made since this was created')
-                return redirect('bookings:reservation_detail', reservation_id=reservation_id)  # ✅ Fixed
+                return redirect('bookings:reservation_detail', reservation_id=reservation_id)
             
             reservation.confirm()
             
@@ -2692,11 +2789,11 @@ def confirm_reservation_view(request, reservation_id):
                 print(f"Notification error: {e}")
             
             messages.success(request, f'Reservation for {reservation.equipment.name} confirmed successfully!')
-            return redirect('bookings:reservation_detail', reservation_id=reservation_id)  # ✅ Fixed
+            return redirect('bookings:reservation_detail', reservation_id=reservation_id)
         
     except Exception as e:
         messages.error(request, str(e))
-        return redirect('bookings:reservation_detail', reservation_id=reservation_id)  # ✅ Fixed
+        return redirect('bookings:reservation_detail', reservation_id=reservation_id)
 
 @login_required
 def get_available_equipment_ajax(request):
@@ -2772,7 +2869,6 @@ def export_single_booking_pdf(request, booking_id):
     """Export a single booking as PDF with full details"""
     booking = get_object_or_404(Booking, id=booking_id)
     
-    # Check permission: only customer, staff, or resource owner can export
     if booking.customer != request.user and not request.user.is_staff and booking.resource.owner != request.user:
         messages.error(request, 'You do not have permission to export this booking.')
         return redirect('bookings:my_bookings')
@@ -2881,7 +2977,6 @@ def export_single_booking_html(request, booking_id):
     """Export a single booking as HTML"""
     booking = get_object_or_404(Booking, id=booking_id)
     
-    # Check permission: only customer, staff, or resource owner can export
     if booking.customer != request.user and not request.user.is_staff and booking.resource.owner != request.user:
         messages.error(request, 'You do not have permission to export this booking.')
         return redirect('bookings:my_bookings')
@@ -2936,12 +3031,10 @@ def rental_detail(request, rental_id):
         messages.error(request, 'Rental record not found.')
         return redirect('my_rentals')
     
-    # Check if user has permission to view this rental
     if rental.rented_by != request.user and not request.user.is_staff:
         messages.error(request, 'You do not have permission to view this rental.')
         return redirect('my_rentals')
     
-    # Check if user can return this equipment (staff or the renter)
     can_return = (
         request.user.is_staff or 
         rental.rented_by == request.user
